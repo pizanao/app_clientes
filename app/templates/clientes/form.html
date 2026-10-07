@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - OmniGestão{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb small mb-1">
+      <li class="breadcrumb-item"><a href="{{ url_for('clientes.index') }}" class="text-decoration-none">Clientes</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ titulo }}</li>
+    </ol>
+  </nav>
+  <div class="d-flex align-items-center justify-content-between">
+    <h2 class="fw-bold mb-0 text-dark">{{ titulo }}</h2>
+    <a href="{{ url_for('clientes.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Voltar à Lista
+    </a>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+
+      <!-- CARD 1: DADOS PRINCIPAIS -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-person-lines-fill text-primary"></i> Identificação do Cliente
+        </h5>
+
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label for="nome" class="form-label">{{ form.nome.label.text }}</label>
+            {{ form.nome(class="form-control" + (" is-invalid" if form.nome.errors else ""), placeholder="Nome completo ou Razão Social") }}
+            {% for error in form.nome.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-4">
+            <label for="documento" class="form-label">{{ form.documento.label.text }}</label>
+            {{ form.documento(class="form-control" + (" is-invalid" if form.documento.errors else ""), placeholder="000.000.000-00", id="documento") }}
+            {% for error in form.documento.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label for="email" class="form-label">{{ form.email.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
+              {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="cliente@exemplo.com") }}
+              {% for error in form.email.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label for="telefone" class="form-label">{{ form.telefone.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light text-muted"><i class="bi bi-telephone"></i></span>
+              {{ form.telefone(class="form-control" + (" is-invalid" if form.telefone.errors else ""), placeholder="(00) 00000-0000", id="telefone") }}
+              {% for error in form.telefone.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="col-md-2 d-flex align-items-end">
+            <div class="form-check form-switch mb-2">
+              {{ form.ativo(class="form-check-input", id="ativo", role="switch") }}
+              <label class="form-check-label fw-semibold" for="ativo">Ativo</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: ENDEREÇO -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-geo-alt-fill text-danger"></i> Endereço e Localização
+        </h5>
+
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label for="cep" class="form-label">{{ form.cep.label.text }}</label>
+            <div class="input-group">
+              {{ form.cep(class="form-control" + (" is-invalid" if form.cep.errors else ""), placeholder="00000-000", id="cep") }}
+              <span class="input-group-text bg-light text-muted" title="Busca automática de CEP" data-bs-toggle="tooltip">
+                <i class="bi bi-search"></i>
+              </span>
+            </div>
+            <small class="text-muted" style="font-size: 0.75rem;">Preenchimento automático via CEP</small>
+            {% for error in form.cep.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-7">
+            <label for="logradouro" class="form-label">{{ form.logradouro.label.text }}</label>
+            {{ form.logradouro(class="form-control" + (" is-invalid" if form.logradouro.errors else ""), placeholder="Rua, Avenida, Praça...", id="logradouro") }}
+            {% for error in form.logradouro.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-2">
+            <label for="numero" class="form-label">{{ form.numero.label.text }}</label>
+            {{ form.numero(class="form-control" + (" is-invalid" if form.numero.errors else ""), placeholder="123", id="numero") }}
+            {% for error in form.numero.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-4">
+            <label for="complemento" class="form-label">{{ form.complemento.label.text }}</label>
+            {{ form.complemento(class="form-control" + (" is-invalid" if form.complemento.errors else ""), placeholder="Apto 101, Bloco B...", id="complemento") }}
+            {% for error in form.complemento.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-3">
+            <label for="bairro" class="form-label">{{ form.bairro.label.text }}</label>
+            {{ form.bairro(class="form-control" + (" is-invalid" if form.bairro.errors else ""), placeholder="Centro, Jardins...", id="bairro") }}
+            {% for error in form.bairro.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-3">
+            <label for="cidade" class="form-label">{{ form.cidade.label.text }}</label>
+            {{ form.cidade(class="form-control" + (" is-invalid" if form.cidade.errors else ""), placeholder="São Paulo, Rio de Janeiro...", id="cidade") }}
+            {% for error in form.cidade.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-2">
+            <label for="estado" class="form-label">{{ form.estado.label.text }}</label>
+            {{ form.estado(class="form-select" + (" is-invalid" if form.estado.errors else ""), id="estado") }}
+            {% for error in form.estado.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: OBSERVAÇÕES -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-chat-left-text-fill text-info"></i> Observações e Notas Internas
+        </h5>
+
+        <div class="mb-3">
+          {{ form.observacoes(class="form-control" + (" is-invalid" if form.observacoes.errors else ""), rows=3, placeholder="Informações de suporte, dados de faturamento ou detalhes importantes do cliente...") }}
+          {% for error in form.observacoes.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- SUBMIT BAR -->
+      <div class="d-flex align-items-center justify-content-end gap-2 mb-5">
+        <a href="{{ url_for('clientes.index') }}" class="btn btn-light-custom px-4">Cancelar</a>
+        <button type="submit" class="btn btn-primary-custom px-4">
+          <i class="bi bi-check-lg"></i> {{ acao }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

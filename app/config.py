@@ -1,0 +1,35 @@
+import os
+from datetime import timedelta
+
+BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
+os.makedirs(INSTANCE_DIR, exist_ok=True)
+
+
+class Config:
+    """Base configuration."""
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-super-secure-change-in-prod-12345')
+    
+    # SQLAlchemy
+    # No Flask-SQLAlchemy 3+, caminhos relativos SQLite (sqlite:///nome.db) já são resolvidos
+    # automaticamente em relação a app.instance_path. Se o usuário fornecer 'sqlite:///instance/nome.db',
+    # evita duplicação de pastas ('instance/instance/nome.db') que causa erro de abertura do SQLite.
+    _raw_db_url = os.environ.get('DATABASE_URL')
+    if not _raw_db_url:
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(INSTANCE_DIR, 'app_clientes.db')}"
+    elif _raw_db_url.startswith('sqlite:///instance/'):
+        SQLALCHEMY_DATABASE_URI = _raw_db_url.replace('sqlite:///instance/', 'sqlite:///', 1)
+    else:
+        SQLALCHEMY_DATABASE_URI = _raw_db_url
+
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Flask-Session using CacheLib FileSystemCache
+    from cachelib.file import FileSystemCache
+    SESSION_TYPE = 'cachelib'
+    SESSION_CACHELIB = FileSystemCache(cache_dir=os.path.join(INSTANCE_DIR, 'flask_sessions'), threshold=1000)
+    SESSION_PERMANENT = True
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+    
+    # WTForms CSRF
+    WTF_CSRF_ENABLED = True

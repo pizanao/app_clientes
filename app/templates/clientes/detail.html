@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}{{ cliente.nome }} - Detalhes do Cliente{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb small mb-1">
+      <li class="breadcrumb-item"><a href="{{ url_for('clientes.index') }}" class="text-decoration-none">Clientes</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ cliente.nome }}</li>
+    </ol>
+  </nav>
+
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center shadow-sm" style="width: 52px; height: 52px; font-size: 1.25rem;">
+        {{ cliente.nome[:2].upper() }}
+      </div>
+      <div>
+        <div class="d-flex align-items-center gap-2">
+          <h2 class="fw-bold mb-0 text-dark">{{ cliente.nome }}</h2>
+          <span class="badge-status {{ 'badge-ativo' if cliente.ativo else 'badge-inativo' }}">
+            {{ 'Ativo' if cliente.ativo else 'Inativo' }}
+          </span>
+        </div>
+        <small class="text-muted">Cadastrado em {{ cliente.created_at | datetime_br }}</small>
+      </div>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('pedidos.novo', cliente_id=cliente.id) }}" class="btn btn-primary-custom btn-sm">
+        <i class="bi bi-cart-plus"></i> Novo Pedido
+      </a>
+      <a href="{{ url_for('clientes.editar', id=cliente.id) }}" class="btn btn-light-custom btn-sm">
+        <i class="bi bi-pencil"></i> Editar
+      </a>
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              data-bs-toggle="modal"
+              data-bs-target="#deleteConfirmModal"
+              data-action="{{ url_for('clientes.excluir', id=cliente.id) }}"
+              data-name="{{ cliente.nome }}"
+              data-type="o cliente">
+        <i class="bi bi-trash"></i> Excluir
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT DETAILS GRID -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-4">
+    <!-- CONTACT & INFO CARD -->
+    <div class="card-custom p-4 bg-white h-100">
+      <h6 class="fw-bold text-dark pb-2 mb-3 border-bottom d-flex align-items-center gap-2">
+        <i class="bi bi-card-checklist text-primary"></i> Informações do Cliente
+      </h6>
+
+      <div class="mb-3">
+        <label class="text-muted small d-block">E-mail</label>
+        <a href="mailto:{{ cliente.email }}" class="text-dark fw-semibold text-decoration-none">
+          <i class="bi bi-envelope me-1 text-primary"></i>{{ cliente.email }}
+        </a>
+      </div>
+
+      <div class="mb-3">
+        <label class="text-muted small d-block">Telefone</label>
+        {% if cliente.telefone %}
+          <a href="tel:{{ cliente.telefone }}" class="text-dark fw-semibold text-decoration-none">
+            <i class="bi bi-telephone me-1 text-success"></i>{{ cliente.telefone | phone_br }}
+          </a>
+        {% else %}
+          <span class="text-muted">Não informado</span>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="text-muted small d-block">CPF / CNPJ</label>
+        <span class="badge bg-light text-dark border font-monospace fs-6">
+          {{ cliente.documento | doc_br }}
+        </span>
+      </div>
+
+      <div class="mb-3">
+        <label class="text-muted small d-block">Endereço Completo</label>
+        <span class="text-secondary small">
+          <i class="bi bi-geo-alt me-1 text-danger"></i>{{ cliente.endereco_completo }}
+        </span>
+      </div>
+
+      {% if cliente.observacoes %}
+        <div class="mt-3 pt-3 border-top">
+          <label class="text-muted small d-block mb-1">Observações Internas</label>
+          <div class="p-2 bg-light rounded small text-secondary">
+            {{ cliente.observacoes }}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <!-- CLIENT METRICS -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-4">
+        <div class="card-stat">
+          <div class="stat-title">Total de Pedidos</div>
+          <div class="stat-value text-primary">{{ pedidos | length }}</div>
+          <small class="text-muted">Histórico completo</small>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="card-stat">
+          <div class="stat-title">Pedidos Concluídos</div>
+          <div class="stat-value text-success">{{ pedidos_concluidos | length }}</div>
+          <small class="text-muted">Finalizados com sucesso</small>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="card-stat">
+          <div class="stat-title">Total Faturado</div>
+          <div class="stat-value text-dark">{{ total_gasto | currency }}</div>
+          <small class="text-muted">Soma de pedidos válidos</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENT ORDERS TABLE -->
+    <div class="card-custom bg-white">
+      <div class="card-header bg-white border-bottom p-3 d-flex align-items-center justify-content-between">
+        <h6 class="fw-bold mb-0 text-dark">
+          <i class="bi bi-bag-check me-2 text-primary"></i>Pedidos Vinculados ({{ pedidos | length }})
+        </h6>
+        <a href="{{ url_for('pedidos.novo', cliente_id=cliente.id) }}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-plus-lg"></i> Adicionar Pedido
+        </a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table-custom mb-0">
+          <thead>
+            <tr>
+              <th>Nº Pedido</th>
+              <th>Data</th>
+              <th>Descrição</th>
+              <th>Pagamento</th>
+              <th>Status</th>
+              <th>Valor Total</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pedido in pedidos %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('pedidos.detalhe', id=pedido.id) }}" class="fw-bold text-dark text-decoration-none">
+                    #{{ pedido.numero_pedido }}
+                  </a>
+                </td>
+                <td class="text-muted small">{{ pedido.data_pedido | date_br }}</td>
+                <td>
+                  <span class="text-truncate d-inline-block small" style="max-width: 180px;" title="{{ pedido.descricao }}">
+                    {{ pedido.descricao }}
+                  </span>
+                </td>
+                <td class="small text-muted">{{ pedido.metodo_pagamento_label }}</td>
+                <td>
+                  <span class="badge-status badge-{{ pedido.status }}">
+                    {{ pedido.status_label }}
+                  </span>
+                </td>
+                <td class="fw-bold">{{ pedido.valor_total | currency }}</td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    <a href="{{ url_for('pedidos.detalhe', id=pedido.id) }}" class="btn btn-light" title="Ver Detalhes">
+                      <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="{{ url_for('pedidos.editar', id=pedido.id) }}" class="btn btn-light" title="Editar">
+                      <i class="bi bi-pencil"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="7" class="text-center py-4 text-muted">
+                  <i class="bi bi-cart-x fs-2 d-block mb-2 text-secondary"></i>
+                  Este cliente ainda não possui nenhum pedido registrado.
+                  <div class="mt-2">
+                    <a href="{{ url_for('pedidos.novo', cliente_id=cliente.id) }}" class="btn btn-sm btn-primary">
+                      Criar Primeiro Pedido
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - OmniGestão{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb small mb-1">
+      <li class="breadcrumb-item"><a href="{{ url_for('pedidos.index') }}" class="text-decoration-none">Pedidos</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ titulo }}</li>
+    </ol>
+  </nav>
+  <div class="d-flex align-items-center justify-content-between">
+    <h2 class="fw-bold mb-0 text-dark">{{ titulo }}</h2>
+    <a href="{{ url_for('pedidos.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Voltar à Lista
+    </a>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-receipt text-primary"></i> Dados Principais do Pedido
+        </h5>
+
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label for="cliente_id" class="form-label">{{ form.cliente_id.label.text }}</label>
+            {{ form.cliente_id(class="form-select" + (" is-invalid" if form.cliente_id.errors else "")) }}
+            {% for error in form.cliente_id.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+            <small class="text-muted" style="font-size: 0.75rem;">
+              Não encontrou o cliente? <a href="{{ url_for('clientes.novo') }}" target="_blank">Cadastre um novo aqui</a>
+            </small>
+          </div>
+
+          <div class="col-md-4">
+            <label for="numero_pedido" class="form-label">{{ form.numero_pedido.label.text }}</label>
+            {{ form.numero_pedido(class="form-control" + (" is-invalid" if form.numero_pedido.errors else ""), placeholder="PED-2026-0001") }}
+            {% for error in form.numero_pedido.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-4">
+            <label for="data_pedido" class="form-label">{{ form.data_pedido.label.text }}</label>
+            {{ form.data_pedido(class="form-control" + (" is-invalid" if form.data_pedido.errors else "")) }}
+            {% for error in form.data_pedido.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-4">
+            <label for="status" class="form-label">{{ form.status.label.text }}</label>
+            {{ form.status(class="form-select" + (" is-invalid" if form.status.errors else "")) }}
+            {% for error in form.status.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-4">
+            <label for="metodo_pagamento" class="form-label">{{ form.metodo_pagamento.label.text }}</label>
+            {{ form.metodo_pagamento(class="form-select" + (" is-invalid" if form.metodo_pagamento.errors else "")) }}
+            {% for error in form.metodo_pagamento.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-12">
+            <label for="valor_total" class="form-label">{{ form.valor_total.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light fw-bold">R$</span>
+              {{ form.valor_total(class="form-control" + (" is-invalid" if form.valor_total.errors else ""), placeholder="0.00", step="0.01") }}
+              {% for error in form.valor_total.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-box-seam text-info"></i> Detalhes dos Itens & Descrição
+        </h5>
+
+        <div class="mb-3">
+          <label for="descricao" class="form-label">{{ form.descricao.label.text }}</label>
+          {{ form.descricao(class="form-control" + (" is-invalid" if form.descricao.errors else ""), rows=4, placeholder="Descreva os produtos vendidos, serviços prestados, quantidades, especificações...") }}
+          {% for error in form.descricao.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="mb-0">
+          <label for="observacoes" class="form-label">{{ form.observacoes.label.text }}</label>
+          {{ form.observacoes(class="form-control" + (" is-invalid" if form.observacoes.errors else ""), rows=3, placeholder="Observações de entrega, termos de pagamento, notas de garantia...") }}
+          {% for error in form.observacoes.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center justify-content-end gap-2 mb-5">
+        <a href="{{ url_for('pedidos.index') }}" class="btn btn-light-custom px-4">Cancelar</a>
+        <button type="submit" class="btn btn-primary-custom px-4">
+          <i class="bi bi-check-lg"></i> {{ acao }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

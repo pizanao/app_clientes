@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Pedidos - OmniGestão{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 border-bottom gap-3">
+  <div>
+    <h2 class="fw-bold mb-1 text-dark">Cadastro de Pedidos</h2>
+    <p class="text-muted mb-0 small">Controle de vendas, faturamento e status dos pedidos</p>
+  </div>
+  <div>
+    <a href="{{ url_for('pedidos.novo') }}" class="btn btn-primary-custom shadow-sm">
+      <i class="bi bi-cart-plus-fill"></i> Novo Pedido
+    </a>
+  </div>
+</div>
+
+<!-- SEARCH & FILTER BAR -->
+<div class="card-custom p-3 mb-4 bg-white">
+  <form method="GET" action="{{ url_for('pedidos.index') }}" class="row g-2 align-items-center">
+    <div class="col-md-4 col-lg-5">
+      <div class="input-group">
+        <span class="input-group-text bg-light text-muted border-end-0">
+          <i class="bi bi-search"></i>
+        </span>
+        <input type="text" name="q" class="form-control border-start-0" placeholder="Buscar por nº pedido, itens ou cliente..." value="{{ search }}">
+        {% if search %}
+          <a href="{{ url_for('pedidos.index', status=status_filter, cliente_id=cliente_filter) }}" class="btn btn-outline-secondary" title="Limpar busca">
+            <i class="bi bi-x-lg"></i>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col-md-3 col-lg-3">
+      <select name="status" class="form-select" onchange="this.form.submit()">
+        <option value="todos" {% if status_filter == 'todos' %}selected{% endif %}>Status: Todos</option>
+        <option value="pendente" {% if status_filter == 'pendente' %}selected{% endif %}>Pendentes</option>
+        <option value="processando" {% if status_filter == 'processando' %}selected{% endif %}>Em Processamento</option>
+        <option value="concluido" {% if status_filter == 'concluido' %}selected{% endif %}>Concluídos</option>
+        <option value="cancelado" {% if status_filter == 'cancelado' %}selected{% endif %}>Cancelados</option>
+      </select>
+    </div>
+
+    <div class="col-md-3 col-lg-3">
+      <select name="cliente_id" class="form-select" onchange="this.form.submit()">
+        <option value="">Cliente: Todos</option>
+        {% for c in clientes %}
+          <option value="{{ c.id }}" {% if cliente_filter == c.id %}selected{% endif %}>{{ c.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2 col-lg-1">
+      <button type="submit" class="btn btn-light-custom w-100" title="Aplicar filtros">
+        <i class="bi bi-funnel"></i>
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- ORDERS STAT SUMMARY BANNER -->
+<div class="d-flex align-items-center justify-content-between p-3 mb-3 bg-light rounded-3 border">
+  <div class="d-flex align-items-center gap-2">
+    <i class="bi bi-receipt-cutoff text-primary fs-5"></i>
+    <span class="text-secondary small">
+      Total de pedidos filtrados: <strong>{{ total_encontrados }}</strong>
+    </span>
+  </div>
+  <div>
+    <span class="text-muted small me-2">Volume Total:</span>
+    <span class="fs-6 fw-bold text-success">{{ total_valor | currency }}</span>
+  </div>
+</div>
+
+<!-- ORDERS TABLE -->
+<div class="card-custom">
+  <div class="table-responsive">
+    <table class="table-custom mb-0">
+      <thead>
+        <tr>
+          <th>Nº Pedido</th>
+          <th>Cliente</th>
+          <th>Data e Hora</th>
+          <th>Método de Pagto</th>
+          <th>Valor Total</th>
+          <th>Status</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pedido in pedidos %}
+          <tr>
+            <td>
+              <a href="{{ url_for('pedidos.detalhe', id=pedido.id) }}" class="fw-bold text-dark text-decoration-none">
+                #{{ pedido.numero_pedido }}
+              </a>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <a href="{{ url_for('clientes.detalhe', id=pedido.cliente.id) }}" class="text-dark fw-semibold text-decoration-none text-truncate" style="max-width: 220px;">
+                  {{ pedido.cliente.nome }}
+                </a>
+              </div>
+            </td>
+            <td class="text-muted small">{{ pedido.data_pedido | datetime_br }}</td>
+            <td>
+              <span class="badge bg-light text-secondary border">
+                {{ pedido.metodo_pagamento_label }}
+              </span>
+            </td>
+            <td class="fw-bold">{{ pedido.valor_total | currency }}</td>
+            <td>
+              <span class="badge-status badge-{{ pedido.status }}">
+                {{ pedido.status_label }}
+              </span>
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="{{ url_for('pedidos.detalhe', id=pedido.id) }}" class="btn btn-outline-secondary" title="Ver Detalhes" data-bs-toggle="tooltip">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{{ url_for('pedidos.editar', id=pedido.id) }}" class="btn btn-outline-primary" title="Editar Pedido" data-bs-toggle="tooltip">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <button type="button" class="btn btn-outline-danger"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteConfirmModal"
+                        data-action="{{ url_for('pedidos.excluir', id=pedido.id) }}"
+                        data-name="Pedido #{{ pedido.numero_pedido }}"
+                        data-type="o pedido">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bi bi-search fs-1 d-block mb-2 text-secondary"></i>
+              Nenhum pedido encontrado com os filtros informados.
+              <div class="mt-3">
+                {% if search or status_filter != 'todos' or cliente_filter %}
+                  <a href="{{ url_for('pedidos.index') }}" class="btn btn-sm btn-outline-secondary">Limpar Filtros</a>
+                {% else %}
+                  <a href="{{ url_for('pedidos.novo') }}" class="btn btn-sm btn-primary">Cadastrar Primeiro Pedido</a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

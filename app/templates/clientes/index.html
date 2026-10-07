@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Clientes - OmniGestão{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 border-bottom gap-3">
+  <div>
+    <h2 class="fw-bold mb-1 text-dark">Cadastro de Clientes</h2>
+    <p class="text-muted mb-0 small">Gerencie sua carteira de clientes, dados de contato e endereços</p>
+  </div>
+  <div>
+    <a href="{{ url_for('clientes.novo') }}" class="btn btn-primary-custom shadow-sm">
+      <i class="bi bi-person-plus-fill"></i> Novo Cliente
+    </a>
+  </div>
+</div>
+
+<!-- SEARCH & FILTER BAR -->
+<div class="card-custom p-3 mb-4 bg-white">
+  <form method="GET" action="{{ url_for('clientes.index') }}" class="row g-2 align-items-center">
+    <div class="col-md-6 col-lg-7">
+      <div class="input-group">
+        <span class="input-group-text bg-light text-muted border-end-0">
+          <i class="bi bi-search"></i>
+        </span>
+        <input type="text" name="q" class="form-control border-start-0" placeholder="Buscar por nome, e-mail, CPF/CNPJ ou cidade..." value="{{ search }}">
+        {% if search %}
+          <a href="{{ url_for('clientes.index', status=status_filter) }}" class="btn btn-outline-secondary" title="Limpar busca">
+            <i class="bi bi-x-lg"></i>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col-md-4 col-lg-3">
+      <select name="status" class="form-select" onchange="this.form.submit()">
+        <option value="todos" {% if status_filter == 'todos' %}selected{% endif %}>Status: Todos</option>
+        <option value="ativo" {% if status_filter == 'ativo' %}selected{% endif %}>Apenas Ativos</option>
+        <option value="inativo" {% if status_filter == 'inativo' %}selected{% endif %}>Apenas Inativos</option>
+      </select>
+    </div>
+
+    <div class="col-md-2 col-lg-2">
+      <button type="submit" class="btn btn-light-custom w-100">
+        <i class="bi bi-funnel"></i> Filtrar
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- CLIENTS TABLE -->
+<div class="card-custom">
+  <div class="card-header bg-white border-bottom p-3 d-flex align-items-center justify-content-between">
+    <span class="text-muted small">
+      Exibindo <strong>{{ total_encontrados }}</strong> cliente(s)
+    </span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table-custom mb-0">
+      <thead>
+        <tr>
+          <th>Cliente / Razão</th>
+          <th>CPF / CNPJ</th>
+          <th>Contato</th>
+          <th>Cidade / UF</th>
+          <th>Status</th>
+          <th>Pedidos</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cliente in clientes %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-light text-primary fw-bold d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; font-size: 0.85rem;">
+                  {{ cliente.nome[:2].upper() }}
+                </div>
+                <div>
+                  <a href="{{ url_for('clientes.detalhe', id=cliente.id) }}" class="fw-bold text-dark text-decoration-none">
+                    {{ cliente.nome }}
+                  </a>
+                  <small class="text-muted d-block">{{ cliente.email }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border font-monospace">
+                {{ cliente.documento | doc_br }}
+              </span>
+            </td>
+            <td>
+              <span class="small text-muted d-block">
+                <i class="bi bi-telephone me-1"></i>{{ cliente.telefone | phone_br }}
+              </span>
+            </td>
+            <td>
+              {% if cliente.cidade or cliente.estado %}
+                <span class="small text-secondary">
+                  <i class="bi bi-geo-alt me-1 text-danger"></i>{{ cliente.cidade or '-' }}{% if cliente.estado %}/{{ cliente.estado }}{% endif %}
+                </span>
+              {% else %}
+                <span class="text-muted small">-</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge-status {{ 'badge-ativo' if cliente.ativo else 'badge-inativo' }}">
+                {{ 'Ativo' if cliente.ativo else 'Inativo' }}
+              </span>
+            </td>
+            <td>
+              <a href="{{ url_for('clientes.detalhe', id=cliente.id) }}" class="badge bg-primary-subtle text-primary border-0 text-decoration-none px-2 py-1">
+                {{ cliente.pedidos | length }} pedido(s)
+              </a>
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="{{ url_for('clientes.detalhe', id=cliente.id) }}" class="btn btn-outline-secondary" title="Ver Detalhes" data-bs-toggle="tooltip">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{{ url_for('clientes.editar', id=cliente.id) }}" class="btn btn-outline-primary" title="Editar Cliente" data-bs-toggle="tooltip">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <a href="{{ url_for('pedidos.novo', cliente_id=cliente.id) }}" class="btn btn-outline-success" title="Novo Pedido para este Cliente" data-bs-toggle="tooltip">
+                  <i class="bi bi-cart-plus"></i>
+                </a>
+                <button type="button" class="btn btn-outline-danger" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#deleteConfirmModal"
+                        data-action="{{ url_for('clientes.excluir', id=cliente.id) }}"
+                        data-name="{{ cliente.nome }}"
+                        data-type="o cliente">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bi bi-search fs-1 d-block mb-2 text-secondary"></i>
+              Nenhum cliente encontrado com os filtros aplicados.
+              <div class="mt-3">
+                {% if search or status_filter != 'todos' %}
+                  <a href="{{ url_for('clientes.index') }}" class="btn btn-sm btn-outline-secondary">Limpar Filtros</a>
+                {% else %}
+                  <a href="{{ url_for('clientes.novo') }}" class="btn btn-sm btn-primary">Cadastrar Primeiro Cliente</a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

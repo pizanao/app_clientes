@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - OmniGestão{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 border-bottom gap-3">
+  <div>
+    <h2 class="fw-bold mb-1 text-dark">Painel de Controle</h2>
+    <p class="text-muted mb-0 small">Visão geral em tempo real de clientes, faturamento e pedidos</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('clientes.novo') }}" class="btn btn-light-custom btn-sm d-flex align-items-center gap-1 shadow-sm">
+      <i class="bi bi-person-plus text-primary"></i> Novo Cliente
+    </a>
+    <a href="{{ url_for('pedidos.novo') }}" class="btn btn-primary-custom btn-sm shadow-sm">
+      <i class="bi bi-cart-plus"></i> Novo Pedido
+    </a>
+  </div>
+</div>
+
+<!-- STAT CARDS ROW -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-stat">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="stat-title">Total de Clientes</div>
+        <div class="stat-icon primary">
+          <i class="bi bi-people"></i>
+        </div>
+      </div>
+      <div class="stat-value">{{ total_clientes }}</div>
+      <div class="small text-muted mt-2">
+        <span class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>{{ clientes_ativos }}</span> ativos no sistema
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-stat">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="stat-title">Faturamento Total</div>
+        <div class="stat-icon success">
+          <i class="bi bi-cash-stack"></i>
+        </div>
+      </div>
+      <div class="stat-value text-success">{{ faturamento_total | currency }}</div>
+      <div class="small text-muted mt-2">
+        <span>Concluído: <strong>{{ faturamento_concluido | currency }}</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-stat">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="stat-title">Total de Pedidos</div>
+        <div class="stat-icon info">
+          <i class="bi bi-bag-check"></i>
+        </div>
+      </div>
+      <div class="stat-value">{{ total_pedidos }}</div>
+      <div class="small text-muted mt-2">
+        <span>Ticket Médio: <strong>{{ ticket_medio | currency }}</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-stat">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="stat-title">Pedidos Pendentes</div>
+        <div class="stat-icon warning">
+          <i class="bi bi-hourglass-split"></i>
+        </div>
+      </div>
+      <div class="stat-value text-warning">{{ pedidos_pendentes }}</div>
+      <div class="small text-muted mt-2">
+        <span class="text-info fw-semibold">{{ pedidos_processando }}</span> em processamento
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ORDERS BY STATUS SUMMARY PILLS -->
+<div class="card-custom p-3 mb-4 bg-white">
+  <div class="row text-center g-2 align-items-center">
+    <div class="col-6 col-md-3 border-end">
+      <div class="text-muted small">Pendentes</div>
+      <div class="fs-5 fw-bold text-warning">{{ pedidos_pendentes }}</div>
+    </div>
+    <div class="col-6 col-md-3 border-end">
+      <div class="text-muted small">Em Processamento</div>
+      <div class="fs-5 fw-bold text-info">{{ pedidos_processando }}</div>
+    </div>
+    <div class="col-6 col-md-3 border-end">
+      <div class="text-muted small">Concluídos</div>
+      <div class="fs-5 fw-bold text-success">{{ pedidos_concluidos }}</div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="text-muted small">Cancelados</div>
+      <div class="fs-5 fw-bold text-danger">{{ pedidos_cancelados }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- RECENT TABLES ROW -->
+<div class="row g-4">
+  <!-- RECENT ORDERS -->
+  <div class="col-lg-7">
+    <div class="card-custom h-100">
+      <div class="card-header bg-white border-bottom p-3 d-flex align-items-center justify-content-between">
+        <h6 class="fw-bold mb-0 text-dark">
+          <i class="bi bi-clock-history me-2 text-primary"></i>Últimos Pedidos
+        </h6>
+        <a href="{{ url_for('pedidos.index') }}" class="btn btn-sm btn-link text-decoration-none p-0 fw-semibold">
+          Ver todos ({{ total_pedidos }}) &rarr;
+        </a>
+      </div>
+      <div class="table-responsive">
+        <table class="table-custom mb-0">
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>Cliente</th>
+              <th>Data</th>
+              <th>Valor</th>
+              <th>Status</th>
+              <th class="text-end">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pedido in ultimos_pedidos %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('pedidos.detalhe', id=pedido.id) }}" class="fw-bold text-decoration-none text-dark">
+                    #{{ pedido.numero_pedido }}
+                  </a>
+                </td>
+                <td>
+                  <a href="{{ url_for('clientes.detalhe', id=pedido.cliente.id) }}" class="text-decoration-none text-dark text-truncate d-inline-block" style="max-width: 140px;">
+                    {{ pedido.cliente.nome }}
+                  </a>
+                </td>
+                <td class="text-muted small">{{ pedido.data_pedido | date_br }}</td>
+                <td class="fw-bold">{{ pedido.valor_total | currency }}</td>
+                <td>
+                  <span class="badge-status badge-{{ pedido.status }}">
+                    {{ pedido.status_label }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <a href="{{ url_for('pedidos.detalhe', id=pedido.id) }}" class="btn btn-sm btn-light p-1 px-2" title="Visualizar Pedido">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted">
+                  <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                  Nenhum pedido registrado ainda.
+                  <div class="mt-2">
+                    <a href="{{ url_for('pedidos.novo') }}" class="btn btn-sm btn-primary">Cadastrar Primeiro Pedido</a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECENT CLIENTS -->
+  <div class="col-lg-5">
+    <div class="card-custom h-100">
+      <div class="card-header bg-white border-bottom p-3 d-flex align-items-center justify-content-between">
+        <h6 class="fw-bold mb-0 text-dark">
+          <i class="bi bi-people me-2 text-primary"></i>Clientes Recentes
+        </h6>
+        <a href="{{ url_for('clientes.index') }}" class="btn btn-sm btn-link text-decoration-none p-0 fw-semibold">
+          Ver todos ({{ total_clientes }}) &rarr;
+        </a>
+      </div>
+      <div class="p-0">
+        <ul class="list-group list-group-flush">
+          {% for cliente in ultimos_clientes %}
+            <li class="list-group-item p-3 d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center gap-3 text-truncate">
+                <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center fw-bold" style="width: 42px; height: 42px; flex-shrink: 0;">
+                  {{ cliente.nome[:2].upper() }}
+                </div>
+                <div class="text-truncate">
+                  <a href="{{ url_for('clientes.detalhe', id=cliente.id) }}" class="fw-bold text-dark text-decoration-none d-block text-truncate">
+                    {{ cliente.nome }}
+                  </a>
+                  <small class="text-muted d-block text-truncate">
+                    <i class="bi bi-envelope me-1"></i>{{ cliente.email }}
+                  </small>
+                </div>
+              </div>
+              <div class="text-end ps-2 flex-shrink-0">
+                <span class="badge-status {{ 'badge-ativo' if cliente.ativo else 'badge-inativo' }} mb-1 d-inline-block">
+                  {{ 'Ativo' if cliente.ativo else 'Inativo' }}
+                </span>
+                <div class="small text-muted">{{ cliente.pedidos | length }} pedidos</div>
+              </div>
+            </li>
+          {% else %}
+            <li class="list-group-item text-center py-4 text-muted">
+              <i class="bi bi-person-x fs-2 d-block mb-2 text-secondary"></i>
+              Nenhum cliente cadastrado ainda.
+              <div class="mt-2">
+                <a href="{{ url_for('clientes.novo') }}" class="btn btn-sm btn-outline-primary">Cadastrar Cliente</a>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

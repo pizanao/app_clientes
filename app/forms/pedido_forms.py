@@ -1,7 +1,30 @@
 from datetime import datetime
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, TextAreaField, DecimalField, DateTimeLocalField, SubmitField
+from wtforms import (
+    StringField, SelectField, TextAreaField, DecimalField,
+    DateTimeLocalField, SubmitField, HiddenField, Form
+)
 from wtforms.validators import DataRequired, NumberRange, Optional, Length
+
+
+class ItemPedidoForm(Form):
+    """Subformulário para itens individuais do pedido."""
+    id = HiddenField('ID')
+    descricao = StringField('Descrição do Item *', validators=[
+        DataRequired(message='A descrição do item é obrigatória.'),
+        Length(min=2, max=255, message='A descrição deve ter entre 2 e 255 caracteres.')
+    ])
+    quantidade = DecimalField('Quantidade *', places=2, validators=[
+        DataRequired(message='Informe a quantidade do item.'),
+        NumberRange(min=0.01, message='A quantidade deve ser maior que zero.')
+    ])
+    valor_unitario = DecimalField('Valor Unitário (R$) *', places=2, validators=[
+        DataRequired(message='Informe o valor unitário do item.'),
+        NumberRange(min=0.01, message='O valor unitário deve ser maior que zero.')
+    ])
+    valor_total = DecimalField('Valor Total (R$)', places=2, validators=[
+        Optional()
+    ])
 
 
 class PedidoForm(FlaskForm):
@@ -33,15 +56,14 @@ class PedidoForm(FlaskForm):
     ], default='pix', validators=[
         DataRequired(message='Selecione o método de pagamento.')
     ])
-    valor_total = DecimalField('Valor Total (R$) *', places=2, validators=[
-        DataRequired(message='Informe o valor total.'),
-        NumberRange(min=0.01, message='O valor deve ser maior que zero.')
+    valor_total = DecimalField('Valor Total (R$)', places=2, validators=[
+        Optional()
     ])
-    descricao = TextAreaField('Descrição / Itens do Pedido *', validators=[
-        DataRequired(message='Descreva os produtos ou serviços inclusos.'),
-        Length(min=5, message='A descrição deve ter pelo menos 5 caracteres.')
+    descricao = TextAreaField('Resumo Geral / Descrição do Pedido', validators=[
+        Optional()
     ])
     observacoes = TextAreaField('Observações Adicionais', validators=[
         Optional()
     ])
     submit = SubmitField('Salvar Pedido')
+

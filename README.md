@@ -20,13 +20,19 @@ Aplicação web desenvolvida em **Python 3 + Flask** com arquitetura moderna e i
 - **Visualização Detalhada**: Página de perfil com histórico de pedidos, métricas de faturamento e dados de contato.
 - **Exclusão Segura**: Modal de confirmação com remoção em cascata dos pedidos associados.
 
-### 3. Cadastro de Pedidos do Cliente (CRUD Completo)
+### 3. Cadastro de Pedidos e Itens (CRUD Completo com Totalização Automática)
 - **Vínculo relacional obrigatório** entre Pedido e Cliente (`cliente_id` com chave estrangeira).
+- **Estrutura de Itens do Pedido (1 a 10 Itens)**:
+  - Cada pedido possui de **1 a 10 itens** obrigatoriamente.
+  - Para cada item é informado: *Descrição*, *Quantidade*, *Valor Unitário* e *Valor Total do Item*.
+  - **Cálculo automático em tempo real**: O sistema calcula o valor total de cada item (`Quantidade * Valor Unitário`) e a totalização do pedido no formulário.
+  - Interface dinâmica com botões de adicionar e remover itens, contador em tempo real (`X / 10 itens`), trava ao atingir 10 itens e impedimento de exclusão do único item restante.
 - **Geração automática** de código do pedido no padrão `PED-YYYY-XXXX`.
 - **Status do Pedido**: *Pendente*, *Em Processamento*, *Concluído* e *Cancelado* com identificadores visuais (badges coloridos).
 - **Métodos de Pagamento**: PIX, Cartão de Crédito, Cartão de Débito, Boleto Bancário, Transferência / TED e Dinheiro.
-- **Comprovante de Pedido**: Layout formatado pronto para impressão (`window.print()`).
-- **Filtros avançados**: Busca por número de pedido, descrição, cliente e status.
+- **Comprovante de Pedido**: Layout comercial com tabela detalhada de itens pronta para impressão (`window.print()`).
+- **Filtros avançados**: Busca por número de pedido, descrição dos itens, cliente e status.
+
 
 ### 4. Dashboard Executivo em Tempo Real
 - **KPIs**: Total de Clientes (e ativos), Total de Pedidos, Faturamento Concluído, Ticket Médio e Pedidos Pendentes.

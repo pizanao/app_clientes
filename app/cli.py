@@ -4,7 +4,7 @@ from flask.cli import with_appcontext
 from app.extensions import db
 from app.models.user import User
 from app.models.cliente import Cliente
-from app.models.pedido import Pedido
+from app.models.pedido import Pedido, ItemPedido
 
 
 def register_cli_commands(app):
@@ -140,7 +140,7 @@ def register_cli_commands(app):
             db.session.add_all(clientes_exemplo)
             db.session.flush()
 
-            # Sample orders
+            # Sample orders with items
             pedidos_exemplo = [
                 Pedido(
                     numero_pedido='PED-2026-0001',
@@ -179,7 +179,7 @@ def register_cli_commands(app):
                     status='pendente',
                     metodo_pagamento='pix',
                     valor_total=6420.50,
-                    descricao='Lote de suprimentos de informática (50 unidades cabo de rede Cat6, 10 switches 8 portas gigabit).',
+                    descricao='Lote de suprimentos de informática (cabos de rede Cat6, switches 8 portas gigabit).',
                     observacoes='Orçamento aprovado. Enviada chave PIX para faturamento.'
                 ),
                 Pedido(
@@ -194,7 +194,34 @@ def register_cli_commands(app):
                 ),
             ]
             db.session.add_all(pedidos_exemplo)
-            click.echo('Clientes e Pedidos de exemplo cadastrados com sucesso!')
+            db.session.flush()
+
+            # Add sample items for each order
+            itens_exemplo = [
+                # Pedido 1 (Total: 4850.00)
+                ItemPedido(pedido_id=pedidos_exemplo[0].id, descricao='Desenvolvimento de módulo de relatórios personalizados', quantidade=1.0, valor_unitario=3500.00, valor_total=3500.00),
+                ItemPedido(pedido_id=pedidos_exemplo[0].id, descricao='Consultoria técnica especializada (horas)', quantidade=10.0, valor_unitario=135.00, valor_total=1350.00),
+
+                # Pedido 2 (Total: 1299.90)
+                ItemPedido(pedido_id=pedidos_exemplo[1].id, descricao='Assinatura Anual Plano Premium Cloud', quantidade=1.0, valor_unitario=999.90, valor_total=999.90),
+                ItemPedido(pedido_id=pedidos_exemplo[1].id, descricao='Pacote Suporte Prioritário 24/7 (trimestral)', quantidade=3.0, valor_unitario=100.00, valor_total=300.00),
+
+                # Pedido 3 (Total: 890.00)
+                ItemPedido(pedido_id=pedidos_exemplo[2].id, descricao='Kit de Equipamentos de Automação Comercial', quantidade=1.0, valor_unitario=590.00, valor_total=590.00),
+                ItemPedido(pedido_id=pedidos_exemplo[2].id, descricao='Licença Adicional de Terminal OmniGestão', quantidade=1.0, valor_unitario=300.00, valor_total=300.00),
+
+                # Pedido 4 (Total: 6420.50)
+                ItemPedido(pedido_id=pedidos_exemplo[3].id, descricao='Cabo de Rede Furukawa Cat6 (Caixa 100m)', quantidade=2.0, valor_unitario=350.00, valor_total=700.00),
+                ItemPedido(pedido_id=pedidos_exemplo[3].id, descricao='Switch Gigabit Ethernet 8 Portas TP-Link', quantidade=10.0, valor_unitario=180.00, valor_total=1800.00),
+                ItemPedido(pedido_id=pedidos_exemplo[3].id, descricao='Roteador Corporativo Dual Band Wi-Fi 6', quantidade=3.0, valor_unitario=640.00, valor_total=1920.00),
+                ItemPedido(pedido_id=pedidos_exemplo[3].id, descricao='Serviço de Conectorização e Certificação de Rede', quantidade=1.0, valor_unitario=2000.50, valor_total=2000.50),
+
+                # Pedido 5 (Total: 2500.00)
+                ItemPedido(pedido_id=pedidos_exemplo[4].id, descricao='Hospedagem Dedicada Cloud Server (Mensal)', quantidade=1.0, valor_unitario=1800.00, valor_total=1800.00),
+                ItemPedido(pedido_id=pedidos_exemplo[4].id, descricao='Rotina de Backup Corporativo Offsite (500GB)', quantidade=1.0, valor_unitario=700.00, valor_total=700.00),
+            ]
+            db.session.add_all(itens_exemplo)
+            click.echo('Clientes, Pedidos e Itens de exemplo cadastrados com sucesso!')
 
         db.session.commit()
         click.echo('Processo de Seed finalizado!')

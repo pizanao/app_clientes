@@ -1,7 +1,7 @@
 import os
 from app import create_app
 from app.extensions import db
-from app.models import User, Cliente, Pedido
+from app.models import User, Cliente, Pedido, ItemPedido
 
 app = create_app()
 
@@ -12,8 +12,10 @@ def make_shell_context():
         'db': db,
         'User': User,
         'Cliente': Cliente,
-        'Pedido': Pedido
+        'Pedido': Pedido,
+        'ItemPedido': ItemPedido
     }
+
 
 
 if __name__ == '__main__':

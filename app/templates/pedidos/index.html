@@ -95,12 +95,20 @@
               <a href="{{ url_for('pedidos.detalhe', id=pedido.id) }}" class="fw-bold text-dark text-decoration-none">
                 #{{ pedido.numero_pedido }}
               </a>
+              <div>
+                <span class="badge bg-light text-secondary border" style="font-size: 0.7rem;">
+                  <i class="bi bi-box-seam me-1"></i>{{ pedido.itens|length }} {{ 'item' if pedido.itens|length == 1 else 'itens' }}
+                </span>
+              </div>
             </td>
             <td>
-              <div class="d-flex align-items-center gap-2">
+              <div class="d-flex flex-column">
                 <a href="{{ url_for('clientes.detalhe', id=pedido.cliente.id) }}" class="text-dark fw-semibold text-decoration-none text-truncate" style="max-width: 220px;">
                   {{ pedido.cliente.nome }}
                 </a>
+                <small class="text-muted text-truncate" style="max-width: 220px; font-size: 0.75rem;" title="{{ pedido.resumo_itens }}">
+                  {{ pedido.resumo_itens }}
+                </small>
               </div>
             </td>
             <td class="text-muted small">{{ pedido.data_pedido | datetime_br }}</td>

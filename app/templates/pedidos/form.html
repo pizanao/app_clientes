@@ -11,7 +11,10 @@
     </ol>
   </nav>
   <div class="d-flex align-items-center justify-content-between">
-    <h2 class="fw-bold mb-0 text-dark">{{ titulo }}</h2>
+    <div>
+      <h2 class="fw-bold mb-0 text-dark">{{ titulo }}</h2>
+      <p class="text-muted small mb-0">Preencha as informações do pedido e seus itens (mínimo de 1 e máximo de 10 itens).</p>
+    </div>
     <a href="{{ url_for('pedidos.index') }}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-arrow-left"></i> Voltar à Lista
     </a>
@@ -19,17 +22,18 @@
 </div>
 
 <div class="row justify-content-center">
-  <div class="col-lg-9">
-    <form method="POST" novalidate>
+  <div class="col-lg-11 col-xl-10">
+    <form method="POST" id="pedidoForm" novalidate>
       {{ form.hidden_tag() }}
 
+      <!-- DADOS PRINCIPAIS DO PEDIDO -->
       <div class="card-custom p-4 mb-4 bg-white">
         <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
           <i class="bi bi-receipt text-primary"></i> Dados Principais do Pedido
         </h5>
 
         <div class="row g-3">
-          <div class="col-md-8">
+          <div class="col-md-6 col-lg-5">
             <label for="cliente_id" class="form-label">{{ form.cliente_id.label.text }}</label>
             {{ form.cliente_id(class="form-select" + (" is-invalid" if form.cliente_id.errors else "")) }}
             {% for error in form.cliente_id.errors %}
@@ -40,7 +44,7 @@
             </small>
           </div>
 
-          <div class="col-md-4">
+          <div class="col-md-3 col-lg-3">
             <label for="numero_pedido" class="form-label">{{ form.numero_pedido.label.text }}</label>
             {{ form.numero_pedido(class="form-control" + (" is-invalid" if form.numero_pedido.errors else ""), placeholder="PED-2026-0001") }}
             {% for error in form.numero_pedido.errors %}
@@ -48,7 +52,7 @@
             {% endfor %}
           </div>
 
-          <div class="col-md-4">
+          <div class="col-md-3 col-lg-4">
             <label for="data_pedido" class="form-label">{{ form.data_pedido.label.text }}</label>
             {{ form.data_pedido(class="form-control" + (" is-invalid" if form.data_pedido.errors else "")) }}
             {% for error in form.data_pedido.errors %}
@@ -72,27 +76,195 @@
             {% endfor %}
           </div>
 
-          <div class="col-md-12">
-            <label for="valor_total" class="form-label">{{ form.valor_total.label.text }}</label>
+          <div class="col-md-4">
+            <label for="valor_total" class="form-label fw-bold text-dark">
+              Valor Total do Pedido (R$)
+            </label>
             <div class="input-group">
-              <span class="input-group-text bg-light fw-bold">R$</span>
-              {{ form.valor_total(class="form-control" + (" is-invalid" if form.valor_total.errors else ""), placeholder="0.00", step="0.01") }}
-              {% for error in form.valor_total.errors %}
-                <div class="invalid-feedback">{{ error }}</div>
-              {% endfor %}
+              <span class="input-group-text bg-light fw-bold text-success">R$</span>
+              <input type="text"
+                     name="valor_total"
+                     id="valor_total"
+                     class="form-control bg-light fw-bold text-success fs-6"
+                     value="{{ '%.2f'|format(form.valor_total.data) if form.valor_total.data else '0.00' }}"
+                     readonly>
             </div>
+            <small class="text-muted" style="font-size: 0.75rem;">
+              Totalizado automaticamente pela soma dos itens.
+            </small>
           </div>
         </div>
       </div>
 
+      <!-- ITENS DO PEDIDO (MÍNIMO 1 E MÁXIMO 10) -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-3 border-bottom gap-2">
+          <div>
+            <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+              <i class="bi bi-box-seam text-primary"></i> Itens do Pedido *
+            </h5>
+            <p class="text-muted small mb-0">
+              Obrigatório existir pelo menos <strong>1 item</strong> e no máximo <strong>10 itens</strong> por pedido.
+            </p>
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <span id="itemCountBadge" class="badge bg-light text-primary border border-primary-subtle px-3 py-2 fs-6 fw-semibold">
+              <i class="bi bi-list-check me-1"></i>
+              <span id="itemCountNum">{{ itens|length if itens else 1 }}</span> / 10 itens
+            </span>
+            <button type="button" id="btnAddItem" class="btn btn-primary-custom btn-sm px-3">
+              <i class="bi bi-plus-lg me-1"></i> Adicionar Item
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table align-middle mb-0" id="itensTable">
+            <thead class="table-light text-secondary small text-uppercase">
+              <tr>
+                <th style="width: 50px;" class="text-center">#</th>
+                <th>Descrição do Item *</th>
+                <th style="width: 140px;">Quantidade *</th>
+                <th style="width: 170px;">Valor Unitário (R$) *</th>
+                <th style="width: 180px;">Valor Total do Item (R$)</th>
+                <th style="width: 60px;" class="text-center">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="itensTableBody">
+              {% for item in itens %}
+                <tr class="item-row" data-index="{{ loop.index0 }}">
+                  <td class="text-center fw-bold text-muted row-number">{{ loop.index }}</td>
+                  <td>
+                    {% if item.id %}
+                      <input type="hidden" name="itens-{{ loop.index0 }}-id" value="{{ item.id }}">
+                    {% endif %}
+                    <input type="text"
+                           name="itens-{{ loop.index0 }}-descricao"
+                           class="form-control item-descricao"
+                           placeholder="Ex: Consultoria técnica, Monitor 27'', etc."
+                           value="{{ item.descricao }}"
+                           required>
+                  </td>
+                  <td>
+                    <input type="number"
+                           name="itens-{{ loop.index0 }}-quantidade"
+                           class="form-control item-qtd text-end"
+                           placeholder="1"
+                           step="any"
+                           min="0.01"
+                           value="{{ item.quantidade if item.quantidade is defined and item.quantidade != '' else 1 }}"
+                           required>
+                  </td>
+                  <td>
+                    <div class="input-group">
+                      <span class="input-group-text bg-light text-muted small">R$</span>
+                      <input type="number"
+                             name="itens-{{ loop.index0 }}-valor_unitario"
+                             class="form-control item-unit text-end"
+                             placeholder="0.00"
+                             step="0.01"
+                             min="0.01"
+                             value="{{ item.valor_unitario if item.valor_unitario is defined and item.valor_unitario != '' else '' }}"
+                             required>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="input-group">
+                      <span class="input-group-text bg-light text-muted small">R$</span>
+                      <input type="text"
+                             name="itens-{{ loop.index0 }}-valor_total"
+                             class="form-control item-total text-end bg-light fw-bold text-dark"
+                             value="{{ '%.2f'|format(item.valor_total) if item.valor_total is defined and item.valor_total else '0.00' }}"
+                             readonly>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-remove-item" title="Remover item">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              {% else %}
+                <tr class="item-row" data-index="0">
+                  <td class="text-center fw-bold text-muted row-number">1</td>
+                  <td>
+                    <input type="text"
+                           name="itens-0-descricao"
+                           class="form-control item-descricao"
+                           placeholder="Ex: Consultoria técnica, Monitor 27'', etc."
+                           required>
+                  </td>
+                  <td>
+                    <input type="number"
+                           name="itens-0-quantidade"
+                           class="form-control item-qtd text-end"
+                           placeholder="1"
+                           step="any"
+                           min="0.01"
+                           value="1"
+                           required>
+                  </td>
+                  <td>
+                    <div class="input-group">
+                      <span class="input-group-text bg-light text-muted small">R$</span>
+                      <input type="number"
+                             name="itens-0-valor_unitario"
+                             class="form-control item-unit text-end"
+                             placeholder="0.00"
+                             step="0.01"
+                             min="0.01"
+                             required>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="input-group">
+                      <span class="input-group-text bg-light text-muted small">R$</span>
+                      <input type="text"
+                             name="itens-0-valor_total"
+                             class="form-control item-total text-end bg-light fw-bold text-dark"
+                             value="0.00"
+                             readonly>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-remove-item" title="Remover item">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot class="table-light border-top">
+              <tr>
+                <td colspan="4" class="text-end fw-bold text-dark py-3">
+                  <span class="text-muted me-2 small">Soma de todos os itens:</span>
+                  Valor Total do Pedido:
+                </td>
+                <td class="fw-bold text-success fs-5 py-3">
+                  <span id="orderTotalDisplay">R$ 0,00</span>
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div id="itemLimitAlert" class="alert alert-warning d-none mt-3 mb-0 py-2 small d-flex align-items-center gap-2">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <span>Limite máximo de 10 itens atingido para este pedido. Para adicionar outro item, remova um item existente.</span>
+        </div>
+      </div>
+
+      <!-- OBSERVAÇÕES E DETALHES GERAIS -->
       <div class="card-custom p-4 mb-4 bg-white">
         <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
-          <i class="bi bi-box-seam text-info"></i> Detalhes dos Itens & Descrição
+          <i class="bi bi-chat-left-text text-secondary"></i> Observações e Resumo Adicional
         </h5>
 
         <div class="mb-3">
           <label for="descricao" class="form-label">{{ form.descricao.label.text }}</label>
-          {{ form.descricao(class="form-control" + (" is-invalid" if form.descricao.errors else ""), rows=4, placeholder="Descreva os produtos vendidos, serviços prestados, quantidades, especificações...") }}
+          {{ form.descricao(class="form-control" + (" is-invalid" if form.descricao.errors else ""), rows=2, placeholder="Resumo opcional dos serviços ou produtos contratados (preenchido automaticamente se deixado em branco)...") }}
           {% for error in form.descricao.errors %}
             <div class="invalid-feedback">{{ error }}</div>
           {% endfor %}
@@ -100,20 +272,304 @@
 
         <div class="mb-0">
           <label for="observacoes" class="form-label">{{ form.observacoes.label.text }}</label>
-          {{ form.observacoes(class="form-control" + (" is-invalid" if form.observacoes.errors else ""), rows=3, placeholder="Observações de entrega, termos de pagamento, notas de garantia...") }}
+          {{ form.observacoes(class="form-control" + (" is-invalid" if form.observacoes.errors else ""), rows=2, placeholder="Observações de entrega, termos de garantia, condições especiais de faturamento...") }}
           {% for error in form.observacoes.errors %}
             <div class="invalid-feedback">{{ error }}</div>
           {% endfor %}
         </div>
       </div>
 
+      <!-- BOTÕES DE AÇÃO -->
       <div class="d-flex align-items-center justify-content-end gap-2 mb-5">
         <a href="{{ url_for('pedidos.index') }}" class="btn btn-light-custom px-4">Cancelar</a>
-        <button type="submit" class="btn btn-primary-custom px-4">
+        <button type="submit" id="btnSubmitPedido" class="btn btn-primary-custom px-4">
           <i class="bi bi-check-lg"></i> {{ acao }}
         </button>
       </div>
     </form>
   </div>
 </div>
+
+<!-- TEMPLATE PARA NOVA LINHA DE ITEM -->
+<template id="itemRowTemplate">
+  <tr class="item-row" data-index="__INDEX__">
+    <td class="text-center fw-bold text-muted row-number">__NUM__</td>
+    <td>
+      <input type="text"
+             name="itens-__INDEX__-descricao"
+             class="form-control item-descricao"
+             placeholder="Ex: Consultoria técnica, Monitor 27'', etc."
+             required>
+    </td>
+    <td>
+      <input type="number"
+             name="itens-__INDEX__-quantidade"
+             class="form-control item-qtd text-end"
+             placeholder="1"
+             step="any"
+             min="0.01"
+             value="1"
+             required>
+    </td>
+    <td>
+      <div class="input-group">
+        <span class="input-group-text bg-light text-muted small">R$</span>
+        <input type="number"
+               name="itens-__INDEX__-valor_unitario"
+               class="form-control item-unit text-end"
+               placeholder="0.00"
+               step="0.01"
+               min="0.01"
+               required>
+      </div>
+    </td>
+    <td>
+      <div class="input-group">
+        <span class="input-group-text bg-light text-muted small">R$</span>
+        <input type="text"
+               name="itens-__INDEX__-valor_total"
+               class="form-control item-total text-end bg-light fw-bold text-dark"
+               value="0.00"
+               readonly>
+      </div>
+    </td>
+    <td class="text-center">
+      <button type="button" class="btn btn-outline-danger btn-sm btn-remove-item" title="Remover item">
+        <i class="bi bi-trash"></i>
+      </button>
+    </td>
+  </tr>
+</template>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const tableBody = document.getElementById('itensTableBody');
+  const btnAddItem = document.getElementById('btnAddItem');
+  const itemCountBadge = document.getElementById('itemCountNum');
+  const itemLimitAlert = document.getElementById('itemLimitAlert');
+  const template = document.getElementById('itemRowTemplate');
+  const valorTotalInput = document.getElementById('valor_total');
+  const orderTotalDisplay = document.getElementById('orderTotalDisplay');
+  const pedidoForm = document.getElementById('pedidoForm');
+
+  const MAX_ITENS = 10;
+  const MIN_ITENS = 1;
+
+  function formatBRL(value) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  }
+
+  // Recalcula o subtotal de uma linha (Qtd * Vlr Unitario)
+  function recalculateRow(row) {
+    const qtdInput = row.querySelector('.item-qtd');
+    const unitInput = row.querySelector('.item-unit');
+    const totalInput = row.querySelector('.item-total');
+
+    const qtd = parseFloat(qtdInput.value.replace(',', '.')) || 0;
+    const unit = parseFloat(unitInput.value.replace(',', '.')) || 0;
+
+    const rowTotal = Math.round((qtd * unit) * 100) / 100;
+    totalInput.value = rowTotal.toFixed(2);
+
+    return rowTotal;
+  }
+
+  // Recalcula todos os itens e totaliza o pedido
+  function recalculateAll() {
+    const rows = tableBody.querySelectorAll('.item-row');
+    let orderTotal = 0;
+
+    rows.forEach(function (row) {
+      orderTotal += recalculateRow(row);
+    });
+
+    orderTotal = Math.round(orderTotal * 100) / 100;
+
+    if (valorTotalInput) {
+      valorTotalInput.value = orderTotal.toFixed(2);
+    }
+    if (orderTotalDisplay) {
+      orderTotalDisplay.textContent = formatBRL(orderTotal);
+    }
+  }
+
+  // Reindexa as linhas para manter a integridade dos inputs itens-0-*, itens-1-*, etc.
+  function reindexRows() {
+    const rows = tableBody.querySelectorAll('.item-row');
+    const totalRows = rows.length;
+
+    if (itemCountBadge) {
+      itemCountBadge.textContent = totalRows;
+    }
+
+    rows.forEach(function (row, idx) {
+      row.setAttribute('data-index', idx);
+      const rowNumberEl = row.querySelector('.row-number');
+      if (rowNumberEl) {
+        rowNumberEl.textContent = idx + 1;
+      }
+
+      // Atualiza os nomes dos campos para manter a numeração sequencial
+      row.querySelectorAll('input').forEach(function (input) {
+        const name = input.getAttribute('name');
+        if (name && name.startsWith('itens-')) {
+          const parts = name.split('-');
+          if (parts.length >= 3) {
+            input.setAttribute('name', `itens-${idx}-${parts.slice(2).join('-')}`);
+          }
+        }
+      });
+
+      // Se houver apenas 1 item, desabilita o botão de remoção para garantir pelo menos 1 item
+      const removeBtn = row.querySelector('.btn-remove-item');
+      if (removeBtn) {
+        if (totalRows <= MIN_ITENS) {
+          removeBtn.setAttribute('disabled', 'disabled');
+          removeBtn.setAttribute('title', 'O pedido deve ter pelo menos 1 item.');
+          removeBtn.classList.add('disabled');
+        } else {
+          removeBtn.removeAttribute('disabled');
+          removeBtn.setAttribute('title', 'Remover este item');
+          removeBtn.classList.remove('disabled');
+        }
+      }
+    });
+
+    // Controla o botão de adicionar item de acordo com o limite de 10
+    if (totalRows >= MAX_ITENS) {
+      if (btnAddItem) {
+        btnAddItem.setAttribute('disabled', 'disabled');
+      }
+      if (itemLimitAlert) {
+        itemLimitAlert.classList.remove('d-none');
+      }
+    } else {
+      if (btnAddItem) {
+        btnAddItem.removeAttribute('disabled');
+      }
+      if (itemLimitAlert) {
+        itemLimitAlert.classList.add('d-none');
+      }
+    }
+  }
+
+  // Adicionar novo item
+  if (btnAddItem) {
+    btnAddItem.addEventListener('click', function () {
+      const rows = tableBody.querySelectorAll('.item-row');
+      if (rows.length >= MAX_ITENS) {
+        alert('Limite máximo de 10 itens por pedido atingido.');
+        return;
+      }
+
+      const newIndex = rows.length;
+      let html = template.innerHTML
+        .replace(/__INDEX__/g, newIndex)
+        .replace(/__NUM__/g, newIndex + 1);
+
+      const tempDiv = document.createElement('tbody');
+      tempDiv.innerHTML = html;
+      const newRow = tempDiv.firstElementChild;
+
+      tableBody.appendChild(newRow);
+
+      reindexRows();
+      recalculateAll();
+
+      const descInput = newRow.querySelector('.item-descricao');
+      if (descInput) {
+        descInput.focus();
+      }
+    });
+  }
+
+  // Event Delegation para inputs e remoção de itens
+  tableBody.addEventListener('input', function (e) {
+    if (e.target.classList.contains('item-qtd') || e.target.classList.contains('item-unit')) {
+      recalculateAll();
+    }
+  });
+
+  tableBody.addEventListener('change', function (e) {
+    if (e.target.classList.contains('item-qtd') || e.target.classList.contains('item-unit')) {
+      recalculateAll();
+    }
+  });
+
+  tableBody.addEventListener('click', function (e) {
+    const btn = e.target.closest('.btn-remove-item');
+    if (!btn) return;
+
+    const rows = tableBody.querySelectorAll('.item-row');
+    if (rows.length <= MIN_ITENS) {
+      alert('O pedido deve possuir pelo menos 1 item.');
+      return;
+    }
+
+    const row = btn.closest('.item-row');
+    if (row) {
+      row.remove();
+      reindexRows();
+      recalculateAll();
+    }
+  });
+
+  // Validação no envio do formulário
+  if (pedidoForm) {
+    pedidoForm.addEventListener('submit', function (e) {
+      reindexRows();
+      recalculateAll();
+
+      const rows = tableBody.querySelectorAll('.item-row');
+      if (rows.length < MIN_ITENS) {
+        e.preventDefault();
+        alert('O pedido deve conter pelo menos 1 item.');
+        return false;
+      }
+
+      if (rows.length > MAX_ITENS) {
+        e.preventDefault();
+        alert('O pedido pode conter no máximo 10 itens.');
+        return false;
+      }
+
+      // Validar cada linha
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const desc = r.querySelector('.item-descricao').value.trim();
+        const qtd = parseFloat(r.querySelector('.item-qtd').value) || 0;
+        const unit = parseFloat(r.querySelector('.item-unit').value) || 0;
+
+        if (!desc) {
+          e.preventDefault();
+          alert(`Por favor, preencha a descrição do item #${i + 1}.`);
+          r.querySelector('.item-descricao').focus();
+          return false;
+        }
+
+        if (qtd <= 0) {
+          e.preventDefault();
+          alert(`A quantidade do item #${i + 1} deve ser maior que zero.`);
+          r.querySelector('.item-qtd').focus();
+          return false;
+        }
+
+        if (unit <= 0) {
+          e.preventDefault();
+          alert(`O valor unitário do item #${i + 1} deve ser maior que zero.`);
+          r.querySelector('.item-unit').focus();
+          return false;
+        }
+      }
+    });
+  }
+
+  // Inicialização no carregamento da página
+  reindexRows();
+  recalculateAll();
+});
+</script>
+{% endblock %}
+

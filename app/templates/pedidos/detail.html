@@ -130,13 +130,77 @@
         </div>
       </div>
 
-      <!-- ITEMS / DESCRIPTION -->
+      <!-- ITEMS TABLE -->
       <div class="mb-4">
-        <h6 class="text-uppercase text-muted fw-bold small mb-2">Itens / Descrição dos Serviços e Produtos</h6>
-        <div class="p-3 bg-light rounded-3 border">
-          <p class="mb-0 text-dark" style="white-space: pre-line;">{{ pedido.descricao }}</p>
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h6 class="text-uppercase text-muted fw-bold small mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-box-seam text-primary"></i> Itens do Pedido ({{ pedido.itens|length if pedido.itens else 0 }})
+          </h6>
+          <span class="badge bg-light text-muted border small">
+            {{ pedido.itens|length }} {{ 'item cadastrado' if (pedido.itens|length == 1) else 'itens cadastrados' }}
+          </span>
+        </div>
+
+        <div class="table-responsive border rounded-3 overflow-hidden">
+          <table class="table table-striped align-middle mb-0">
+            <thead class="table-light text-secondary small text-uppercase">
+              <tr>
+                <th style="width: 50px;" class="text-center">#</th>
+                <th>Descrição do Item</th>
+                <th style="width: 130px;" class="text-end">Quantidade</th>
+                <th style="width: 170px;" class="text-end">Valor Unitário</th>
+                <th style="width: 170px;" class="text-end">Valor Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in pedido.itens %}
+                <tr>
+                  <td class="text-center text-muted fw-semibold">{{ loop.index }}</td>
+                  <td>
+                    <span class="fw-semibold text-dark">{{ item.descricao }}</span>
+                  </td>
+                  <td class="text-end font-monospace">
+                    {{ item.quantidade|int if item.quantidade == item.quantidade|int else item.quantidade }}
+                  </td>
+                  <td class="text-end text-muted">
+                    {{ item.valor_unitario | currency }}
+                  </td>
+                  <td class="text-end fw-bold text-dark">
+                    {{ item.valor_total | currency }}
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="5" class="p-3 text-muted">
+                    {{ pedido.descricao or 'Nenhum item discriminado individualmente.' }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot class="table-light border-top">
+              <tr>
+                <td colspan="4" class="text-end fw-bold text-dark py-3">
+                  <span class="text-muted small me-2">Soma dos Itens:</span>
+                  Valor Total do Pedido:
+                </td>
+                <td class="text-end fw-bold text-success fs-5 py-3">
+                  {{ pedido.valor_total | currency }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
+
+      <!-- GENERAL DESCRIPTION / NOTES -->
+      {% if pedido.descricao and pedido.descricao != pedido.resumo_itens %}
+        <div class="mb-4">
+          <h6 class="text-uppercase text-muted fw-bold small mb-2">Resumo Geral / Descrição do Pedido</h6>
+          <div class="p-3 bg-light rounded-3 border">
+            <p class="mb-0 text-dark" style="white-space: pre-line;">{{ pedido.descricao }}</p>
+          </div>
+        </div>
+      {% endif %}
 
       <!-- OBSERVATIONS -->
       {% if pedido.observacoes %}

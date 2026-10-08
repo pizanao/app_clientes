@@ -27,9 +27,9 @@ class Config:
     # Flask-Session using CacheLib FileSystemCache
     from cachelib.file import FileSystemCache
     SESSION_TYPE = 'cachelib'
-    SESSION_CACHELIB = FileSystemCache(cache_dir=os.path.join(INSTANCE_DIR, 'flask_sessions'), threshold=1000)
+    SESSION_CACHELIB = FileSystemCache(cache_dir=os.path.join(INSTANCE_DIR, 'flask_sessions'), threshold=100)
     SESSION_PERMANENT = True
-    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+    PERMANENT_SESSION_LIFETIME = timedelta(days=1)
     
     # WTForms CSRF
     WTF_CSRF_ENABLED = True

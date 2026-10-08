@@ -1,0 +1,3 @@
+# Scripts shell precisam de LF: com CRLF o bash falha ("$'\r': command not found"),
+# o que acontece ao clonar no Windows com core.autocrlf=true e copiar para o Linux.
+*.sh text eol=lf

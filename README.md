@@ -1,4 +1,4 @@
-# OmniGestão - Sistema de Gestão de Clientes e Pedidos
+# Gestão-NET - Sistema de Gestão de Clientes e Pedidos
 
 Aplicação web desenvolvida em **Python 3 + Flask** com arquitetura moderna e interface completa em **HTML5, CSS3, JavaScript e Bootstrap 5.3**.
 
@@ -114,12 +114,17 @@ chmod +x setup.sh
 O script cuidará de:
 1. Validar o ambiente Python 3;
 2. Criar toda a estrutura de diretórios do projeto;
-3. Gerar todos os arquivos fonte (Models, Forms, Routes, Templates, CSS, JS, Testes);
-4. Criar o ambiente virtual `.venv`;
-5. Instalar todas as dependências do `requirements.txt`;
-6. Inicializar e aplicar as migrações do banco (`flask db upgrade`);
-7. Inserir dados de teste e usuário admin padrão (`flask seed`);
+3. Gerar todos os arquivos fonte (Models, Forms, Routes, Templates, CSS, JS, Migrations, Testes);
+4. Criar o arquivo `.env` com uma `SECRET_KEY` aleatória;
+5. Criar o ambiente virtual `.venv` e instalar as dependências do `requirements.txt`;
+6. Aplicar as migrações do banco (`flask db upgrade`);
+7. Inserir dados de teste e o usuário `admin` com senha aleatória (`flask seed`);
 8. Executar os testes automatizados para certificar a integridade do sistema.
+
+> **Mantenedores:** o `setup.sh` é gerado a partir dos arquivos versionados. Após alterar o código, regenere-o com:
+> ```bash
+> python scripts/gerar_setup.py
+> ```
 
 ### 2. Scripts Utilitários no Linux
 Após a execução do `setup.sh`, os seguintes comandos ficam disponíveis na raiz:
@@ -162,12 +167,24 @@ Acesse no seu navegador: **`http://127.0.0.1:5000`**
 
 ---
 
-## 🔑 Credenciais Padrão de Acesso
+## 🔑 Credenciais de Acesso
 
 - **Usuário:** `admin` (ou `admin@exemplo.com`)
-- **Senha:** `admin123`
+- **Senha:** gerada aleatoriamente pelo `flask seed` e exibida **uma única vez** no terminal.
+  Para definir uma senha conhecida, exporte `SEED_ADMIN_PASSWORD` antes do seed.
+
+Para criar outro administrador (a senha é solicitada de forma oculta):
+```powershell
+flask create-admin --username gerente --email gerente@empresa.com
+```
 
 *Você também pode criar novos usuários a qualquer momento pelo botão "Cadastre-se gratuitamente" na tela de login.*
+
+## 🔒 Produção
+
+- Defina `FLASK_DEBUG=0` e uma `SECRET_KEY` própria (`python -c "import secrets; print(secrets.token_hex(32))"`).
+  Sem ela, a aplicação **se recusa a iniciar** fora do modo debug.
+- Use um servidor WSGI (ex.: `gunicorn wsgi:app` ou `waitress-serve wsgi:app`) em vez de `python wsgi.py`.
 
 ---
 

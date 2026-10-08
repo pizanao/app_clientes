@@ -38,7 +38,9 @@ def dashboard():
         func.coalesce(func.sum(Pedido.valor_total), 0.0)
     ).filter(Pedido.status == 'concluido').scalar() or 0.0
 
-    ticket_medio = (faturamento_total / total_pedidos) if total_pedidos > 0 else 0.0
+    # O faturamento ignora pedidos cancelados, então o divisor também deve ignorá-los
+    pedidos_validos = total_pedidos - pedidos_cancelados
+    ticket_medio = (faturamento_total / pedidos_validos) if pedidos_validos > 0 else 0.0
 
     # Recent items
     ultimos_clientes = Cliente.query.order_by(Cliente.created_at.desc()).limit(5).all()

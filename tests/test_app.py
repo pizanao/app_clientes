@@ -1,10 +1,13 @@
+import os
 import unittest
+from unittest import mock
 from app import create_app
-from app.config import Config
+from app.config import Config, DEV_SECRET_KEY
 from app.extensions import db
 from app.models.user import User
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido
+from app.routes.auth import is_safe_redirect_url
 
 
 class TestConfig(Config):
@@ -336,6 +339,92 @@ class AppTestCase(unittest.TestCase):
         self.assertIn('valor unitário deve ser maior que zero'.encode('utf-8'), res2.data)
         self.assertIsNone(Pedido.query.filter_by(numero_pedido='PED-2026-INV2').first())
 
+    # --- SEGURANÇA: REDIRECIONAMENTO APÓS LOGIN ---
+    def test_is_safe_redirect_url(self):
+        for url in ['/clientes/', '/pedidos/1?x=1', '/dashboard']:
+            self.assertTrue(is_safe_redirect_url(url), url)
+        for url in [None, '', '//evil.com', '/\\evil.com', '\\\\evil.com',
+                    'https://evil.com', 'http:/evil.com', 'javascript:alert(1)', 'clientes']:
+            self.assertFalse(is_safe_redirect_url(url), url)
+
+    def test_login_bloqueia_open_redirect(self):
+        res = self.client.post('/auth/login?next=//evil.com/phish', data={
+            'login': 'tester', 'password': 'password123'
+        })
+        self.assertEqual(res.status_code, 302)
+        self.assertNotIn('evil.com', res.headers['Location'])
+        self.assertTrue(res.headers['Location'].endswith('/dashboard'))
+
+    def test_login_respeita_next_interno(self):
+        res = self.client.post('/auth/login?next=/clientes/', data={
+            'login': 'tester', 'password': 'password123'
+        })
+        self.assertEqual(res.status_code, 302)
+        self.assertTrue(res.headers['Location'].endswith('/clientes/'))
+
+    # --- DASHBOARD ---
+    def test_dashboard_ticket_medio_ignora_cancelados(self):
+        self.login()
+        c = Cliente(nome='Cliente Ticket', email='ticket@cliente.com')
+        db.session.add(c)
+        db.session.flush()
+        db.session.add_all([
+            Pedido(numero_pedido='PED-T-1', cliente_id=c.id, status='concluido', valor_total=100.0),
+            Pedido(numero_pedido='PED-T-2', cliente_id=c.id, status='pendente', valor_total=300.0),
+            Pedido(numero_pedido='PED-T-3', cliente_id=c.id, status='cancelado', valor_total=1000.0),
+        ])
+        db.session.commit()
+
+        res = self.client.get('/dashboard')
+        self.assertEqual(res.status_code, 200)
+        # (100 + 300) / 2 pedidos válidos = 200,00 (antes era 400 / 3 = 133,33)
+        self.assertIn('Ticket Médio: <strong>R$ 200,00</strong>'.encode('utf-8'), res.data)
+
+    # --- CLI ---
+    def test_seed_nao_usa_senha_fixa(self):
+        runner = self.app.test_cli_runner()
+        with mock.patch.dict(os.environ, {'SEED_ADMIN_PASSWORD': 'SenhaSeed#2026'}):
+            result = runner.invoke(args=['seed'])
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertNotIn('SenhaSeed#2026', result.output)
+        admin = User.query.filter_by(username='admin').first()
+        self.assertTrue(admin.check_password('SenhaSeed#2026'))
+        self.assertFalse(admin.check_password('admin123'))
+
+    def test_create_admin_nao_exibe_senha(self):
+        runner = self.app.test_cli_runner()
+        result = runner.invoke(args=['create-admin', '--username', 'chefe',
+                                     '--email', 'chefe@x.com', '--password', 'SuperSenha123'])
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertNotIn('SuperSenha123', result.output)
+        self.assertTrue(User.query.filter_by(username='chefe').first().check_password('SuperSenha123'))
+
+        curta = runner.invoke(args=['create-admin', '--username', 'x', '--email', 'x@x.com', '--password', '123'])
+        self.assertNotEqual(curta.exit_code, 0)
+
+
+class SecretKeyConfigTestCase(unittest.TestCase):
+    """Garante que a aplicação não sobe em produção com a SECRET_KEY de desenvolvimento."""
+
+    def _config(self, secret, testing=False):
+        return type('Cfg', (TestConfig,), {'SECRET_KEY': secret, 'TESTING': testing})
+
+    def test_producao_com_chave_padrao_falha(self):
+        with mock.patch.dict(os.environ, {'FLASK_DEBUG': '0'}):
+            with self.assertRaises(RuntimeError):
+                create_app(self._config(DEV_SECRET_KEY))
+            with self.assertRaises(RuntimeError):
+                create_app(self._config(''))
+
+    def test_producao_com_chave_propria_funciona(self):
+        with mock.patch.dict(os.environ, {'FLASK_DEBUG': '0'}):
+            app = create_app(self._config('chave-de-producao-forte-e-unica'))
+        self.assertFalse(app.debug)
+
+    def test_debug_aceita_chave_padrao(self):
+        with mock.patch.dict(os.environ, {'FLASK_DEBUG': '1'}):
+            app = create_app(self._config(DEV_SECRET_KEY))
+        self.assertTrue(app.debug)
 
 
 if __name__ == '__main__':

@@ -5,10 +5,14 @@ BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
 os.makedirs(INSTANCE_DIR, exist_ok=True)
 
+# Chave usada apenas em desenvolvimento/testes. create_app() recusa iniciar
+# com ela (ou sem SECRET_KEY) quando a aplicação não está em modo debug/teste.
+DEV_SECRET_KEY = 'dev-secret-key-super-secure-change-in-prod-12345'
+
 
 class Config:
     """Base configuration."""
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-super-secure-change-in-prod-12345')
+    SECRET_KEY = os.environ.get('SECRET_KEY') or DEV_SECRET_KEY
     
     # SQLAlchemy
     # No Flask-SQLAlchemy 3+, caminhos relativos SQLite (sqlite:///nome.db) já são resolvidos

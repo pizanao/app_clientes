@@ -1,3 +1,5 @@
+import os
+import secrets
 import click
 from datetime import datetime, timedelta
 from flask.cli import with_appcontext
@@ -19,10 +21,13 @@ def register_cli_commands(app):
     @app.cli.command('create-admin')
     @click.option('--username', default='admin', help='Nome de usuário do admin.')
     @click.option('--email', default='admin@sistema.local', help='E-mail do admin.')
-    @click.option('--password', default='admin123', help='Senha do admin.')
+    @click.password_option('--password', help='Senha do admin (solicitada de forma oculta se omitida).')
     @with_appcontext
     def create_admin_command(username, email, password):
         """Cria um usuário administrador inicial."""
+        if len(password) < 8:
+            raise click.BadParameter('A senha deve ter pelo menos 8 caracteres.', param_hint='--password')
+
         user = User.query.filter((User.username == username) | (User.email == email)).first()
         if user:
             click.echo(f'Usuário {username} ou e-mail {email} já existe.')
@@ -37,7 +42,7 @@ def register_cli_commands(app):
         admin.set_password(password)
         db.session.add(admin)
         db.session.commit()
-        click.echo(f'Administrador "{username}" criado com sucesso! Senha: {password}')
+        click.echo(f'Administrador "{username}" criado com sucesso!')
 
     @app.cli.command('seed')
     @with_appcontext
@@ -48,15 +53,21 @@ def register_cli_commands(app):
         # Admin user
         admin = User.query.filter_by(username='admin').first()
         if not admin:
+            # Sem senha fixa no código: usa SEED_ADMIN_PASSWORD ou gera uma aleatória
+            senha_admin = os.environ.get('SEED_ADMIN_PASSWORD') or secrets.token_urlsafe(9)
             admin = User(
                 nome='Administrador Master',
                 username='admin',
                 email='admin@exemplo.com',
                 ativo=True
             )
-            admin.set_password('admin123')
+            admin.set_password(senha_admin)
             db.session.add(admin)
-            click.echo('Criado usuário admin padrão (admin / admin123).')
+            if os.environ.get('SEED_ADMIN_PASSWORD'):
+                click.echo('Criado usuário "admin" com a senha definida em SEED_ADMIN_PASSWORD.')
+            else:
+                click.echo(f'Criado usuário "admin" com senha gerada: {senha_admin}')
+                click.echo('Anote esta senha agora: ela não será exibida novamente.')
 
         # Sample clients
         if Cliente.query.count() == 0:

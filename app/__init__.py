@@ -1,6 +1,6 @@
 import os
 from flask import Flask, render_template
-from app.config import Config
+from app.config import Config, DEV_SECRET_KEY
 from app.extensions import db, migrate, login_manager, sess
 from app.utils.filters import init_filters
 
@@ -8,6 +8,15 @@ from app.utils.filters import init_filters
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # Fora de debug/teste, exige uma SECRET_KEY própria: com a chave padrão
+    # qualquer pessoa conseguiria forjar cookies de sessão/"lembrar de mim".
+    if not (app.debug or app.testing) and app.config.get('SECRET_KEY') in (None, '', DEV_SECRET_KEY):
+        raise RuntimeError(
+            'SECRET_KEY não configurada para produção. Defina a variável de ambiente '
+            'SECRET_KEY (ex.: python -c "import secrets; print(secrets.token_hex(32))") '
+            'ou use FLASK_DEBUG=1 em desenvolvimento.'
+        )
 
     # Initialize Flask extensions
     db.init_app(app)

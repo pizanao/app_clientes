@@ -41,4 +41,6 @@ instance/
 .idea/
 *.sublime-project
 *.sublime-workspace
-*.sh
+run.sh
+seed.sh
+test.sh

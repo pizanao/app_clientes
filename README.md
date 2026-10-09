@@ -38,6 +38,18 @@ Aplicação web desenvolvida em **Python 3 + Flask** com arquitetura moderna e i
 - **KPIs**: Total de Clientes (e ativos), Total de Pedidos, Faturamento Concluído, Ticket Médio e Pedidos Pendentes.
 - **Tabelas de últimos registros**: Acesso rápido aos 5 últimos pedidos e aos 5 clientes mais recentes.
 
+### 5. Radar de Prospecção Geo-Localizada & Expansão de Fibra (DigitalNet MS)
+- **Clusters de Viabilidade Óptica por Clientes Ativos**: O sistema agrupa a base de clientes por bairros e CEPs de Campo Grande - MS (ex: *Chácara Cachoeira*, *Santa Fé*, *Centro*, *Jardim dos Estados*) para garantir viabilidade técnica de quase 100% e custo marginal de instalação mínimo.
+- **Varredura com IA / Motor de Telecom**: Gera leads B2B e comerciais no mesmo nó óptico com pontuação (*lead score*), operadora atual da concorrência (Vivo Fibra / Claro) e dor operacional mapeada.
+- **Abordagem Anti-Ban no WhatsApp com Opt-in Conversacional**:
+  - Gancho hiperlocal sem envio de links frios.
+  - Oferta superior à concorrência (Wi-Fi 6 comodato, pontos DigiMesh, upload simétrico e suporte 24h local em Campo Grande).
+  - Pedido explícito de consentimento (*"Posso te enviar o comparativo sem compromisso?"*) com opção de saída, eliminando risco de banimento de número.
+  - Disparo de 1-clique via link direto `https://wa.me/...`.
+- **Tutor de Quebra de Objeções (SDR Telecom)**: Scripts prontos contra fidelidade na concorrente, preço, desconfiança de marca e comodismo.
+- **Conversão Automática em 1-Clique**: Converte o lead diretamente em Cliente e Pedido no banco com totalização e planos reais da DigitalNet (Fibra 600, 700 + DigiMesh, 900 Advanced e Link Dedicado B2B).
+- **APIs RESTful desacopladas**: Endpoints prontos em `/leads/api/clusters` e `/leads/api/prospectar` para alimentar frontends modernos (React 19 + Vite ou mobile).
+
 ---
 
 ## 🛠️ Tecnologias Utilizadas

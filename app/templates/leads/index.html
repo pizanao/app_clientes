@@ -1,0 +1,659 @@
+{% extends "base.html" %}
+
+{% block title %}Radar de Leads Telecom & Expansão de Fibra - DigitalNet MS{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS para o Mapa de Calor -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(15, 45, 87, 0.22);
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+  }
+  .leaflet-popup-content {
+    margin: 0 !important;
+    line-height: 1.4;
+  }
+  .leaflet-container {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+  }
+  .heat-badge-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .custom-pin-fibra {
+    background: #1b4f99;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(27, 79, 153, 0.45);
+    font-size: 0.85rem;
+  }
+  .custom-pin-lead {
+    background: #f59e0b;
+    color: #0f172a;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.5);
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+  .custom-pin-lead.high-score {
+    background: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.55);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- CABEÇALHO COM IDENTIDADE DIGITALNET -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+    <div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h1 class="h3 mb-0 dn-header-title">Radar de Prospecção & Expansão de Fibra</h1>
+        <span class="badge py-2 px-3 dn-badge-corp rounded-pill">
+          <i class="bi bi-broadcast-pin text-warning me-1"></i> DigitalNet MS &bull; Campo Grande
+        </span>
+      </div>
+      <p class="text-muted small mb-0 mt-1">
+        Geo-prospecção inteligente na mesma região dos clientes ativos com abordagem anti-ban e opt-in via WhatsApp.
+      </p>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#comoFunciona" aria-expanded="false">
+        <i class="bi bi-shield-check text-warning me-1"></i> Blindagem Anti-Ban
+      </button>
+      <button class="btn btn-dn-yellow btn-sm px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalProspectar">
+        <i class="bi bi-lightning-charge-fill me-1"></i> Nova Prospecção Geo
+      </button>
+    </div>
+  </div>
+
+  <!-- BOX EXPLICATIVO ANTI-BAN (COLLAPSIBLE) -->
+  <div class="collapse mb-4" id="comoFunciona">
+    <div class="card border-0 shadow-sm rounded-3" style="background: linear-gradient(135deg, #0f2d57, #1b4f99); color: #ffffff;">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-shield-lock-fill fs-4 text-warning"></i>
+          <h5 class="fw-bold mb-0 text-white">Estratégia Anti-Ban & Prospecção por Nós Ópticos</h5>
+        </div>
+        <div class="row g-3 small">
+          <div class="col-md-4">
+            <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.08);">
+              <strong class="text-warning d-block mb-1"><i class="bi bi-geo-alt-fill me-1"></i>1. Viabilidade por Vizinhos:</strong>
+              Prospecta apenas em quarteirões onde a DigitalNet já possui clientes ativos. Custo de instalação mínimo e viabilidade técnica garantida no poste.
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.08);">
+              <strong class="text-warning d-block mb-1"><i class="bi bi-router-fill me-1"></i>2. Oferta Superior à Concorrência:</strong>
+              Aborda com argumentos imbatíveis contra Vivo/Claro: roteador Wi-Fi 6 comodato, pontos extras DigiMesh, upload de 50% e suporte 24h presencial em Campo Grande.
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.08);">
+              <strong class="text-warning d-block mb-1"><i class="bi bi-chat-check-fill me-1"></i>3. Opt-in Conversacional Obrigatório:</strong>
+              O primeiro contato nunca envia links externos nem arquivos pesados. Pede permissão explícita para enviar o comparativo, blindando o WhatsApp contra bans.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAPA DE CALOR: DENSIDADE ÓPTICA & OPORTUNIDADES EM CAMPO GRANDE -->
+  <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+    <div class="card-header bg-white py-3 border-bottom d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <div class="p-2 rounded-3" style="background: #fef3c7; color: #b45309;">
+          <i class="bi bi-fire fs-5"></i>
+        </div>
+        <div>
+          <h5 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">
+            Mapa de Calor: Cobertura Óptica & Densidade de Oportunidades
+          </h5>
+          <small class="text-muted">Concentração geo-espacial de clientes DigitalNet MS e leads potenciais em Campo Grande</small>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="btn-group btn-group-sm shadow-sm" role="group">
+          <button type="button" class="btn btn-outline-secondary active" id="btnFiltroTodos" onclick="filtrarMapa('todos')">
+            <i class="bi bi-grid-fill me-1"></i> Todos
+          </button>
+          <button type="button" class="btn btn-outline-secondary" id="btnFiltroFibra" onclick="filtrarMapa('fibra')">
+            <i class="bi bi-broadcast text-primary me-1"></i> Nós de Fibra
+          </button>
+          <button type="button" class="btn btn-outline-secondary" id="btnFiltroLeads" onclick="filtrarMapa('leads')">
+            <i class="bi bi-fire text-warning me-1"></i> Oportunidades
+          </button>
+        </div>
+
+        <button type="button" class="btn btn-sm btn-light border shadow-sm" onclick="centralizarCampoGrande()" title="Centralizar em Campo Grande">
+          <i class="bi bi-crosshair me-1"></i> Recentralizar
+        </button>
+      </div>
+    </div>
+
+    <!-- LEGENDA DO MAPA DE CALOR -->
+    <div class="px-3 py-2 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2 small">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <span class="text-muted fw-semibold">Gradiente Térmico:</span>
+        <span class="heat-badge-chip bg-white border">
+          <span style="width: 12px; height: 12px; border-radius: 50%; background: #1b4f99; display: inline-block;"></span>
+          Rede DigitalNet Iluminada (CTO Ativa)
+        </span>
+        <span class="heat-badge-chip bg-white border">
+          <span style="width: 12px; height: 12px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+          Lead Quente (Score 80-89)
+        </span>
+        <span class="heat-badge-chip bg-white border">
+          <span style="width: 12px; height: 12px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+          Alta Prioridade / Alto Ticket (Score 90+)
+        </span>
+      </div>
+      <div class="text-muted small">
+        <i class="bi bi-cursor me-1 text-primary"></i> Clique em qualquer ponto para ver detalhes ou iniciar o WhatsApp
+      </div>
+    </div>
+
+    <!-- CONTAINER LEAFLET -->
+    <div class="position-relative">
+      <div id="mapaCalor" style="height: 440px; width: 100%; z-index: 1;"></div>
+    </div>
+  </div>
+
+  <!-- RADAR DE BAIRROS (CLUSTERS DE REDE ÓPTICA) -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-2">
+        <div class="p-2 rounded-3" style="background: #e8f0fe; color: var(--dn-blue);">
+          <i class="bi bi-geo-alt-fill fs-5"></i>
+        </div>
+        <div>
+          <h5 class="fw-bold mb-0" style="color: var(--dn-blue-dark);">Clusters de Cobertura Óptica (Bairros com Clientes Ativos)</h5>
+          <small class="text-muted">Selecione uma região para prospectar empresas e residências no mesmo nó de fibra da DigitalNet</small>
+        </div>
+      </div>
+      <span class="badge py-2 px-3 rounded-pill bg-light text-dark border fw-semibold">
+        <i class="bi bi-pin-map-fill text-primary me-1"></i> {{ clusters|length }} Regiões Mapeadas
+      </span>
+    </div>
+    <div class="card-body p-3 bg-light bg-opacity-50">
+      <div class="row g-3">
+        {% for c in clusters %}
+        <div class="col-xl-3 col-lg-4 col-md-6">
+          <div class="dn-cluster-card {% if bairro_selecionado == c.bairro %}active-cluster{% endif %} h-100 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h6 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">{{ c.bairro }}</h6>
+              <span class="badge py-1 px-2 rounded-pill" style="background: #e0f2fe; color: #0369a1; font-size: 0.7rem; font-weight: 700;">
+                <i class="bi bi-check-circle-fill me-1 text-success"></i>{{ c.viabilidade_estimada }}
+              </span>
+            </div>
+            
+            <div class="small text-muted mb-2">
+              <i class="bi bi-building text-secondary me-1"></i> {{ c.cidade }} &bull; {{ c.estado }}
+            </div>
+
+            <div class="d-flex justify-content-between text-muted small py-2 my-2 border-top border-bottom">
+              <span><strong class="text-dark">{{ c.total_clientes }}</strong> clientes ativos</span>
+              <span><strong class="text-primary">{{ c.total_leads }}</strong> leads na fila</span>
+            </div>
+
+            <div class="d-flex gap-2 mt-auto pt-2">
+              <a href="{{ url_for('leads.index', bairro=c.bairro) }}" class="btn btn-sm btn-outline-secondary flex-fill" title="Ver leads deste bairro">
+                <i class="bi bi-funnel me-1"></i> Filtrar
+              </a>
+              <form action="{{ url_for('leads.prospectar_regiao') }}" method="POST" class="d-inline flex-fill">
+                <input type="hidden" name="bairro" value="{{ c.bairro }}">
+                <input type="hidden" name="cidade" value="{{ c.cidade }}">
+                <input type="hidden" name="count" value="4">
+                <button type="submit" class="btn btn-sm btn-dn-blue w-100" title="Gerar mais leads vizinhos com IA">
+                  <i class="bi bi-lightning-charge-fill text-warning me-1"></i> Prospectar
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- MÉTRICAS DO FUNIL DE LEADS (KPI CARDS DIGITALNET) -->
+  <div class="row g-3 mb-4">
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid var(--dn-blue);">
+        <span class="kpi-label">Total Leads</span>
+        <div class="kpi-number" style="color: var(--dn-blue);">{{ total_leads }}</div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid #64748b;">
+        <span class="kpi-label">Novos / Fila</span>
+        <div class="kpi-number" style="color: #475569;">{{ total_novos }}</div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid var(--dn-yellow);">
+        <span class="kpi-label">Opt-in Enviado</span>
+        <div class="kpi-number" style="color: var(--dn-yellow-dark);">{{ total_optin_solicitado }}</div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid #0284c7;">
+        <span class="kpi-label">Opt-in Aceito</span>
+        <div class="kpi-number" style="color: #0284c7;">{{ total_optin_aceito }}</div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid #2563eb;">
+        <span class="kpi-label">Proposta Enviada</span>
+        <div class="kpi-number" style="color: #2563eb;">{{ total_proposta }}</div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid #10b981;">
+        <span class="kpi-label">Convertidos</span>
+        <div class="kpi-number" style="color: #059669;">{{ total_convertidos }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTROS E TABELA DE LEADS -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 border-bottom">
+      <form method="GET" action="{{ url_for('leads.index') }}" class="row g-2 align-items-center">
+        <div class="col-md-4">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-search"></i></span>
+            <input type="text" name="busca" class="form-control border-start-0 bg-light" placeholder="Buscar por empresa, decisor, rua..." value="{{ busca }}">
+          </div>
+        </div>
+        <div class="col-md-3">
+          <select name="bairro" class="form-select form-select-sm bg-light">
+            <option value="">Todos os Bairros</option>
+            {% for c in clusters %}
+            <option value="{{ c.bairro }}" {% if bairro_selecionado == c.bairro %}selected{% endif %}>{{ c.bairro }} ({{ c.total_clientes }} clientes)</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select name="status" class="form-select form-select-sm bg-light">
+            <option value="">Todos os Status</option>
+            <option value="novo" {% if status_selecionado == 'novo' %}selected{% endif %}>Novo Lead</option>
+            <option value="optin_solicitado" {% if status_selecionado == 'optin_solicitado' %}selected{% endif %}>Opt-in Solicitado</option>
+            <option value="optin_aceito" {% if status_selecionado == 'optin_aceito' %}selected{% endif %}>Opt-in Aceito</option>
+            <option value="proposta_enviada" {% if status_selecionado == 'proposta_enviada' %}selected{% endif %}>Proposta Enviada</option>
+            <option value="convertido" {% if status_selecionado == 'convertido' %}selected{% endif %}>Convertido</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-sm btn-dn-blue flex-fill">
+            <i class="bi bi-funnel-fill me-1"></i> Filtrar
+          </button>
+          {% if busca or bairro_selecionado or status_selecionado %}
+          <a href="{{ url_for('leads.index') }}" class="btn btn-sm btn-outline-secondary" title="Limpar filtros">
+            <i class="bi bi-x-lg"></i>
+          </a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="dn-table-header">
+          <tr>
+            <th class="ps-3">Lead / Empresa</th>
+            <th>Localização (MS)</th>
+            <th>Plano Recomendado</th>
+            <th>Operadora Atual</th>
+            <th>Score</th>
+            <th>Opt-in WhatsApp</th>
+            <th>Status</th>
+            <th class="text-end pe-3">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if leads %}
+            {% for l in leads %}
+            <tr>
+              <td class="ps-3">
+                <div class="fw-bold" style="color: var(--dn-blue-deep);">{{ l.empresa }}</div>
+                <small class="text-muted">{{ l.nome }} {% if l.cargo %}&bull; <span class="text-secondary">{{ l.cargo }}</span>{% endif %}</small>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border"><i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ l.bairro }}</span>
+                <div class="small text-muted mt-1">{{ l.logradouro or 'Área Central' }}, {{ l.numero or 'S/N' }}</div>
+              </td>
+              <td>
+                <div class="small fw-bold" style="color: var(--dn-blue);">{{ l.plano_sugerido }}</div>
+                <small class="text-muted">R$ {{ "%.2f"|format(l.valor_mensal_sugerido)|replace('.', ',') }}/mês</small>
+              </td>
+              <td>
+                <span class="badge bg-secondary bg-opacity-10 text-dark border" style="font-size: 0.75rem;">{{ l.operadora_atual }}</span>
+              </td>
+              <td>
+                <span class="badge {% if l.lead_score >= 90 %}bg-success{% elif l.lead_score >= 80 %}bg-primary{% else %}bg-warning text-dark{% endif %} px-2 py-1">
+                  {{ l.lead_score }} pts
+                </span>
+              </td>
+              <td>
+                {% if l.optin_status == 'aceito' %}
+                <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Opt-in Aceito</span>
+                {% elif l.optin_status == 'recusado' %}
+                <span class="badge bg-danger">Recusado</span>
+                {% else %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Pendente</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge {{ l.status_badge_class }}">{{ l.status_label }}</span>
+              </td>
+              <td class="text-end pe-3">
+                <div class="btn-group btn-group-sm">
+                  {% if l.telefone and l.whatsapp_url != '#' %}
+                  <a href="{{ l.whatsapp_url }}" target="_blank" class="btn btn-success" title="Iniciar Abordagem com Opt-in no WhatsApp Web">
+                    <i class="bi bi-whatsapp"></i>
+                  </a>
+                  {% endif %}
+                  <a href="{{ url_for('leads.detail', lead_id=l.id) }}" class="btn btn-dn-blue" title="Abrir Dossiê 360° e Quebra de Objeções">
+                    <i class="bi bi-eye-fill me-1"></i> Dossiê
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="8" class="text-center py-5 text-muted">
+                <i class="bi bi-radar fs-1 d-block mb-3 text-secondary"></i>
+                <p class="mb-2 fw-semibold text-dark">Nenhum lead encontrado para os filtros selecionados.</p>
+                <small>Clique em <strong>"Nova Prospecção Geo"</strong> acima para mapear clientes em Campo Grande!</small>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL PROSPECTAR COM IA (TEMA DIGITALNET) -->
+<div class="modal fade" id="modalProspectar" tabindex="-1" aria-labelledby="modalProspectarLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow-lg">
+      <form action="{{ url_for('leads.prospectar_regiao') }}" method="POST">
+        <div class="modal-header text-white" style="background: linear-gradient(135deg, var(--dn-blue-deep), var(--dn-blue));">
+          <h5 class="modal-title" id="modalProspectarLabel">
+            <i class="bi bi-radar me-2 text-warning"></i>Nova Prospecção Geo-Localizada
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="small text-muted mb-3">
+            O motor de IA identifica novos clientes potenciais no mesmo bairro onde a <strong>DigitalNet MS</strong> já possui rede óptica ativa, garantindo viabilidade e gerando o script anti-ban para WhatsApp.
+          </p>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-dark">Bairro / Região em Campo Grande (MS)</label>
+            <select name="bairro" class="form-select bg-light" required>
+              <option value="Chácara Cachoeira">Chácara Cachoeira (Alta Densidade Empresarial / Clínicas)</option>
+              <option value="Centro">Centro (Comércios, Escritórios e Contabilidades)</option>
+              <option value="Santa Fé">Santa Fé (Boutiques, Estética e Consultórios)</option>
+              <option value="Jardim dos Estados">Jardim dos Estados (Gastronomia e Escritórios)</option>
+              <option value="Tiradentes">Tiradentes (Escolas, Academias e Varejo)</option>
+              <option value="Vilas Boas">Vilas Boas (Comércio Local e Gastronomia)</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-dark">Nicho Comercial / Segmento</label>
+            <input type="text" name="niche" class="form-control bg-light" value="Clínicas, Consultórios e Escritórios" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-dark">Quantidade de Leads para Mapear</label>
+            <select name="count" class="form-select bg-light">
+              <option value="3">3 leads qualificados</option>
+              <option value="5" selected>5 leads qualificados</option>
+              <option value="8">8 leads qualificados</option>
+            </select>
+          </div>
+
+          <div class="alert alert-warning border-warning bg-warning bg-opacity-10 py-2 small mb-0 d-flex align-items-center">
+            <i class="bi bi-shield-check text-warning-emphasis fs-5 me-2"></i>
+            <div>
+              Cada lead virá com <strong>score de qualificação</strong>, <strong>dor mapeada</strong> e o <strong>script de opt-in de 1 clique</strong>.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-dn-blue btn-sm px-3 shadow-sm">
+            <i class="bi bi-lightning-charge-fill text-warning me-1"></i> Iniciar Varredura de Leads
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet JS para Renderização do Mapa de Calor -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+  // Dados passados pelo backend Flask
+  const rawMapPoints = {{ map_points|tojson|safe }};
+  const centroCG = [-20.4600, -54.5980];
+  
+  let mapInstance = null;
+  let layerGroupFibra = null;
+  let layerGroupLeads = null;
+  let layerGroupHeat = null;
+
+  function initMap() {
+    const mapContainer = document.getElementById('mapaCalor');
+    if (!mapContainer || typeof L === 'undefined') return;
+
+    // Inicializa o mapa Leaflet
+    mapInstance = L.map('mapaCalor', {
+      center: centroCG,
+      zoom: 13,
+      zoomControl: true,
+      scrollWheelZoom: false
+    });
+
+    // Camada de Azulejos (CartoDB Voyager - visual executivo e limpo)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(mapInstance);
+
+    // Grupos de camadas
+    layerGroupFibra = L.layerGroup().addTo(mapInstance);
+    layerGroupLeads = L.layerGroup().addTo(mapInstance);
+    layerGroupHeat = L.layerGroup().addTo(mapInstance);
+
+    renderPoints();
+  }
+
+  function renderPoints() {
+    if (!mapInstance) return;
+
+    layerGroupFibra.clearLayers();
+    layerGroupLeads.clearLayers();
+    layerGroupHeat.clearLayers();
+
+    rawMapPoints.forEach(pt => {
+      if (pt.tipo === 'cluster_fibra') {
+        // Círculo de calor térmico para rede ativa
+        const raio = 380 + (pt.clientes * 100);
+        const heatCircle = L.circle([pt.lat, pt.lng], {
+          radius: raio,
+          color: '#1b4f99',
+          fillColor: '#1b4f99',
+          fillOpacity: 0.18,
+          weight: 1.5,
+          dashArray: '4, 4'
+        });
+        layerGroupHeat.addLayer(heatCircle);
+
+        // Marcador do Nó Óptico
+        const iconFibra = L.divIcon({
+          className: 'custom-pin-fibra-wrapper',
+          html: `<div class="custom-pin-fibra" title="${pt.titulo}"><i class="bi bi-broadcast"></i></div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+
+        const marker = L.marker([pt.lat, pt.lng], { icon: iconFibra });
+        const popupContent = `
+          <div style="width: 250px;">
+            <div style="background: linear-gradient(135deg, #0f2d57, #1b4f99); color: white; padding: 12px 14px;">
+              <small style="color: #fbbf24; text-transform: uppercase; font-weight: 700; font-size: 0.7rem;">Nó de Fibra DigitalNet</small>
+              <h6 style="margin: 0; font-weight: 700; font-size: 1rem;">${pt.bairro}</h6>
+            </div>
+            <div style="padding: 12px 14px; background: white; font-size: 0.85rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span style="color: #64748b;">Clientes Ativos:</span>
+                <strong style="color: #0f172a;">${pt.clientes}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span style="color: #64748b;">Leads Mapeados:</span>
+                <strong style="color: #1b4f99;">${pt.leads}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span style="color: #64748b;">Viabilidade:</span>
+                <span style="color: #059669; font-weight: 700;">${pt.viabilidade}</span>
+              </div>
+              <a href="?bairro=${encodeURIComponent(pt.bairro)}" class="btn btn-sm btn-dn-blue w-100" style="padding: 4px 8px; font-size: 0.75rem;">
+                <i class="bi bi-funnel me-1"></i> Filtrar este Bairro
+              </a>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        layerGroupFibra.addLayer(marker);
+
+      } else if (pt.tipo === 'lead_oportunidade') {
+        // Círculo térmico (Amarelo ou Vermelho conforme score)
+        const isHighScore = pt.score >= 90;
+        const heatColor = isHighScore ? '#ef4444' : '#f59e0b';
+        const heatRadius = 220 + (pt.score * 1.5);
+
+        const leadHeat = L.circle([pt.lat, pt.lng], {
+          radius: heatRadius,
+          color: heatColor,
+          fillColor: heatColor,
+          fillOpacity: isHighScore ? 0.28 : 0.20,
+          weight: 1
+        });
+        layerGroupHeat.addLayer(leadHeat);
+
+        // Marcador do Lead
+        const pinClass = isHighScore ? 'custom-pin-lead high-score' : 'custom-pin-lead';
+        const iconLead = L.divIcon({
+          className: 'custom-pin-lead-wrapper',
+          html: `<div class="${pinClass}" title="${pt.titulo}"><i class="bi bi-building"></i></div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+
+        const marker = L.marker([pt.lat, pt.lng], { icon: iconLead });
+        const popupContent = `
+          <div style="width: 270px;">
+            <div style="background: ${isHighScore ? 'linear-gradient(135deg, #b91c1c, #ef4444)' : 'linear-gradient(135deg, #d97706, #f59e0b)'}; color: white; padding: 10px 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <small style="color: white; opacity: 0.85; font-size: 0.7rem; font-weight: 600;">Oportunidade</small>
+                <span style="background: rgba(0,0,0,0.25); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">Score: ${pt.score}</span>
+              </div>
+              <h6 style="margin: 2px 0 0 0; font-weight: 700; font-size: 0.95rem; color: white;">${pt.titulo}</h6>
+            </div>
+            <div style="padding: 12px 14px; background: white; font-size: 0.85rem;">
+              <div style="color: #475569; margin-bottom: 6px; font-size: 0.8rem;">
+                <i class="bi bi-person me-1"></i> ${pt.contato} ${pt.cargo ? '&bull; ' + pt.cargo : ''}
+              </div>
+              <div style="color: #64748b; margin-bottom: 8px; font-size: 0.75rem;">
+                <i class="bi bi-geo-alt me-1 text-danger"></i> ${pt.endereco}
+              </div>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; margin-bottom: 10px;">
+                <div style="color: #1b4f99; font-weight: 700; font-size: 0.8rem;">${pt.plano}</div>
+                <small style="color: #64748b;">${pt.valor} &bull; Operadora atual: <strong>${pt.operadora}</strong></small>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                ${pt.whatsapp_url !== '#' ? `
+                  <a href="${pt.whatsapp_url}" target="_blank" class="btn btn-sm btn-success" style="flex: 1; font-size: 0.75rem; padding: 5px;">
+                    <i class="bi bi-whatsapp me-1"></i> WhatsApp
+                  </a>
+                ` : ''}
+                <a href="${pt.detail_url}" class="btn btn-sm btn-dn-blue" style="flex: 1; font-size: 0.75rem; padding: 5px;">
+                  <i class="bi bi-eye me-1"></i> Dossiê
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        layerGroupLeads.addLayer(marker);
+      }
+    });
+  }
+
+  function filtrarMapa(tipo) {
+    document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+    
+    if (tipo === 'todos') {
+      document.getElementById('btnFiltroTodos').classList.add('active');
+      if (!mapInstance.hasLayer(layerGroupFibra)) mapInstance.addLayer(layerGroupFibra);
+      if (!mapInstance.hasLayer(layerGroupLeads)) mapInstance.addLayer(layerGroupLeads);
+      if (!mapInstance.hasLayer(layerGroupHeat)) mapInstance.addLayer(layerGroupHeat);
+    } else if (tipo === 'fibra') {
+      document.getElementById('btnFiltroFibra').classList.add('active');
+      if (!mapInstance.hasLayer(layerGroupFibra)) mapInstance.addLayer(layerGroupFibra);
+      if (mapInstance.hasLayer(layerGroupLeads)) mapInstance.removeLayer(layerGroupLeads);
+    } else if (tipo === 'leads') {
+      document.getElementById('btnFiltroLeads').classList.add('active');
+      if (mapInstance.hasLayer(layerGroupFibra)) mapInstance.removeLayer(layerGroupFibra);
+      if (!mapInstance.hasLayer(layerGroupLeads)) mapInstance.addLayer(layerGroupLeads);
+    }
+  }
+
+  function centralizarCampoGrande() {
+    if (mapInstance) {
+      mapInstance.setView(centroCG, 13);
+    }
+  }
+
+  // Inicializa quando a página carregar
+  document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+  });
+</script>
+{% endblock %}

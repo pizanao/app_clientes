@@ -37,3 +37,6 @@ class Config:
     
     # WTForms CSRF
     WTF_CSRF_ENABLED = True
+
+    # Google Gemini AI (Telecom Prospector)
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')

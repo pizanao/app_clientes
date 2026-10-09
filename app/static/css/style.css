@@ -502,3 +502,179 @@ body {
     padding: 1.25rem 1rem;
   }
 }
+
+/* ==========================================================================
+   DIGITALNET MS - TEMA AZUL TELECOM & AMARELO FIBRA
+   ========================================================================== */
+
+:root {
+  --dn-blue: #1b4f99;
+  --dn-blue-dark: #0f2d57;
+  --dn-blue-deep: #091c36;
+  --dn-blue-light: #eff6ff;
+  --dn-blue-border: #bfdbfe;
+  
+  --dn-yellow: #f59e0b;
+  --dn-yellow-gold: #ffbe18;
+  --dn-yellow-light: #fefce8;
+  --dn-yellow-dark: #92400e;
+  --dn-yellow-border: #fde68a;
+}
+
+/* Header & Banner */
+.dn-header-title {
+  color: var(--dn-blue-deep);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.dn-badge-corp {
+  background: linear-gradient(135deg, var(--dn-blue), var(--dn-blue-dark));
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+.dn-badge-yellow {
+  background: var(--dn-yellow-gold);
+  color: #0f172a;
+  font-weight: 700;
+  border-radius: 9999px;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.25);
+}
+
+/* Botões com Identidade DigitalNet */
+.btn-dn-blue {
+  background: linear-gradient(135deg, var(--dn-blue), #143e79);
+  color: #ffffff !important;
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 3px 8px rgba(27, 79, 153, 0.25);
+  transition: all 0.2s ease;
+}
+.btn-dn-blue:hover {
+  background: linear-gradient(135deg, #143e79, var(--dn-blue-deep));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(27, 79, 153, 0.35);
+}
+
+.btn-dn-yellow {
+  background: linear-gradient(135deg, var(--dn-yellow-gold), var(--dn-yellow));
+  color: #0f172a !important;
+  border: none;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(245, 158, 11, 0.25);
+  transition: all 0.2s ease;
+}
+.btn-dn-yellow:hover {
+  background: linear-gradient(135deg, var(--dn-yellow), #d97706);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(245, 158, 11, 0.35);
+}
+
+.btn-dn-outline {
+  border: 1.5px solid var(--dn-blue);
+  color: var(--dn-blue);
+  background: #ffffff;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.btn-dn-outline:hover {
+  background: var(--dn-blue);
+  color: #ffffff;
+}
+
+/* Cards de Clusters de Bairros */
+.dn-cluster-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 1.15rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.dn-cluster-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--dn-blue), var(--dn-yellow-gold));
+}
+.dn-cluster-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgba(27, 79, 153, 0.12);
+  border-color: var(--dn-blue-border);
+}
+.dn-cluster-card.active-cluster {
+  border-color: var(--dn-blue);
+  background-color: var(--dn-blue-light);
+}
+
+/* Indicadores de Funil (KPI Cards) */
+.dn-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 1rem 1.15rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+  position: relative;
+  transition: all 0.2s ease;
+}
+.dn-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.06);
+}
+.dn-kpi-card .kpi-number {
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--dn-blue-deep);
+}
+.dn-kpi-card .kpi-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+/* Tabela de Leads */
+.dn-table-header {
+  background: linear-gradient(135deg, var(--dn-blue-deep), var(--dn-blue));
+  color: #ffffff;
+}
+.dn-table-header th {
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.85rem 1rem;
+  border: none;
+}
+
+/* Hero Banner do Lead (detail.html) */
+.dn-hero-banner {
+  background: linear-gradient(135deg, var(--dn-blue-deep) 0%, var(--dn-blue) 100%);
+  color: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(15, 45, 87, 0.2);
+}
+.dn-hero-banner::after {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 190, 24, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}

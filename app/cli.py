@@ -7,6 +7,8 @@ from app.extensions import db
 from app.models.user import User
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido, ItemPedido
+from app.models.lead import Lead
+from app.services.prospector import TelecomProspectorService
 
 
 def register_cli_commands(app):
@@ -147,6 +149,67 @@ def register_cli_commands(app):
                     ativo=False,
                     observacoes='Cadastro temporariamente inativo a pedido do cliente.'
                 ),
+                # Clientes Estratégicos DigitalNet MS (Campo Grande)
+                Cliente(
+                    nome='Condomínio Residencial Parque das Nações',
+                    email='sindico@parquedasnacoes.ms.gov.br',
+                    telefone='(67) 3321-4455',
+                    documento='04.123.456/0001-78',
+                    cep='79040-010',
+                    logradouro='Rua Raul Pires Barbosa',
+                    numero='1250',
+                    complemento='Administração',
+                    bairro='Chácara Cachoeira',
+                    cidade='Campo Grande',
+                    estado='MS',
+                    ativo=True,
+                    observacoes='Condomínio atendido pela fibra DigitalNet com 60 apartamentos conectados.'
+                ),
+                Cliente(
+                    nome='Clínica Médica Santa Fé Especializada',
+                    email='contato@clinicasantafe.com.br',
+                    telefone='(67) 3345-6789',
+                    documento='18.987.654/0001-32',
+                    cep='79021-120',
+                    logradouro='Rua Ceará',
+                    numero='840',
+                    complemento='Sala 10',
+                    bairro='Santa Fé',
+                    cidade='Campo Grande',
+                    estado='MS',
+                    ativo=True,
+                    observacoes='Link Fibra 700 + DigiMesh em comodato com suporte 24h.'
+                ),
+                Cliente(
+                    nome='Escritório Silva & Associados Advocacia',
+                    email='administrativo@silvaadvocacia.com.br',
+                    telefone='(67) 3388-9900',
+                    documento='22.333.444/0001-55',
+                    cep='79002-001',
+                    logradouro='Rua 14 de Julho',
+                    numero='2100',
+                    complemento='Andar 4',
+                    bairro='Centro',
+                    cidade='Campo Grande',
+                    estado='MS',
+                    ativo=True,
+                    observacoes='Link Dedicado Pro com IP Fixo e redundância.'
+                ),
+                Cliente(
+                    nome='Restaurante e Parrilla Pantaneira',
+                    email='financeiro@parrillapantaneira.com.br',
+                    telefone='(67) 3356-7890',
+                    documento='33.444.555/0001-66',
+                    cep='79020-000',
+                    logradouro='Rua Euclides da Cunha',
+                    numero='650',
+                    complemento='',
+                    bairro='Jardim dos Estados',
+                    cidade='Campo Grande',
+                    estado='MS',
+                    ativo=True,
+                    observacoes='Wi-Fi 6 de alta densidade para 80 clientes simultâneos.'
+                ),
             ]
             db.session.add_all(clientes_exemplo)
             db.session.flush()
@@ -233,6 +296,25 @@ def register_cli_commands(app):
             ]
             db.session.add_all(itens_exemplo)
             click.echo('Clientes, Pedidos e Itens de exemplo cadastrados com sucesso!')
+
+        # Sample leads for telecom prospecting in Campo Grande
+        if Lead.query.count() == 0:
+            leads_chacara = TelecomProspectorService.prospect_neighborhood(
+                bairro='Chácara Cachoeira',
+                cidade='Campo Grande',
+                estado='MS',
+                niche='Clínicas e Escritórios',
+                count=4
+            )
+            leads_centro = TelecomProspectorService.prospect_neighborhood(
+                bairro='Centro',
+                cidade='Campo Grande',
+                estado='MS',
+                niche='Comércios e Contabilidade',
+                count=3
+            )
+            TelecomProspectorService.save_prospects(leads_chacara + leads_centro)
+            click.echo('Leads de prospecção geo-localizada em Campo Grande cadastrados com sucesso!')
 
         db.session.commit()
         click.echo('Processo de Seed finalizado!')

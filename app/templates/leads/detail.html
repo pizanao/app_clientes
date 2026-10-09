@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}Dossiê Comercial & Central WhatsApp - {{ lead.empresa }} - DigitalNet MS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- BREADCRUMB & VOLTAR -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{{ url_for('leads.index', bairro=lead.bairro) }}" class="btn btn-dn-outline btn-sm shadow-sm">
+      <i class="bi bi-arrow-left me-1"></i> Voltar ao Radar de Leads
+    </a>
+
+    <div class="d-flex gap-2">
+      <span class="badge {{ lead.status_badge_class }} py-2 px-3 fs-6 shadow-sm">
+        Status: {{ lead.status_label }}
+      </span>
+      {% if lead.optin_status == 'aceito' %}
+      <span class="badge bg-success py-2 px-3 fs-6 shadow-sm">
+        <i class="bi bi-shield-check me-1"></i> Opt-in Aceito
+      </span>
+      {% elif lead.optin_status == 'recusado' %}
+      <span class="badge bg-danger py-2 px-3 fs-6 shadow-sm">
+        Opt-in Recusado
+      </span>
+      {% else %}
+      <span class="badge bg-warning text-dark py-2 px-3 fs-6 shadow-sm">
+        <i class="bi bi-clock-history me-1"></i> Opt-in Pendente
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- HERO BANNER DO LEAD COM IDENTIDADE DIGITALNET -->
+  <div class="dn-hero-banner mb-4">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <div class="rounded-circle p-3 d-flex align-items-center justify-content-center shadow" style="background: rgba(255, 190, 24, 0.2); color: var(--dn-yellow-gold); width: 64px; height: 64px;">
+            <i class="bi bi-building fs-2"></i>
+          </div>
+          <div>
+            <h2 class="h3 fw-bold mb-1 text-white">{{ lead.empresa }}</h2>
+            <div class="text-white-50 small d-flex align-items-center gap-2 flex-wrap">
+              <span><i class="bi bi-person-fill text-warning me-1"></i> Decisor: <strong class="text-white">{{ lead.nome }}</strong></span>
+              {% if lead.cargo %}
+              <span class="badge" style="background: rgba(255, 190, 24, 0.25); color: #fde047; font-weight: 600;">{{ lead.cargo }}</span>
+              {% endif %}
+              <span>&bull; <i class="bi bi-tag-fill text-warning me-1"></i> {{ lead.niche }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-4 text-white-50 small mt-3 pt-3 border-top" style="border-color: rgba(255, 255, 255, 0.15) !important;">
+          <div><i class="bi bi-geo-alt-fill text-danger me-1"></i> <span class="text-white">{{ lead.endereco_resumido }}</span></div>
+          {% if lead.telefone %}
+          <div><i class="bi bi-telephone-fill text-success me-1"></i> <span class="text-white">{{ lead.telefone }}</span></div>
+          {% endif %}
+          {% if lead.email %}
+          <div><i class="bi bi-envelope-fill text-info me-1"></i> <span class="text-white">{{ lead.email }}</span></div>
+          {% endif %}
+          <div><i class="bi bi-hdd-network text-warning me-1"></i> Operadora Atual: <strong class="text-white">{{ lead.operadora_atual }}</strong></div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+        <div class="d-inline-block text-center p-3 rounded-3 shadow" style="background: rgba(9, 28, 54, 0.6); border: 1px solid rgba(255, 190, 24, 0.3); min-width: 170px;">
+          <small class="text-white-50 d-block text-uppercase fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Score de Conversão</small>
+          <h2 class="fw-bold mb-0 text-warning" style="font-size: 2.5rem;">{{ lead.lead_score }}<small class="fs-6 text-white-50">/100</small></h2>
+          <small class="text-success fw-semibold"><i class="bi bi-check2-circle me-1"></i>Alta Viabilidade Óptica</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- COLUNA ESQUERDA: CENTRAL WHATSAPP & QUEBRA DE OBJEÇÕES -->
+    <div class="col-lg-7">
+
+      <!-- CARD WHATSAPP ANTI-BAN -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <div class="p-2 rounded-2 text-white" style="background: #25d366;">
+              <i class="bi bi-whatsapp fs-5"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">Abordagem WhatsApp com Opt-in Anti-Ban</h5>
+              <small class="text-muted">Mensagem consultiva sem links promocionais no primeiro contato</small>
+            </div>
+          </div>
+          <span class="badge py-2 px-3 rounded-pill" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700;">
+            <i class="bi bi-shield-check me-1"></i> Blindado contra Ban
+          </span>
+        </div>
+        
+        <div class="card-body p-4">
+          <div class="alert alert-light border py-2 px-3 small mb-3 text-secondary">
+            <i class="bi bi-info-circle text-primary me-1"></i>
+            Este roteiro segue o método de 3 passos: <strong>1)</strong> Gancho hiperlocal em Campo Grande, <strong>2)</strong> Comparativo contra a operadora atual e <strong>3)</strong> Pedido de consentimento explícito.
+          </div>
+
+          <div class="position-relative mb-3">
+            <textarea id="scriptWhatsApp" class="form-control bg-light border text-dark font-monospace small p-3" rows="8" readonly style="line-height: 1.5; resize: none;">{{ lead.icebreaker_optin }}</textarea>
+            <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2 shadow-sm" onclick="copiarScript()" title="Copiar para área de transferência">
+              <i class="bi bi-clipboard me-1"></i> Copiar
+            </button>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center pt-2">
+            {% if lead.whatsapp_url != '#' %}
+            <a href="{{ lead.whatsapp_url }}" target="_blank" class="btn btn-success px-4 shadow-sm" id="btnDispararWhatsApp">
+              <i class="bi bi-whatsapp me-2"></i> Abrir WhatsApp Web
+            </a>
+            {% else %}
+            <button class="btn btn-secondary" disabled>Sem telefone cadastrado</button>
+            {% endif %}
+
+            <div class="d-flex gap-2">
+              <form action="{{ url_for('leads.atualizar_status', lead_id=lead.id) }}" method="POST" class="d-inline">
+                <input type="hidden" name="status" value="optin_solicitado">
+                <input type="hidden" name="optin_status" value="pendente">
+                <button type="submit" class="btn btn-sm btn-outline-warning text-dark fw-semibold" title="Marcar que enviou mensagem">
+                  <i class="bi bi-send me-1"></i> Marcar Enviado
+                </button>
+              </form>
+
+              <form action="{{ url_for('leads.atualizar_status', lead_id=lead.id) }}" method="POST" class="d-inline">
+                <input type="hidden" name="status" value="optin_aceito">
+                <input type="hidden" name="optin_status" value="aceito">
+                <button type="submit" class="btn btn-sm btn-dn-blue" title="Lead respondeu com interesse">
+                  <i class="bi bi-check-circle-fill text-warning me-1"></i> Opt-in Aceito!
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TUTOR DE QUEBRA DE OBJEÇÕES -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 border-bottom">
+          <div class="d-flex align-items-center gap-2">
+            <div class="p-2 rounded-2 text-dark" style="background: var(--dn-yellow-gold);">
+              <i class="bi bi-mortarboard-fill fs-5"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">Tutor de Quebra de Objeções (SDR Telecom)</h5>
+              <small class="text-muted">Selecione a objeção do cliente para obter a técnica psicológica e o script imediato</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-4">
+          <div class="btn-group btn-group-sm w-100 mb-3 shadow-sm" role="group">
+            <a href="{{ url_for('leads.detail', lead_id=lead.id, obj='fidelidade') }}" class="btn {% if obj_key == 'fidelidade' %}btn-dn-yellow{% else %}btn-outline-secondary{% endif %}">
+              Fidelidade Concorrente
+            </a>
+            <a href="{{ url_for('leads.detail', lead_id=lead.id, obj='preco') }}" class="btn {% if obj_key == 'preco' %}btn-dn-yellow{% else %}btn-outline-secondary{% endif %}">
+              Preço / Custo
+            </a>
+            <a href="{{ url_for('leads.detail', lead_id=lead.id, obj='marca') }}" class="btn {% if obj_key == 'marca' %}btn-dn-yellow{% else %}btn-outline-secondary{% endif %}">
+              Não Conheço a Marca
+            </a>
+            <a href="{{ url_for('leads.detail', lead_id=lead.id, obj='satisfeito') }}" class="btn {% if obj_key == 'satisfeito' %}btn-dn-yellow{% else %}btn-outline-secondary{% endif %}">
+              Já Estou Satisfeito
+            </a>
+          </div>
+
+          <div class="p-3 bg-light rounded-3 border mb-2">
+            <div class="d-flex justify-content-between align-items-start mb-2 flex-wrap gap-1">
+              <h6 class="fw-bold mb-0" style="color: var(--dn-blue);"><i class="bi bi-chat-quote-fill me-1 text-warning"></i>{{ tutor_obj.titulo }}</h6>
+              <span class="badge py-1 px-2 rounded-pill bg-dark text-white">Técnica: {{ tutor_obj.tecnica }}</span>
+            </div>
+            
+            <p class="small text-muted mb-2"><strong>Diagnóstico Psicológico:</strong> {{ tutor_obj.diagnostico }}</p>
+            
+            <div class="p-3 bg-white rounded border border-warning font-monospace small text-dark mt-2 shadow-sm" style="border-left: 4px solid var(--dn-yellow) !important;">
+              {{ tutor_obj.script_whatsapp|replace('\n', '<br>')|safe }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- COLUNA DIREITA: VIABILIDADE & CONVERSÃO EM CLIENTE -->
+    <div class="col-lg-5">
+
+      <!-- DIAGNÓSTICO E DOR -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 border-bottom">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-speedometer2 fs-5 text-primary"></i>
+            <h5 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">Diagnóstico da Conexão Atual</h5>
+          </div>
+        </div>
+        
+        <div class="card-body p-4">
+          <div class="mb-3">
+            <label class="small fw-bold text-muted text-uppercase d-block mb-1">Principal Gargalo / Dor Mapeada:</label>
+            <div class="alert alert-warning border-warning bg-warning bg-opacity-10 small mb-0 py-2">
+              <i class="bi bi-exclamation-triangle-fill text-warning-emphasis me-2"></i>
+              <strong class="text-dark">{{ lead.dor_principal or "Lentidão nas maquininhas e lentidão no sinal Wi-Fi durante os horários de pico." }}</strong>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="small fw-bold text-muted text-uppercase d-block mb-1">Viabilidade Óptica no Bairro (DigitalNet MS):</label>
+            <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-3 border">
+              <div class="p-2 rounded-circle bg-success bg-opacity-10 text-success">
+                <i class="bi bi-check-circle-fill fs-4"></i>
+              </div>
+              <div>
+                <strong class="text-dark d-block">Porta Óptica Confirmada no Bairro {{ lead.bairro }}</strong>
+                <div class="text-muted" style="font-size: 0.75rem;">Rede FTTH própria AS61588. Instalação rápida inclusa sem obras.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-top pt-3">
+            <label class="small fw-bold text-muted text-uppercase d-block mb-1">Plano Recomendado DigitalNet:</label>
+            <h5 class="fw-bold mb-1" style="color: var(--dn-blue);">{{ lead.plano_sugerido }}</h5>
+            <div class="text-muted small">Valor mensal: <strong class="text-dark fs-6">R$ {{ "%.2f"|format(lead.valor_mensal_sugerido)|replace('.', ',') }}</strong> com roteador Wi-Fi 6 em comodato.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORMULÁRIO DE CONVERSÃO EM CLIENTE (DIGITALNET THEMED) -->
+      <div class="card border-0 shadow-sm" style="border-top: 4px solid var(--dn-yellow) !important;">
+        <div class="card-header bg-white py-3 border-bottom">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-person-check-fill fs-5" style="color: var(--dn-blue);"></i>
+            <div>
+              <h5 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">Fechar Venda & Ativar Assinatura</h5>
+              <small class="text-muted">Cria o Cliente e gera o Pedido de instalação no banco de dados</small>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body p-4">
+          <form action="{{ url_for('leads.converter_cliente', lead_id=lead.id) }}" method="POST">
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-dark">Plano Contratado da DigitalNet</label>
+              <select name="plano_sugerido" class="form-select bg-light" id="selectPlano">
+                {% for p in planos %}
+                <option value="{{ p.nome }}" data-preco="{{ p.preco }}" {% if p.nome == lead.plano_sugerido %}selected{% endif %}>
+                  {{ p.nome }} ({{ p.download }}) - R$ {{ "%.2f"|format(p.preco)|replace('.', ',') }}/mês
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-dark">Valor da Mensalidade (R$)</label>
+              <input type="number" step="0.01" name="valor_mensal_sugerido" id="inputValor" class="form-control bg-light" value="{{ lead.valor_mensal_sugerido }}" required>
+            </div>
+
+            <div class="alert alert-info border-info bg-info bg-opacity-10 small mb-3 py-2">
+              <i class="bi bi-info-circle-fill text-info me-1"></i>
+              Ao clicar no botão abaixo, este lead será inserido na tabela <strong>clientes</strong> e um <strong>pedido de assinatura</strong> será gerado com totalização automática.
+            </div>
+
+            <button type="submit" class="btn btn-dn-yellow w-100 py-3 fw-bold shadow-sm" style="font-size: 1rem;">
+              <i class="bi bi-check2-circle me-2"></i> Converter em Cliente & Gerar Pedido
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+function copiarScript() {
+  const textarea = document.getElementById('scriptWhatsApp');
+  textarea.select();
+  textarea.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(textarea.value).then(() => {
+    alert('Script de WhatsApp copiado para a área de transferência!');
+  });
+}
+
+document.getElementById('selectPlano').addEventListener('change', function() {
+  const selectedOpt = this.options[this.selectedIndex];
+  const preco = selectedOpt.getAttribute('data-preco');
+  if (preco) {
+    document.getElementById('inputValor').value = preco;
+  }
+});
+</script>
+{% endblock %}

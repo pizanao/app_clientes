@@ -55,6 +55,7 @@ mkdir -p \
     'app/forms' \
     'app/models' \
     'app/routes' \
+    'app/services' \
     'app/static/css' \
     'app/static/js' \
     'app/templates' \
@@ -62,6 +63,7 @@ mkdir -p \
     'app/templates/clientes' \
     'app/templates/dashboard' \
     'app/templates/errors' \
+    'app/templates/leads' \
     'app/templates/pedidos' \
     'app/utils' \
     'instance' \
@@ -71,7 +73,7 @@ mkdir -p \
 echo -e "${GREEN}✓ Estrutura de pastas criada com sucesso.${NC}"
 
 # 3. Criação dos arquivos do projeto
-echo -e "\n${YELLOW}[3/6] Criando 44 arquivos de código-fonte...${NC}"
+echo -e "\n${YELLOW}[3/6] Criando 52 arquivos de código-fonte...${NC}"
 
 # --- .env.example ---
 cat > '.env.example' <<'OMNI_EOF'
@@ -85,6 +87,16 @@ DATABASE_URL=sqlite:///app_clientes.db
 # Senha do usuário "admin" criado pelo "flask seed".
 # Se omitida, uma senha aleatória é gerada e exibida uma única vez.
 # SEED_ADMIN_PASSWORD=
+
+# Chave de API do Google Gemini (opcional - ativa IA em tempo real para prospecção de telecom)
+# GEMINI_API_KEY=
+OMNI_EOF
+
+# --- .gitattributes ---
+cat > '.gitattributes' <<'OMNI_EOF'
+# Scripts shell precisam de LF: com CRLF o bash falha ("$'\r': command not found"),
+# o que acontece ao clonar no Windows com core.autocrlf=true e copiar para o Linux.
+*.sh text eol=lf
 OMNI_EOF
 
 # --- .gitignore ---
@@ -173,11 +185,13 @@ def create_app(config_class=Config):
     from app.routes.main import main_bp
     from app.routes.clientes import clientes_bp
     from app.routes.pedidos import pedidos_bp
+    from app.routes.leads import leads_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(clientes_bp)
     app.register_blueprint(pedidos_bp)
+    app.register_blueprint(leads_bp)
 
     # Register CLI commands
     from app.cli import register_cli_commands
@@ -207,6 +221,8 @@ from app.extensions import db
 from app.models.user import User
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido, ItemPedido
+from app.models.lead import Lead
+from app.services.prospector import TelecomProspectorService
 
 
 def register_cli_commands(app):
@@ -347,6 +363,67 @@ def register_cli_commands(app):
                     ativo=False,
                     observacoes='Cadastro temporariamente inativo a pedido do cliente.'
                 ),
+                # Clientes Estratégicos DigitalNet MS (Campo Grande)
+                Cliente(
+                    nome='Condomínio Residencial Parque das Nações',
+                    email='sindico@parquedasnacoes.ms.gov.br',
+                    telefone='(67) 3321-4455',
+                    documento='04.123.456/0001-78',
+                    cep='79040-010',
+                    logradouro='Rua Raul Pires Barbosa',
+                    numero='1250',
+                    complemento='Administração',
+                    bairro='Chácara Cachoeira',
+                    cidade='Campo Grande',
+                    estado='MS',
+                    ativo=True,
+                    observacoes='Condomínio atendido pela fibra DigitalNet com 60 apartamentos conectados.'
+                ),
+                Cliente(
+                    nome='Clínica Médica Santa Fé Especializada',
+                    email='contato@clinicasantafe.com.br',
+                    telefone='(67) 3345-6789',
+                    documento='18.987.654/0001-32',
+                    cep='79021-120',
+                    logradouro='Rua Ceará',
+                    numero='840',
+                    complemento='Sala 10',
+                    bairro='Santa Fé',
+                    cidade='Campo Grande',
+                    estado='MS',
+                    ativo=True,
+                    observacoes='Link Fibra 700 + DigiMesh em comodato com suporte 24h.'
+                ),
+                Cliente(
+                    nome='Escritório Silva & Associados Advocacia',
+                    email='administrativo@silvaadvocacia.com.br',
+                    telefone='(67) 3388-9900',
+                    documento='22.333.444/0001-55',
+                    cep='79002-001',
+                    logradouro='Rua 14 de Julho',
+                    numero='2100',
+                    complemento='Andar 4',
+                    bairro='Centro',
+                    cidade='Campo Grande',
+                    estado='MS',
+                    ativo=True,
+                    observacoes='Link Dedicado Pro com IP Fixo e redundância.'
+                ),
+                Cliente(
+                    nome='Restaurante e Parrilla Pantaneira',
+                    email='financeiro@parrillapantaneira.com.br',
+                    telefone='(67) 3356-7890',
+                    documento='33.444.555/0001-66',
+                    cep='79020-000',
+                    logradouro='Rua Euclides da Cunha',
+                    numero='650',
+                    complemento='',
+                    bairro='Jardim dos Estados',
+                    cidade='Campo Grande',
+                    estado='MS',
+                    ativo=True,
+                    observacoes='Wi-Fi 6 de alta densidade para 80 clientes simultâneos.'
+                ),
             ]
             db.session.add_all(clientes_exemplo)
             db.session.flush()
@@ -434,6 +511,25 @@ def register_cli_commands(app):
             db.session.add_all(itens_exemplo)
             click.echo('Clientes, Pedidos e Itens de exemplo cadastrados com sucesso!')
 
+        # Sample leads for telecom prospecting in Campo Grande
+        if Lead.query.count() == 0:
+            leads_chacara = TelecomProspectorService.prospect_neighborhood(
+                bairro='Chácara Cachoeira',
+                cidade='Campo Grande',
+                estado='MS',
+                niche='Clínicas e Escritórios',
+                count=4
+            )
+            leads_centro = TelecomProspectorService.prospect_neighborhood(
+                bairro='Centro',
+                cidade='Campo Grande',
+                estado='MS',
+                niche='Comércios e Contabilidade',
+                count=3
+            )
+            TelecomProspectorService.save_prospects(leads_chacara + leads_centro)
+            click.echo('Leads de prospecção geo-localizada em Campo Grande cadastrados com sucesso!')
+
         db.session.commit()
         click.echo('Processo de Seed finalizado!')
 OMNI_EOF
@@ -479,6 +575,9 @@ class Config:
     
     # WTForms CSRF
     WTF_CSRF_ENABLED = True
+
+    # Google Gemini AI (Telecom Prospector)
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 OMNI_EOF
 
 # --- app/extensions.py ---
@@ -791,6 +890,137 @@ class Cliente(db.Model):
 
     def __repr__(self):
         return f'<Cliente {self.nome}>'
+OMNI_EOF
+
+# --- app/models/lead.py ---
+cat > 'app/models/lead.py' <<'OMNI_EOF'
+from datetime import datetime
+import urllib.parse
+from app.extensions import db
+
+
+class Lead(db.Model):
+    __tablename__ = 'leads'
+
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(120), nullable=False, index=True)
+    empresa = db.Column(db.String(150), nullable=False, index=True)
+    cargo = db.Column(db.String(100), nullable=True)
+    telefone = db.Column(db.String(30), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+    documento = db.Column(db.String(30), nullable=True)
+    niche = db.Column(db.String(100), nullable=True, default='Geral')
+
+    # Geo-localização do Lead
+    cep = db.Column(db.String(15), nullable=True)
+    logradouro = db.Column(db.String(150), nullable=True)
+    numero = db.Column(db.String(20), nullable=True)
+    complemento = db.Column(db.String(50), nullable=True)
+    bairro = db.Column(db.String(80), nullable=False, index=True)
+    cidade = db.Column(db.String(80), nullable=False, default='Campo Grande', index=True)
+    estado = db.Column(db.String(2), nullable=False, default='MS')
+
+    # Vinculo com o cliente ativo que viabilizou a rede na região
+    cliente_referencia_id = db.Column(
+        db.Integer,
+        db.ForeignKey('clientes.id', ondelete='SET NULL'),
+        nullable=True,
+        index=True
+    )
+
+    # Status de Funil e Opt-in
+    status = db.Column(db.String(30), default='novo', nullable=False, index=True)
+    optin_status = db.Column(db.String(20), default='pendente', nullable=False, index=True)
+
+    # Dados Comerciais e Concorrência
+    operadora_atual = db.Column(db.String(80), default='Vivo Fibra / Claro', nullable=True)
+    plano_sugerido = db.Column(db.String(120), default='Fibra 700 + DigiMesh', nullable=True)
+    valor_mensal_sugerido = db.Column(db.Float, default=139.90, nullable=False)
+    lead_score = db.Column(db.Integer, default=85, nullable=False)
+    dor_principal = db.Column(db.Text, nullable=True)
+    icebreaker_optin = db.Column(db.Text, nullable=True)
+    dossie_comercial = db.Column(db.Text, nullable=True)
+    observacoes = db.Column(db.Text, nullable=True)
+
+    # Vinculo com o cliente criado apos a conversão
+    cliente_convertido_id = db.Column(
+        db.Integer,
+        db.ForeignKey('clientes.id', ondelete='SET NULL'),
+        nullable=True,
+        index=True
+    )
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relacionamentos
+    cliente_referencia = db.relationship('Cliente', foreign_keys=[cliente_referencia_id], backref='leads_vizinhos_gerados')
+    cliente_convertido = db.relationship('Cliente', foreign_keys=[cliente_convertido_id], backref='lead_origem')
+
+    STATUS_CONFIG = {
+        'novo': ('Novo Lead', 'bg-secondary text-white'),
+        'optin_solicitado': ('Opt-in Solicitado', 'bg-warning text-dark'),
+        'optin_aceito': ('Opt-in Aceito', 'bg-info text-white'),
+        'proposta_enviada': ('Proposta Enviada', 'bg-primary text-white'),
+        'convertido': ('Convertido / Fechado', 'bg-success text-white'),
+        'perdido': ('Perdido', 'bg-danger text-white'),
+    }
+
+    OPTIN_CONFIG = {
+        'pendente': ('Pendente', 'badge bg-secondary'),
+        'aceito': ('Aceito (Anti-Ban Ativo)', 'badge bg-success'),
+        'recusado': ('Recusado', 'badge bg-danger'),
+    }
+
+    @property
+    def status_label(self) -> str:
+        return self.STATUS_CONFIG.get(self.status, (self.status.capitalize(), 'bg-secondary text-white'))[0]
+
+    @property
+    def status_badge_class(self) -> str:
+        return self.STATUS_CONFIG.get(self.status, ('', 'bg-secondary text-white'))[1]
+
+    @property
+    def optin_label(self) -> str:
+        return self.OPTIN_CONFIG.get(self.optin_status, (self.optin_status.capitalize(), 'badge bg-secondary'))[0]
+
+    @property
+    def optin_badge_class(self) -> str:
+        return self.OPTIN_CONFIG.get(self.optin_status, ('', 'badge bg-secondary'))[1]
+
+    @property
+    def telefone_numeros(self) -> str:
+        """Retorna apenas dígitos do telefone para montagem do link wa.me."""
+        if not self.telefone:
+            return ''
+        digits = ''.join(c for c in self.telefone if c.isdigit())
+        if len(digits) in (10, 11) and not digits.startswith('55'):
+            digits = '55' + digits
+        return digits
+
+    @property
+    def whatsapp_url(self) -> str:
+        """Gera URL com a mensagem de opt-in pronta para o WhatsApp Web."""
+        phone = self.telefone_numeros
+        msg = self.icebreaker_optin or ''
+        if not phone or not msg:
+            return '#'
+        encoded = urllib.parse.quote(msg)
+        return f"https://wa.me/{phone}?text={encoded}"
+
+    @property
+    def endereco_resumido(self) -> str:
+        partes = []
+        if self.logradouro:
+            partes.append(f"{self.logradouro}, {self.numero or 'S/N'}")
+        if self.bairro:
+            partes.append(self.bairro)
+        if self.cidade and self.estado:
+            partes.append(f"{self.cidade}/{self.estado}")
+        return ' - '.join(partes) if partes else f"{self.bairro}, {self.cidade}/{self.estado}"
+
+    def __repr__(self):
+        return f'<Lead #{self.id}: {self.empresa} ({self.bairro})>'
 OMNI_EOF
 
 # --- app/models/pedido.py ---
@@ -1176,6 +1406,281 @@ def excluir(id):
         flash(f'Cliente "{nome}" excluído com sucesso.', 'info')
 
     return redirect(url_for('clientes.index'))
+OMNI_EOF
+
+# --- app/routes/leads.py ---
+cat > 'app/routes/leads.py' <<'OMNI_EOF'
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_required, current_user
+from app.extensions import db
+from app.models.lead import Lead
+from app.models.cliente import Cliente
+from app.services.prospector import TelecomProspectorService, PLANOS_DIGITALNET
+
+leads_bp = Blueprint('leads', __name__, url_prefix='/leads')
+
+
+# -----------------------------------------------------------------------------
+# ROTAS WEB (INTERFACE HTML/BOOTSTRAP)
+# -----------------------------------------------------------------------------
+
+@leads_bp.route('/')
+@login_required
+def index():
+    """Painel de Prospecção Geo-Localizada & Funil de Leads."""
+    bairro_filtro = request.args.get('bairro', '').strip()
+    status_filtro = request.args.get('status', '').strip()
+    busca = request.args.get('busca', '').strip()
+
+    # Clusters de bairros com clientes ativos (densidade de rede)
+    clusters = TelecomProspectorService.get_neighborhood_clusters()
+
+    # Query de Leads
+    query = Lead.query
+    if bairro_filtro:
+        query = query.filter(Lead.bairro.ilike(f"%{bairro_filtro}%"))
+    if status_filtro:
+        query = query.filter(Lead.status == status_filtro)
+    if busca:
+        termo = f"%{busca}%"
+        query = query.filter(
+            (Lead.empresa.ilike(termo)) |
+            (Lead.nome.ilike(termo)) |
+            (Lead.telefone.ilike(termo)) |
+            (Lead.logradouro.ilike(termo))
+        )
+
+    leads = query.order_by(Lead.lead_score.desc(), Lead.created_at.desc()).all()
+
+    # Métricas do Funil
+    total_leads = Lead.query.count()
+    total_novos = Lead.query.filter_by(status='novo').count()
+    total_optin_solicitado = Lead.query.filter_by(status='optin_solicitado').count()
+    total_optin_aceito = Lead.query.filter_by(optin_status='aceito').count()
+    total_proposta = Lead.query.filter_by(status='proposta_enviada').count()
+    total_convertidos = Lead.query.filter_by(status='convertido').count()
+
+    # Pontos para o Mapa de Calor & Nós de Fibra
+    map_points = []
+    for c in clusters:
+        map_points.append({
+            'tipo': 'cluster_fibra',
+            'titulo': f"Nó Óptico: {c['bairro']}",
+            'bairro': c['bairro'],
+            'lat': c.get('lat', -20.4697),
+            'lng': c.get('lng', -54.6201),
+            'clientes': c['total_clientes'],
+            'leads': c['total_leads'],
+            'viabilidade': c['viabilidade_estimada'],
+            'cor': '#1b4f99',
+            'intensidade': round(min(1.0, 0.4 + (c['total_clientes'] * 0.15)), 2),
+        })
+
+    for l in leads:
+        base_coords = TelecomProspectorService.COORDENADAS_BAIRROS.get(l.bairro, (-20.4697, -54.6201))
+        jitter_lat = ((l.id * 17) % 19 - 9) * 0.00075
+        jitter_lng = ((l.id * 31) % 19 - 9) * 0.00075
+        map_points.append({
+            'tipo': 'lead_oportunidade',
+            'id': l.id,
+            'titulo': l.empresa,
+            'contato': l.nome,
+            'cargo': l.cargo or '',
+            'bairro': l.bairro,
+            'endereco': l.endereco_resumido,
+            'lat': round(base_coords[0] + jitter_lat, 6),
+            'lng': round(base_coords[1] + jitter_lng, 6),
+            'score': l.lead_score,
+            'plano': l.plano_sugerido,
+            'valor': f"R$ {l.valor_mensal_sugerido:.2f}".replace('.', ','),
+            'operadora': l.operadora_atual,
+            'status': l.status_label,
+            'optin': l.optin_label,
+            'whatsapp_url': l.whatsapp_url,
+            'detail_url': url_for('leads.detail', lead_id=l.id),
+            'cor': '#f59e0b',
+            'intensidade': round(l.lead_score / 100.0, 2),
+        })
+
+    return render_template(
+        'leads/index.html',
+        leads=leads,
+        clusters=clusters,
+        planos=PLANOS_DIGITALNET,
+        total_leads=total_leads,
+        total_novos=total_novos,
+        total_optin_solicitado=total_optin_solicitado,
+        total_optin_aceito=total_optin_aceito,
+        total_proposta=total_proposta,
+        total_convertidos=total_convertidos,
+        bairro_selecionado=bairro_filtro,
+        status_selecionado=status_filtro,
+        busca=busca,
+        map_points=map_points,
+    )
+
+
+@leads_bp.route('/prospectar', methods=['POST'])
+@login_required
+def prospectar_regiao():
+    """Dispara a geração de leads vizinhos baseada na região selecionada."""
+    bairro = request.form.get('bairro', '').strip() or 'Chácara Cachoeira'
+    cidade = request.form.get('cidade', '').strip() or 'Campo Grande'
+    niche = request.form.get('niche', '').strip() or 'Empresas e Clínicas'
+    count = int(request.form.get('count', 5))
+    cliente_ref_id = request.form.get('cliente_referencia_id')
+
+    cliente_ref_id_int = int(cliente_ref_id) if cliente_ref_id and cliente_ref_id.isdigit() else None
+
+    # Executa a prospecção com IA / Heurística de Campo Grande
+    novos_dados = TelecomProspectorService.prospect_neighborhood(
+        bairro=bairro,
+        cidade=cidade,
+        estado='MS',
+        niche=niche,
+        count=count,
+        cliente_ref_id=cliente_ref_id_int
+    )
+
+    salvos = TelecomProspectorService.save_prospects(novos_dados, cliente_ref_id=cliente_ref_id_int)
+
+    if salvos:
+        flash(f"Sucesso! {len(salvos)} novos leads foram gerados no bairro {bairro} com viabilidade óptica mapeada.", 'success')
+    else:
+        flash(f"Nenhum novo lead precisou ser gerado (empresas da região já cadastradas no bairro {bairro}).", 'info')
+
+    return redirect(url_for('leads.index', bairro=bairro))
+
+
+@leads_bp.route('/<int:lead_id>')
+@login_required
+def detail(lead_id: int):
+    """Exibe o dossiê comercial, central de WhatsApp e quebra de objeções."""
+    lead = Lead.query.get_or_404(lead_id)
+
+    # Garante script anti-ban atualizado
+    if not lead.icebreaker_optin:
+        lead.icebreaker_optin = TelecomProspectorService.generate_anti_ban_whatsapp_script(lead)
+        db.session.commit()
+
+    # Prepara tutores de objeção
+    obj_key = request.args.get('obj', 'fidelidade')
+    tutor_obj = TelecomProspectorService.get_objection_tutor(obj_key, lead)
+
+    return render_template(
+        'leads/detail.html',
+        lead=lead,
+        tutor_obj=tutor_obj,
+        obj_key=obj_key,
+        planos=PLANOS_DIGITALNET
+    )
+
+
+@leads_bp.route('/<int:lead_id>/status', methods=['POST'])
+@login_required
+def atualizar_status(lead_id: int):
+    """Atualiza o status de funil e/ou opt-in do lead."""
+    lead = Lead.query.get_or_404(lead_id)
+
+    novo_status = request.form.get('status')
+    novo_optin = request.form.get('optin_status')
+
+    if novo_status and novo_status in Lead.STATUS_CONFIG:
+        lead.status = novo_status
+    if novo_optin and novo_optin in Lead.OPTIN_CONFIG:
+        lead.optin_status = novo_optin
+        if novo_optin == 'aceito' and lead.status in ('novo', 'optin_solicitado'):
+            lead.status = 'optin_aceito'
+
+    db.session.commit()
+    flash(f"Status do lead #{lead.id} ({lead.empresa}) atualizado com sucesso!", 'success')
+    return redirect(url_for('leads.detail', lead_id=lead.id))
+
+
+@leads_bp.route('/<int:lead_id>/converter', methods=['POST'])
+@login_required
+def converter_cliente(lead_id: int):
+    """Converte o lead em cliente e cria o pedido da assinatura DigitalNet."""
+    lead = Lead.query.get_or_404(lead_id)
+
+    plano_escolhido = request.form.get('plano_sugerido')
+    valor_escolhido = request.form.get('valor_mensal_sugerido')
+
+    if plano_escolhido:
+        lead.plano_sugerido = plano_escolhido
+    if valor_escolhido:
+        try:
+            lead.valor_mensal_sugerido = float(valor_escolhido)
+        except ValueError:
+            pass
+
+    cliente = TelecomProspectorService.convert_lead_to_client(lead)
+    flash(f"Parabéns! Lead convertido em Cliente '{cliente.nome}' com Pedido de Ativação gerado!", 'success')
+    return redirect(url_for('clientes.detalhe', id=cliente.id))
+
+
+@leads_bp.route('/<int:lead_id>/excluir', methods=['POST'])
+@login_required
+def excluir(lead_id: int):
+    """Exclui um lead do sistema."""
+    lead = Lead.query.get_or_404(lead_id)
+    empresa = lead.empresa
+    db.session.delete(lead)
+    db.session.commit()
+    flash(f"Lead '{empresa}' removido com sucesso.", 'warning')
+    return redirect(url_for('leads.index'))
+
+
+# -----------------------------------------------------------------------------
+# REST API (JSON PARA REACT 19 / VITE / INTEGRACAO)
+# -----------------------------------------------------------------------------
+
+@leads_bp.route('/api/clusters', methods=['GET'])
+@login_required
+def api_clusters():
+    """Retorna clusters de bairros de clientes em JSON."""
+    clusters = TelecomProspectorService.get_neighborhood_clusters()
+    return jsonify({'success': True, 'clusters': clusters})
+
+
+@leads_bp.route('/api/prospectar', methods=['POST'])
+@login_required
+def api_prospectar():
+    """Endpoint REST para acionar a prospecção via frontend moderno."""
+    data = request.get_json() or {}
+    bairro = data.get('bairro', 'Chácara Cachoeira')
+    cidade = data.get('cidade', 'Campo Grande')
+    niche = data.get('niche', 'Empresas e Clínicas')
+    count = int(data.get('count', 5))
+
+    novos_dados = TelecomProspectorService.prospect_neighborhood(
+        bairro=bairro,
+        cidade=cidade,
+        estado='MS',
+        niche=niche,
+        count=count
+    )
+    salvos = TelecomProspectorService.save_prospects(novos_dados)
+
+    return jsonify({
+        'success': True,
+        'count': len(salvos),
+        'leads': [
+            {
+                'id': l.id,
+                'empresa': l.empresa,
+                'nome': l.nome,
+                'telefone': l.telefone,
+                'bairro': l.bairro,
+                'plano_sugerido': l.plano_sugerido,
+                'valor': l.valor_mensal_sugerido,
+                'lead_score': l.lead_score,
+                'whatsapp_url': l.whatsapp_url,
+                'optin_status': l.optin_status
+            }
+            for l in salvos
+        ]
+    })
 OMNI_EOF
 
 # --- app/routes/main.py ---
@@ -1639,6 +2144,592 @@ def excluir(id):
     flash(f'Pedido #{num} excluído com sucesso.', 'info')
     return redirect(url_for('pedidos.index'))
 
+OMNI_EOF
+
+# --- app/services/prospector.py ---
+cat > 'app/services/prospector.py' <<'OMNI_EOF'
+from datetime import datetime
+import json
+import logging
+import os
+import random
+import re
+import urllib.parse
+import urllib.request
+from typing import Dict, List, Any, Optional
+from flask import current_app
+from app.extensions import db
+from app.models.cliente import Cliente
+from app.models.lead import Lead
+from app.models.pedido import Pedido, ItemPedido
+
+logger = logging.getLogger(__name__)
+
+# Planos reais da DigitalNet MS
+PLANOS_DIGITALNET = [
+    {
+        'nome': 'Fibra 600 Standard (Wi-Fi 6)',
+        'download': '600 Mbps',
+        'upload': '300 Mbps',
+        'preco': 129.90,
+        'diferencial': 'Wi-Fi 6 em comodato + Skeelo + Instalação inclusa',
+    },
+    {
+        'nome': 'Fibra 700 + DigiMesh (Wi-Fi 6)',
+        'download': '700 Mbps',
+        'upload': '350 Mbps',
+        'preco': 139.90,
+        'diferencial': 'Ponto extra DigiMesh sem fios + Wi-Fi 6 + Instalação inclusa',
+    },
+    {
+        'nome': 'Fibra 900 Advanced (Wi-Fi 6)',
+        'download': '900 Mbps',
+        'upload': '450 Mbps',
+        'preco': 149.90,
+        'promocao_entrada': 'R$ 99,90 nos primeiros 3 meses',
+        'diferencial': 'Máxima velocidade residencial/comercial + Wi-Fi 6 + Skeelo',
+    },
+    {
+        'nome': 'DigitalNet B2B Link Dedicado Pro',
+        'download': '1000 Mbps',
+        'upload': '1000 Mbps (100% Simétrico)',
+        'preco': 399.90,
+        'diferencial': 'IP Fixo + SLA de 4h + Wi-Fi 6 Alta Densidade + Suporte 24h Campo Grande',
+    },
+]
+
+# Ruas e perfis de empresas em Campo Grande - MS para Fallback
+PERFIS_CAMPO_GRANDE = {
+    'Chácara Cachoeira': {
+        'ruas': ['Rua Raul Pires Barbosa', 'Rua Afonso Pena', 'Rua Jeribá', 'Rua Dr. Paulo Machado'],
+        'cep_prefix': '79040',
+        'nichos': ['Clínicas Médicas & Odontológicas', 'Escritórios de Advocacia', 'Coworkings & Startups', 'Consultórios'],
+    },
+    'Centro': {
+        'ruas': ['Rua 14 de Julho', 'Avenida Calógeras', 'Rua Dom Aquino', 'Rua Barão do Rio Branco'],
+        'cep_prefix': '79002',
+        'nichos': ['Comércio & Varejo', 'Escritórios de Contabilidade', 'Imobiliárias', 'Restaurantes & Lanchonetes'],
+    },
+    'Santa Fé': {
+        'ruas': ['Rua Ceará', 'Rua Abrão Júlio Rahe', 'Rua Alagoas', 'Rua Goiás'],
+        'cep_prefix': '79021',
+        'nichos': ['Clínicas de Estética', 'Escritórios Corporativos', 'Agências de Marketing', 'Boutiques'],
+    },
+    'Jardim dos Estados': {
+        'ruas': ['Rua Euclides da Cunha', 'Rua Rio Grande do Sul', 'Rua Bahia', 'Avenida Mato Grosso'],
+        'cep_prefix': '79020',
+        'nichos': ['Escritórios Executivos', 'Restaurantes Gastronômicos', 'Centros Médicos', 'Empresas de TI'],
+    },
+    'Tiradentes': {
+        'ruas': ['Avenida Marquês de Pombal', 'Rua José Nogueira Vieira', 'Avenida Três Barras'],
+        'cep_prefix': '79041',
+        'nichos': ['Supermercados & Farmácias', 'Auto Centers', 'Academias', 'Escolas & Cursos'],
+    },
+    'Vilas Boas': {
+        'ruas': ['Avenida Bom Pastor', 'Rua Domingos Jorge Velho', 'Rua Cel. Salustiano'],
+        'cep_prefix': '79051',
+        'nichos': ['Gastronomia & Restaurantes', 'Lojas de Conveniência', 'Pet Shops & Veterinárias'],
+    },
+}
+
+# Coordenadas geográficas reais dos bairros de Campo Grande - MS para o Mapa de Calor
+COORDENADAS_BAIRROS = {
+    'Chácara Cachoeira': (-20.4578, -54.5824),
+    'Centro': (-20.4628, -54.6156),
+    'Santa Fé': (-20.4485, -54.5952),
+    'Jardim dos Estados': (-20.4552, -54.6063),
+    'Tiradentes': (-20.4682, -54.5615),
+    'Vilas Boas': (-20.4851, -54.5889),
+    'Bela Vista': (-20.4720, -54.5900),
+    'Copacabana': (-20.4900, -54.6300),
+}
+
+
+class TelecomProspectorService:
+    COORDENADAS_BAIRROS = COORDENADAS_BAIRROS
+
+    @staticmethod
+    def get_neighborhood_clusters() -> List[Dict[str, Any]]:
+        """
+        Agrupa clientes existentes por bairro e cidade para identificar
+        onde a DigitalNet já possui infraestrutura óptica instalada (CTO/Cabos).
+        """
+        clientes = Cliente.query.filter_by(ativo=True).all()
+        clusters_map: Dict[str, Dict[str, Any]] = {}
+
+        for c in clientes:
+            bairro = (c.bairro or 'Centro').strip()
+            cidade = (c.cidade or 'Campo Grande').strip()
+            estado = (c.estado or 'MS').strip()
+            chave = f"{cidade}|{bairro}"
+
+            if chave not in clusters_map:
+                clusters_map[chave] = {
+                    'cidade': cidade,
+                    'bairro': bairro,
+                    'estado': estado,
+                    'total_clientes': 0,
+                    'clientes_ids': [],
+                    'exemplo_ruas': set(),
+                }
+
+            clusters_map[chave]['total_clientes'] += 1
+            clusters_map[chave]['clientes_ids'].append(c.id)
+            if c.logradouro:
+                clusters_map[chave]['exemplo_ruas'].add(c.logradouro)
+
+        # Se não houver clientes ou poucos, garante os principais bairros de Campo Grande
+        if not clusters_map:
+            for b in ['Chácara Cachoeira', 'Centro', 'Santa Fé', 'Jardim dos Estados']:
+                clusters_map[f"Campo Grande|{b}"] = {
+                    'cidade': 'Campo Grande',
+                    'bairro': b,
+                    'estado': 'MS',
+                    'total_clientes': 0,
+                    'clientes_ids': [],
+                    'exemplo_ruas': set(PERFIS_CAMPO_GRANDE.get(b, {}).get('ruas', [])[:2]),
+                }
+
+        resultado = []
+        for chave, dado in clusters_map.items():
+            bairro = dado['bairro']
+            # Conta leads já cadastrados nessa região
+            total_leads = Lead.query.filter_by(bairro=bairro).count()
+            leads_convertidos = Lead.query.filter_by(bairro=bairro, status='convertido').count()
+
+            coords = COORDENADAS_BAIRROS.get(bairro, (-20.4697, -54.6201))
+            resultado.append({
+                'cidade': dado['cidade'],
+                'bairro': bairro,
+                'estado': dado['estado'],
+                'lat': coords[0],
+                'lng': coords[1],
+                'total_clientes': dado['total_clientes'],
+                'total_leads': total_leads,
+                'leads_convertidos': leads_convertidos,
+                'ruas': list(dado['exemplo_ruas'])[:3],
+                'viabilidade_estimada': '99% (Fibra Ativa no Poste)' if dado['total_clientes'] > 0 else 'Alta (Área de Cobertura)',
+                'badge_class': 'bg-success' if dado['total_clientes'] >= 2 else 'bg-primary',
+            })
+
+        # Ordena por bairros com mais clientes
+        resultado.sort(key=lambda x: (x['total_clientes'], x['total_leads']), reverse=True)
+        return resultado
+
+    @classmethod
+    def generate_anti_ban_whatsapp_script(cls, lead: Lead) -> str:
+        """
+        Cria o roteiro de abordagem consultiva com pedido explícito de opt-in
+        para evitar banimento por spam no WhatsApp.
+        """
+        nome_curto = (lead.nome or 'Olá').split()[0]
+        empresa = lead.empresa or 'sua empresa'
+        bairro = lead.bairro or 'sua região'
+        operadora = lead.operadora_atual or 'outras operadoras'
+        plano = lead.plano_sugerido or 'Fibra 700 + DigiMesh com Wi-Fi 6'
+
+        script = (
+            f"Olá {nome_curto}, tudo bem? Notei a presença da {empresa} aqui no bairro {bairro}.\n\n"
+            f"A DigitalNet acabou de concluir a modernização da rede de fibra óptica com roteadores Wi-Fi 6 "
+            f"aqui na sua rua. Identificamos que muitos comércios e escritórios locais sofrem com lentidão e "
+            f"suporte demorado de operadoras nacionais como {operadora}.\n\n"
+            f"Estruturamos um comparativo rápido mostrando como ter mais velocidade e suporte local 24h em Campo Grande "
+            f"com o nosso plano {plano}.\n\n"
+            f"👉 *Posso te enviar esse comparativo de 1 minuto aqui pelo WhatsApp sem compromisso?*\n"
+            f"_(Se não for o momento, fique à vontade para responder 'Não')_"
+        )
+        return script
+
+    @classmethod
+    def prospect_neighborhood(
+        cls,
+        bairro: str,
+        cidade: str = 'Campo Grande',
+        estado: str = 'MS',
+        niche: str = 'Empresas e Comércios',
+        count: int = 5,
+        cliente_ref_id: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Gera leads vizinhos qualificados na mesma região dos clientes.
+        Tenta chamar o Google Gemini se GEMINI_API_KEY estiver configurado;
+        caso contrário, usa o motor heurístico local hiper-realista.
+        """
+        api_key = current_app.config.get('GEMINI_API_KEY')
+        if api_key:
+            try:
+                leads_ai = cls._call_gemini_prospector(bairro, cidade, estado, niche, count, api_key)
+                if leads_ai:
+                    return leads_ai
+            except Exception as e:
+                logger.warning(f"Falha na chamada ao Gemini API ({e}). Usando motor local de telecom.")
+
+        return cls._generate_fallback_prospects(bairro, cidade, estado, niche, count)
+
+    @classmethod
+    def _call_gemini_prospector(
+        cls,
+        bairro: str,
+        cidade: str,
+        estado: str,
+        niche: str,
+        count: int,
+        api_key: str
+    ) -> List[Dict[str, Any]]:
+        """Chama a API do Google Gemini via HTTP padrão (sem bibliotecas externas pesadas)."""
+        prompt = f"""Você é o maior especialista em prospecção de vendas B2B e expansão de provedores de internet fibra óptica (ISP).
+A empresa é a DigitalNet MS (provedor com rede própria AS61588, Wi-Fi 6 em comodato, suporte local 24h e planos de 600 a 900 Mega em Campo Grande - MS).
+
+Gere uma lista de {count} leads B2B/comerciais realistas e altamente prováveis localizados EXATAMENTE no bairro "{bairro}" em "{cidade} - {estado}", nicho "{niche}".
+
+Retorne EXCLUSIVAMENTE um JSON array (sem formatação markdown, sem ```json) com a seguinte estrutura para cada item:
+[
+  {{
+    "empresa": "Nome da Empresa / Clínica / Comércio",
+    "nome": "Nome do Decisor (Ex: Dra. Camila Rocha, Dr. Marcos Silva, Roberto Santos)",
+    "cargo": "Cargo (Ex: Sócio-Diretor, Gerente Geral, Médico Responsável)",
+    "telefone": "(67) 99876-1234",
+    "email": "contato@empresa.com.br",
+    "logradouro": "Rua ou Avenida real deste bairro em Campo Grande",
+    "numero": "120",
+    "cep": "79000-000",
+    "operadora_atual": "Vivo Fibra ou Claro",
+    "plano_sugerido": "Fibra 700 + DigiMesh (Wi-Fi 6) ou Fibra 900 Advanced",
+    "valor_mensal_sugerido": 139.90,
+    "lead_score": 88,
+    "dor_principal": "Descrição da dor (ex: maquininha oscilando, sinal Wi-Fi fraco, suporte 0800 demorado)",
+    "icebreaker_optin": "Texto persuasivo de 3 parágrafos pedindo opt-in para comparativo sem ban"
+  }}
+]"""
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        payload = json.dumps({
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.4}
+        }).encode('utf-8')
+
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+
+        with urllib.request.urlopen(req, timeout=12) as response:
+            res_data = json.loads(response.read().decode('utf-8'))
+            text_resp = res_data['candidates'][0]['content']['parts'][0]['text']
+            # Remove blocos ```json se houver
+            text_clean = re.sub(r'^```json\s*', '', text_resp.strip(), flags=re.MULTILINE)
+            text_clean = re.sub(r'```$', '', text_clean.strip(), flags=re.MULTILINE)
+            dados = json.loads(text_clean)
+            if isinstance(dados, list):
+                return dados
+        return []
+
+    @classmethod
+    def _generate_fallback_prospects(
+        cls,
+        bairro: str,
+        cidade: str,
+        estado: str,
+        niche: str,
+        count: int
+    ) -> List[Dict[str, Any]]:
+        """Motor heurístico de telecomunicações para Campo Grande."""
+        info_bairro = PERFIS_CAMPO_GRANDE.get(bairro, {
+            'ruas': ['Avenida Principal', 'Rua Central', 'Rua das Palmeiras'],
+            'cep_prefix': '79000',
+            'nichos': ['Comércio & Serviços', 'Consultórios', 'Escritórios'],
+        })
+
+        ruas = info_bairro['ruas']
+        cep_prefix = info_bairro['cep_prefix']
+
+        templates_empresas = [
+            {
+                'empresa_tpl': 'Clínica Integrada {sobrenome}',
+                'contato': 'Dra. Patricia {sobrenome}',
+                'cargo': 'Diretora Clínica',
+                'dor': 'Lentidão no sistema de agendamento online e máquinas de cartão travando em horários de pico.',
+                'operadora': 'Vivo Fibra',
+                'plano': 'Fibra 700 + DigiMesh (Wi-Fi 6)',
+                'valor': 139.90,
+                'score': 92,
+            },
+            {
+                'empresa_tpl': '{sobrenome} Advogados Associados',
+                'contato': 'Dr. Marcos Eduardo {sobrenome}',
+                'cargo': 'Sócio Coordenador',
+                'dor': 'Queda de conexão durante audiências virtuais pelo Teams/Zoom e demora no upload de petições pesadas.',
+                'operadora': 'Claro NET',
+                'plano': 'DigitalNet B2B Link Dedicado Pro',
+                'valor': 399.90,
+                'score': 95,
+            },
+            {
+                'empresa_tpl': 'Studio & Boutique {sobrenome}',
+                'contato': 'Camila {sobrenome}',
+                'cargo': 'Sócia Proprietária',
+                'dor': 'Wi-Fi da operadora atual não cobre a recepção e o estoque; sinal fraco para clientes.',
+                'operadora': 'Vivo Fibra',
+                'plano': 'Fibra 700 + DigiMesh (Wi-Fi 6)',
+                'valor': 139.90,
+                'score': 88,
+            },
+            {
+                'empresa_tpl': '{sobrenome} Contabilidade & Gestão',
+                'contato': 'Carlos Roberto {sobrenome}',
+                'cargo': 'Contador Responsável',
+                'dor': 'Falta de suporte aos finais de semana e suporte telefônico via robô 0800 quando cai o sinal.',
+                'operadora': 'Claro NET',
+                'plano': 'Fibra 900 Advanced (Wi-Fi 6)',
+                'valor': 149.90,
+                'score': 90,
+            },
+            {
+                'empresa_tpl': 'Espaço Saúde & Bem-Estar {sobrenome}',
+                'contato': 'Juliana {sobrenome}',
+                'cargo': 'Gerente Geral',
+                'dor': 'Cobrança alta de fatura na fatura atual sem entrega da velocidade contratada.',
+                'operadora': 'Vivo Fibra',
+                'plano': 'Fibra 600 Standard (Wi-Fi 6)',
+                'valor': 129.90,
+                'score': 84,
+            },
+            {
+                'empresa_tpl': 'Restaurante & Café {sobrenome}',
+                'contato': 'Fernando {sobrenome}',
+                'cargo': 'Proprietário',
+                'dor': 'Queda no link de dados afeta o tablet de pedidos dos garçons e a emissão de cupons fiscais.',
+                'operadora': 'Claro NET',
+                'plano': 'Fibra 700 + DigiMesh (Wi-Fi 6)',
+                'valor': 139.90,
+                'score': 91,
+            },
+        ]
+
+        sobrenomes = ['Albuquerque', 'Mendes', 'Fontana', 'Vasconcelos', 'Barreto', 'Nogueira', 'Pires', 'Ribeiro']
+        resultado = []
+
+        for i in range(min(count, len(templates_empresas))):
+            t = templates_empresas[i]
+            sobrenome = sobrenomes[i % len(sobrenomes)]
+            empresa = t['empresa_tpl'].format(sobrenome=sobrenome)
+            nome_contato = t['contato'].format(sobrenome=sobrenome)
+            rua = ruas[i % len(ruas)]
+            num = str(100 + i * 85)
+            tel = f"(67) 9{random.randint(9100, 9999)}-{random.randint(1000, 9999)}"
+            email_empresa = f"contato@{re.sub(r'[^a-z0-9]', '', empresa.lower())[:14]}.com.br"
+            cep = f"{cep_prefix}-{random.randint(100, 999):03d}"
+
+            # Cria lead estruturado
+            lead_item = {
+                'empresa': empresa,
+                'nome': nome_contato,
+                'cargo': t['cargo'],
+                'telefone': tel,
+                'email': email_empresa,
+                'logradouro': rua,
+                'numero': num,
+                'bairro': bairro,
+                'cidade': cidade,
+                'estado': estado,
+                'cep': cep,
+                'niche': niche,
+                'operadora_atual': t['operadora'],
+                'plano_sugerido': t['plano'],
+                'valor_mensal_sugerido': t['valor'],
+                'lead_score': t['score'],
+                'dor_principal': t['dor'],
+            }
+
+            # Monta script de opt-in
+            temp_lead = Lead(**lead_item)
+            lead_item['icebreaker_optin'] = cls.generate_anti_ban_whatsapp_script(temp_lead)
+            lead_item['dossie_comercial'] = json.dumps({
+                'perfil_decisor': f"{nome_contato} ({t['cargo']}) busca estabilidade de rede e atendimento direto sem burocracia.",
+                'vantagem_digitalnet': 'Fibra óptica com Wi-Fi 6 de alta densidade + suporte presencial 24h com equipe em Campo Grande.',
+                'angulo_venda': f"Focar na eliminação da dor de '{t['dor']}' demonstrando que a DigitalNet já atende vizinhos nesta mesma rua.",
+            }, ensure_ascii=False)
+
+            resultado.append(lead_item)
+
+        return resultado
+
+    @classmethod
+    def save_prospects(cls, prospects_data: List[Dict[str, Any]], cliente_ref_id: Optional[int] = None) -> List[Lead]:
+        """Salva a lista de leads prospectados no banco de dados."""
+        salvos = []
+        for d in prospects_data:
+            # Evita duplicidade exata de empresa + bairro
+            existente = Lead.query.filter_by(
+                empresa=d['empresa'],
+                bairro=d.get('bairro', 'Campo Grande')
+            ).first()
+
+            if existente:
+                continue
+
+            lead = Lead(
+                empresa=d['empresa'],
+                nome=d['nome'],
+                cargo=d.get('cargo'),
+                telefone=d.get('telefone'),
+                email=d.get('email'),
+                logradouro=d.get('logradouro'),
+                numero=d.get('numero'),
+                bairro=d.get('bairro', 'Centro'),
+                cidade=d.get('cidade', 'Campo Grande'),
+                estado=d.get('estado', 'MS'),
+                cep=d.get('cep'),
+                niche=d.get('niche', 'Geral'),
+                cliente_referencia_id=cliente_ref_id,
+                status='novo',
+                optin_status='pendente',
+                operadora_atual=d.get('operadora_atual', 'Vivo Fibra / Claro'),
+                plano_sugerido=d.get('plano_sugerido', 'Fibra 700 + DigiMesh'),
+                valor_mensal_sugerido=float(d.get('valor_mensal_sugerido', 139.90)),
+                lead_score=int(d.get('lead_score', 85)),
+                dor_principal=d.get('dor_principal'),
+                icebreaker_optin=d.get('icebreaker_optin'),
+                dossie_comercial=d.get('dossie_comercial') if isinstance(d.get('dossie_comercial'), str) else json.dumps(d.get('dossie_comercial') or {}, ensure_ascii=False),
+            )
+
+            # Se não veio o script de opt-in, gera automaticamente
+            if not lead.icebreaker_optin:
+                lead.icebreaker_optin = cls.generate_anti_ban_whatsapp_script(lead)
+
+            db.session.add(lead)
+            salvos.append(lead)
+
+        db.session.commit()
+        return salvos
+
+    @classmethod
+    def convert_lead_to_client(cls, lead: Lead) -> Cliente:
+        """
+        Converte o lead em Cliente efetivo e cria automaticamente o Pedido
+        da assinatura da DigitalNet MS com itens totalizados.
+        """
+        if lead.cliente_convertido_id:
+            cliente_existente = Cliente.query.get(lead.cliente_convertido_id)
+            if cliente_existente:
+                return cliente_existente
+
+        # 1. Cria o Cliente
+        novo_cliente = Cliente(
+            nome=f"{lead.empresa} ({lead.nome})",
+            email=lead.email or f"contato@{re.sub(r'[^a-z0-9]', '', lead.empresa.lower())[:10]}.com.br",
+            telefone=lead.telefone or '(67) 99999-9999',
+            documento=lead.documento or '00.000.000/0001-00',
+            cep=lead.cep or '79000-000',
+            logradouro=lead.logradouro or 'Rua de Acesso',
+            numero=lead.numero or 'S/N',
+            complemento=lead.complemento,
+            bairro=lead.bairro,
+            cidade=lead.cidade,
+            estado=lead.estado,
+            ativo=True,
+            observacoes=f"Cliente convertido via Prospecção Geo-Localizada. Dor anterior: {lead.dor_principal or 'N/A'}"
+        )
+        db.session.add(novo_cliente)
+        db.session.flush()
+
+        # 2. Cria o Pedido da Assinatura
+        prefixo = f"NET-{datetime.utcnow().year}"
+        ultimo_pedido = Pedido.query.filter(Pedido.numero_pedido.like(f"{prefixo}-%")).order_by(Pedido.id.desc()).first()
+        if ultimo_pedido:
+            try:
+                seq = int(ultimo_pedido.numero_pedido.split('-')[-1]) + 1
+            except ValueError:
+                seq = 1
+        else:
+            seq = 1
+        num_pedido = f"{prefixo}-{seq:04d}"
+
+        valor = float(lead.valor_mensal_sugerido or 139.90)
+        pedido = Pedido(
+            numero_pedido=num_pedido,
+            cliente_id=novo_cliente.id,
+            status='processando',
+            metodo_pagamento='pix',
+            valor_total=valor,
+            descricao=f"Assinatura Mensal {lead.plano_sugerido} - Instalação Inclusa com Roteador Wi-Fi 6",
+            observacoes="Ativação inicial de fibra óptica DigitalNet MS."
+        )
+        db.session.add(pedido)
+        db.session.flush()
+
+        # 3. Item do Pedido
+        item = ItemPedido(
+            pedido_id=pedido.id,
+            descricao=f"Mensalidade {lead.plano_sugerido} (Instalação + Wi-Fi 6 em comodato)",
+            quantidade=1.0,
+            valor_unitario=valor,
+            valor_total=valor
+        )
+        db.session.add(item)
+
+        # 4. Atualiza o status do Lead
+        lead.status = 'convertido'
+        lead.optin_status = 'aceito'
+        lead.cliente_convertido_id = novo_cliente.id
+        db.session.commit()
+
+        return novo_cliente
+
+    @staticmethod
+    def get_objection_tutor(objection_key: str, lead: Lead) -> Dict[str, Any]:
+        """Tutor de contorno de objeções com técnicas psicológicas."""
+        bairro = lead.bairro or 'seu bairro'
+        operadora = lead.operadora_atual or 'concorrência'
+        plano = lead.plano_sugerido or 'Fibra com Wi-Fi 6'
+
+        tutores = {
+            'fidelidade': {
+                'titulo': 'Objeção: "Ainda tenho contrato de fidelidade com a Vivo/Claro"',
+                'diagnostico': 'O cliente tem medo de pagar multa rescisória e ficar no prejuízo.',
+                'tecnica': 'Ponte de Transição / Teste em Paralelo',
+                'script_whatsapp': (
+                    f"Entendo perfeitamente! Ninguém gosta de pagar multas desnecessárias.\n\n"
+                    f"O que muitos clientes aqui do {bairro} fazem é instalar a DigitalNet nos últimos 60 dias da fidelidade como 'link de segurança', "
+                    f"aproveitando a nossa condição de R$ 99,90 nos primeiros 3 meses. Assim você não fica sem internet se a {operadora} cair "
+                    f"e faz a transição 100% suave sem pagar multa. Que tal agendarmos a viabilidade?"
+                ),
+            },
+            'preco': {
+                'titulo': 'Objeção: "Achei o valor um pouco acima do que pago hoje"',
+                'diagnostico': 'O cliente está comparando preço nominal de plano antigo sem perceber que tem metade da velocidade e Wi-Fi obsoleto.',
+                'tecnica': 'Custo por Mega & Custo de Queda',
+                'script_whatsapp': (
+                    f"Compreendo! Se olharmos só o valor final parece similar, mas na prática você está pagando mais caro por Mega.\n\n"
+                    f"Na DigitalNet você recebe {plano} com dobro de upload e roteador Wi-Fi 6 de alta densidade incluso em comodato (que a concorrência cobra R$ 25/mês de aluguel). "
+                    f"Além disso, uma única hora sem internet na sua operação custa muito mais que a diferença de mensalidade. Faz sentido dar uma olhada na comparação?"
+                ),
+            },
+            'marca': {
+                'titulo': 'Objeção: "Nunca ouvi falar da DigitalNet, prefiro as grandes teles"',
+                'diagnostico': 'Insegurança em relação à estabilidade e suporte.',
+                'tecnica': 'Autoridade Local + Atendimento Humanizado',
+                'script_whatsapp': (
+                    f"Ótimo ponto! A grande diferença é que a DigitalNet é uma operadora com rede própria autorizada pela Anatel (AS61588) e mais de 700 condomínios atendidos em Campo Grande.\n\n"
+                    f"Enquanto nas teles nacionais você fala com robôs no 0800 e espera 3 dias por um técnico de fora, a nossa equipe de suporte é 100% própria, local e 24h aqui na cidade. "
+                    f"Se precisar de suporte, o técnico chega no mesmo dia. Vale a pena testar a estabilidade local!"
+                ),
+            },
+            'satisfeito': {
+                'titulo': 'Objeção: "Minha internet atual já me atende, não quero mexer"',
+                'diagnostico': 'Acomodação até que ocorra uma queda crítica.',
+                'tecnica': 'Pergunta de Tensão Construtiva',
+                'script_whatsapp': (
+                    f"Excelente saber que está funcionando! Posso te fazer uma pergunta rápida de 30 segundos?\n\n"
+                    f"Quando a sua internet atual oscila nos horários de pico, qual é o plano de contingência da {lead.empresa} para não parar os computadores e maquininhas? "
+                    f"A DigitalNet pode ficar como sua rota principal com Wi-Fi 6 de alta velocidade para que sua equipe nunca mais sofra lentidão. Posso te passar um comparativo?"
+                ),
+            },
+        }
+
+        return tutores.get(objection_key, tutores['fidelidade'])
 OMNI_EOF
 
 # --- app/static/css/style.css ---
@@ -2147,6 +3238,182 @@ body {
     padding: 1.25rem 1rem;
   }
 }
+
+/* ==========================================================================
+   DIGITALNET MS - TEMA AZUL TELECOM & AMARELO FIBRA
+   ========================================================================== */
+
+:root {
+  --dn-blue: #1b4f99;
+  --dn-blue-dark: #0f2d57;
+  --dn-blue-deep: #091c36;
+  --dn-blue-light: #eff6ff;
+  --dn-blue-border: #bfdbfe;
+  
+  --dn-yellow: #f59e0b;
+  --dn-yellow-gold: #ffbe18;
+  --dn-yellow-light: #fefce8;
+  --dn-yellow-dark: #92400e;
+  --dn-yellow-border: #fde68a;
+}
+
+/* Header & Banner */
+.dn-header-title {
+  color: var(--dn-blue-deep);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.dn-badge-corp {
+  background: linear-gradient(135deg, var(--dn-blue), var(--dn-blue-dark));
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+.dn-badge-yellow {
+  background: var(--dn-yellow-gold);
+  color: #0f172a;
+  font-weight: 700;
+  border-radius: 9999px;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.25);
+}
+
+/* Botões com Identidade DigitalNet */
+.btn-dn-blue {
+  background: linear-gradient(135deg, var(--dn-blue), #143e79);
+  color: #ffffff !important;
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 3px 8px rgba(27, 79, 153, 0.25);
+  transition: all 0.2s ease;
+}
+.btn-dn-blue:hover {
+  background: linear-gradient(135deg, #143e79, var(--dn-blue-deep));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(27, 79, 153, 0.35);
+}
+
+.btn-dn-yellow {
+  background: linear-gradient(135deg, var(--dn-yellow-gold), var(--dn-yellow));
+  color: #0f172a !important;
+  border: none;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(245, 158, 11, 0.25);
+  transition: all 0.2s ease;
+}
+.btn-dn-yellow:hover {
+  background: linear-gradient(135deg, var(--dn-yellow), #d97706);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(245, 158, 11, 0.35);
+}
+
+.btn-dn-outline {
+  border: 1.5px solid var(--dn-blue);
+  color: var(--dn-blue);
+  background: #ffffff;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.btn-dn-outline:hover {
+  background: var(--dn-blue);
+  color: #ffffff;
+}
+
+/* Cards de Clusters de Bairros */
+.dn-cluster-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 1.15rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.dn-cluster-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--dn-blue), var(--dn-yellow-gold));
+}
+.dn-cluster-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgba(27, 79, 153, 0.12);
+  border-color: var(--dn-blue-border);
+}
+.dn-cluster-card.active-cluster {
+  border-color: var(--dn-blue);
+  background-color: var(--dn-blue-light);
+}
+
+/* Indicadores de Funil (KPI Cards) */
+.dn-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 1rem 1.15rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+  position: relative;
+  transition: all 0.2s ease;
+}
+.dn-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.06);
+}
+.dn-kpi-card .kpi-number {
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--dn-blue-deep);
+}
+.dn-kpi-card .kpi-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+/* Tabela de Leads */
+.dn-table-header {
+  background: linear-gradient(135deg, var(--dn-blue-deep), var(--dn-blue));
+  color: #ffffff;
+}
+.dn-table-header th {
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.85rem 1rem;
+  border: none;
+}
+
+/* Hero Banner do Lead (detail.html) */
+.dn-hero-banner {
+  background: linear-gradient(135deg, var(--dn-blue-deep) 0%, var(--dn-blue) 100%);
+  color: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(15, 45, 87, 0.2);
+}
+.dn-hero-banner::after {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 190, 24, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
 OMNI_EOF
 
 # --- app/static/js/main.js ---
@@ -2544,12 +3811,12 @@ cat > 'app/templates/base.html' <<'OMNI_EOF'
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <a href="{{ url_for('main.dashboard') }}" class="brand-logo">
-          <div class="brand-icon">
-            <i class="bi bi-layers-fill"></i>
+          <div class="brand-icon" style="background: linear-gradient(135deg, #1b4f99, #0f2d57); box-shadow: 0 4px 12px rgba(27, 79, 153, 0.4);">
+            <i class="bi bi-broadcast-pin" style="color: #fbbf24;"></i>
           </div>
           <div>
-            <div style="line-height: 1.1;">OmniGestão</div>
-            <small style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">Clientes & Pedidos</small>
+            <div style="line-height: 1.1; font-weight: 800; letter-spacing: -0.02em;">Digital<span style="color: #fbbf24;">Net</span></div>
+            <small style="font-size: 0.7rem; color: #94a3b8; font-weight: 500;">Gestão & Expansão MS</small>
           </div>
         </a>
       </div>
@@ -2559,6 +3826,13 @@ cat > 'app/templates/base.html' <<'OMNI_EOF'
         <a href="{{ url_for('main.dashboard') }}" class="sidebar-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
           <i class="bi bi-speedometer2"></i>
           <span>Dashboard</span>
+        </a>
+
+        <div class="nav-section-title">Expansão Telecom</div>
+        <a href="{{ url_for('leads.index') }}" class="sidebar-link {% if request.blueprint == 'leads' %}active{% endif %}">
+          <i class="bi bi-radar text-warning"></i>
+          <span>Radar de Leads</span>
+          <span class="badge ms-auto" style="background: #fbbf24; color: #0f172a; font-weight: 700; font-size: 0.65rem;">Wi-Fi 6</span>
         </a>
 
         <div class="nav-section-title">Gerenciamento</div>
@@ -2610,16 +3884,19 @@ cat > 'app/templates/base.html' <<'OMNI_EOF'
           <button class="btn btn-sm btn-outline-secondary d-lg-none" id="sidebarToggle" type="button" aria-label="Abrir menu">
             <i class="bi bi-list fs-5"></i>
           </button>
-          <div class="d-none d-md-block">
-            <span class="text-muted small">Sistema Integrado de Gestão</span>
+          <div class="d-none d-md-flex align-items-center gap-2">
+            <span class="text-muted small">Portal de Gestão & Expansão</span>
+            <span class="badge py-1 px-2 rounded-pill" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.7rem; font-weight: 700;">
+              <i class="bi bi-geo-alt-fill text-danger me-1"></i>Campo Grande - MS
+            </span>
           </div>
         </div>
 
         <div class="d-flex align-items-center gap-2">
-          <a href="{{ url_for('clientes.novo') }}" class="btn btn-sm btn-outline-primary d-none d-sm-inline-flex align-items-center gap-1">
+          <a href="{{ url_for('clientes.novo') }}" class="btn btn-sm btn-dn-outline d-none d-sm-inline-flex align-items-center gap-1">
             <i class="bi bi-person-plus"></i> + Cliente
           </a>
-          <a href="{{ url_for('pedidos.novo') }}" class="btn btn-sm btn-primary d-none d-sm-inline-flex align-items-center gap-1">
+          <a href="{{ url_for('pedidos.novo') }}" class="btn btn-sm btn-dn-blue d-none d-sm-inline-flex align-items-center gap-1">
             <i class="bi bi-cart-plus"></i> + Pedido
           </a>
           <div class="vr mx-2 d-none d-sm-block"></div>
@@ -3518,6 +4795,969 @@ cat > 'app/templates/errors/500.html' <<'OMNI_EOF'
     <i class="bi bi-house"></i> Voltar ao Dashboard
   </a>
 </div>
+{% endblock %}
+OMNI_EOF
+
+# --- app/templates/leads/detail.html ---
+cat > 'app/templates/leads/detail.html' <<'OMNI_EOF'
+{% extends "base.html" %}
+
+{% block title %}Dossiê Comercial & Central WhatsApp - {{ lead.empresa }} - DigitalNet MS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- BREADCRUMB & VOLTAR -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{{ url_for('leads.index', bairro=lead.bairro) }}" class="btn btn-dn-outline btn-sm shadow-sm">
+      <i class="bi bi-arrow-left me-1"></i> Voltar ao Radar de Leads
+    </a>
+
+    <div class="d-flex gap-2">
+      <span class="badge {{ lead.status_badge_class }} py-2 px-3 fs-6 shadow-sm">
+        Status: {{ lead.status_label }}
+      </span>
+      {% if lead.optin_status == 'aceito' %}
+      <span class="badge bg-success py-2 px-3 fs-6 shadow-sm">
+        <i class="bi bi-shield-check me-1"></i> Opt-in Aceito
+      </span>
+      {% elif lead.optin_status == 'recusado' %}
+      <span class="badge bg-danger py-2 px-3 fs-6 shadow-sm">
+        Opt-in Recusado
+      </span>
+      {% else %}
+      <span class="badge bg-warning text-dark py-2 px-3 fs-6 shadow-sm">
+        <i class="bi bi-clock-history me-1"></i> Opt-in Pendente
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- HERO BANNER DO LEAD COM IDENTIDADE DIGITALNET -->
+  <div class="dn-hero-banner mb-4">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <div class="rounded-circle p-3 d-flex align-items-center justify-content-center shadow" style="background: rgba(255, 190, 24, 0.2); color: var(--dn-yellow-gold); width: 64px; height: 64px;">
+            <i class="bi bi-building fs-2"></i>
+          </div>
+          <div>
+            <h2 class="h3 fw-bold mb-1 text-white">{{ lead.empresa }}</h2>
+            <div class="text-white-50 small d-flex align-items-center gap-2 flex-wrap">
+              <span><i class="bi bi-person-fill text-warning me-1"></i> Decisor: <strong class="text-white">{{ lead.nome }}</strong></span>
+              {% if lead.cargo %}
+              <span class="badge" style="background: rgba(255, 190, 24, 0.25); color: #fde047; font-weight: 600;">{{ lead.cargo }}</span>
+              {% endif %}
+              <span>&bull; <i class="bi bi-tag-fill text-warning me-1"></i> {{ lead.niche }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-4 text-white-50 small mt-3 pt-3 border-top" style="border-color: rgba(255, 255, 255, 0.15) !important;">
+          <div><i class="bi bi-geo-alt-fill text-danger me-1"></i> <span class="text-white">{{ lead.endereco_resumido }}</span></div>
+          {% if lead.telefone %}
+          <div><i class="bi bi-telephone-fill text-success me-1"></i> <span class="text-white">{{ lead.telefone }}</span></div>
+          {% endif %}
+          {% if lead.email %}
+          <div><i class="bi bi-envelope-fill text-info me-1"></i> <span class="text-white">{{ lead.email }}</span></div>
+          {% endif %}
+          <div><i class="bi bi-hdd-network text-warning me-1"></i> Operadora Atual: <strong class="text-white">{{ lead.operadora_atual }}</strong></div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+        <div class="d-inline-block text-center p-3 rounded-3 shadow" style="background: rgba(9, 28, 54, 0.6); border: 1px solid rgba(255, 190, 24, 0.3); min-width: 170px;">
+          <small class="text-white-50 d-block text-uppercase fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Score de Conversão</small>
+          <h2 class="fw-bold mb-0 text-warning" style="font-size: 2.5rem;">{{ lead.lead_score }}<small class="fs-6 text-white-50">/100</small></h2>
+          <small class="text-success fw-semibold"><i class="bi bi-check2-circle me-1"></i>Alta Viabilidade Óptica</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- COLUNA ESQUERDA: CENTRAL WHATSAPP & QUEBRA DE OBJEÇÕES -->
+    <div class="col-lg-7">
+
+      <!-- CARD WHATSAPP ANTI-BAN -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <div class="p-2 rounded-2 text-white" style="background: #25d366;">
+              <i class="bi bi-whatsapp fs-5"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">Abordagem WhatsApp com Opt-in Anti-Ban</h5>
+              <small class="text-muted">Mensagem consultiva sem links promocionais no primeiro contato</small>
+            </div>
+          </div>
+          <span class="badge py-2 px-3 rounded-pill" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700;">
+            <i class="bi bi-shield-check me-1"></i> Blindado contra Ban
+          </span>
+        </div>
+        
+        <div class="card-body p-4">
+          <div class="alert alert-light border py-2 px-3 small mb-3 text-secondary">
+            <i class="bi bi-info-circle text-primary me-1"></i>
+            Este roteiro segue o método de 3 passos: <strong>1)</strong> Gancho hiperlocal em Campo Grande, <strong>2)</strong> Comparativo contra a operadora atual e <strong>3)</strong> Pedido de consentimento explícito.
+          </div>
+
+          <div class="position-relative mb-3">
+            <textarea id="scriptWhatsApp" class="form-control bg-light border text-dark font-monospace small p-3" rows="8" readonly style="line-height: 1.5; resize: none;">{{ lead.icebreaker_optin }}</textarea>
+            <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2 shadow-sm" onclick="copiarScript()" title="Copiar para área de transferência">
+              <i class="bi bi-clipboard me-1"></i> Copiar
+            </button>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center pt-2">
+            {% if lead.whatsapp_url != '#' %}
+            <a href="{{ lead.whatsapp_url }}" target="_blank" class="btn btn-success px-4 shadow-sm" id="btnDispararWhatsApp">
+              <i class="bi bi-whatsapp me-2"></i> Abrir WhatsApp Web
+            </a>
+            {% else %}
+            <button class="btn btn-secondary" disabled>Sem telefone cadastrado</button>
+            {% endif %}
+
+            <div class="d-flex gap-2">
+              <form action="{{ url_for('leads.atualizar_status', lead_id=lead.id) }}" method="POST" class="d-inline">
+                <input type="hidden" name="status" value="optin_solicitado">
+                <input type="hidden" name="optin_status" value="pendente">
+                <button type="submit" class="btn btn-sm btn-outline-warning text-dark fw-semibold" title="Marcar que enviou mensagem">
+                  <i class="bi bi-send me-1"></i> Marcar Enviado
+                </button>
+              </form>
+
+              <form action="{{ url_for('leads.atualizar_status', lead_id=lead.id) }}" method="POST" class="d-inline">
+                <input type="hidden" name="status" value="optin_aceito">
+                <input type="hidden" name="optin_status" value="aceito">
+                <button type="submit" class="btn btn-sm btn-dn-blue" title="Lead respondeu com interesse">
+                  <i class="bi bi-check-circle-fill text-warning me-1"></i> Opt-in Aceito!
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TUTOR DE QUEBRA DE OBJEÇÕES -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 border-bottom">
+          <div class="d-flex align-items-center gap-2">
+            <div class="p-2 rounded-2 text-dark" style="background: var(--dn-yellow-gold);">
+              <i class="bi bi-mortarboard-fill fs-5"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">Tutor de Quebra de Objeções (SDR Telecom)</h5>
+              <small class="text-muted">Selecione a objeção do cliente para obter a técnica psicológica e o script imediato</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-4">
+          <div class="btn-group btn-group-sm w-100 mb-3 shadow-sm" role="group">
+            <a href="{{ url_for('leads.detail', lead_id=lead.id, obj='fidelidade') }}" class="btn {% if obj_key == 'fidelidade' %}btn-dn-yellow{% else %}btn-outline-secondary{% endif %}">
+              Fidelidade Concorrente
+            </a>
+            <a href="{{ url_for('leads.detail', lead_id=lead.id, obj='preco') }}" class="btn {% if obj_key == 'preco' %}btn-dn-yellow{% else %}btn-outline-secondary{% endif %}">
+              Preço / Custo
+            </a>
+            <a href="{{ url_for('leads.detail', lead_id=lead.id, obj='marca') }}" class="btn {% if obj_key == 'marca' %}btn-dn-yellow{% else %}btn-outline-secondary{% endif %}">
+              Não Conheço a Marca
+            </a>
+            <a href="{{ url_for('leads.detail', lead_id=lead.id, obj='satisfeito') }}" class="btn {% if obj_key == 'satisfeito' %}btn-dn-yellow{% else %}btn-outline-secondary{% endif %}">
+              Já Estou Satisfeito
+            </a>
+          </div>
+
+          <div class="p-3 bg-light rounded-3 border mb-2">
+            <div class="d-flex justify-content-between align-items-start mb-2 flex-wrap gap-1">
+              <h6 class="fw-bold mb-0" style="color: var(--dn-blue);"><i class="bi bi-chat-quote-fill me-1 text-warning"></i>{{ tutor_obj.titulo }}</h6>
+              <span class="badge py-1 px-2 rounded-pill bg-dark text-white">Técnica: {{ tutor_obj.tecnica }}</span>
+            </div>
+            
+            <p class="small text-muted mb-2"><strong>Diagnóstico Psicológico:</strong> {{ tutor_obj.diagnostico }}</p>
+            
+            <div class="p-3 bg-white rounded border border-warning font-monospace small text-dark mt-2 shadow-sm" style="border-left: 4px solid var(--dn-yellow) !important;">
+              {{ tutor_obj.script_whatsapp|replace('\n', '<br>')|safe }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- COLUNA DIREITA: VIABILIDADE & CONVERSÃO EM CLIENTE -->
+    <div class="col-lg-5">
+
+      <!-- DIAGNÓSTICO E DOR -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 border-bottom">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-speedometer2 fs-5 text-primary"></i>
+            <h5 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">Diagnóstico da Conexão Atual</h5>
+          </div>
+        </div>
+        
+        <div class="card-body p-4">
+          <div class="mb-3">
+            <label class="small fw-bold text-muted text-uppercase d-block mb-1">Principal Gargalo / Dor Mapeada:</label>
+            <div class="alert alert-warning border-warning bg-warning bg-opacity-10 small mb-0 py-2">
+              <i class="bi bi-exclamation-triangle-fill text-warning-emphasis me-2"></i>
+              <strong class="text-dark">{{ lead.dor_principal or "Lentidão nas maquininhas e lentidão no sinal Wi-Fi durante os horários de pico." }}</strong>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="small fw-bold text-muted text-uppercase d-block mb-1">Viabilidade Óptica no Bairro (DigitalNet MS):</label>
+            <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-3 border">
+              <div class="p-2 rounded-circle bg-success bg-opacity-10 text-success">
+                <i class="bi bi-check-circle-fill fs-4"></i>
+              </div>
+              <div>
+                <strong class="text-dark d-block">Porta Óptica Confirmada no Bairro {{ lead.bairro }}</strong>
+                <div class="text-muted" style="font-size: 0.75rem;">Rede FTTH própria AS61588. Instalação rápida inclusa sem obras.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-top pt-3">
+            <label class="small fw-bold text-muted text-uppercase d-block mb-1">Plano Recomendado DigitalNet:</label>
+            <h5 class="fw-bold mb-1" style="color: var(--dn-blue);">{{ lead.plano_sugerido }}</h5>
+            <div class="text-muted small">Valor mensal: <strong class="text-dark fs-6">R$ {{ "%.2f"|format(lead.valor_mensal_sugerido)|replace('.', ',') }}</strong> com roteador Wi-Fi 6 em comodato.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORMULÁRIO DE CONVERSÃO EM CLIENTE (DIGITALNET THEMED) -->
+      <div class="card border-0 shadow-sm" style="border-top: 4px solid var(--dn-yellow) !important;">
+        <div class="card-header bg-white py-3 border-bottom">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-person-check-fill fs-5" style="color: var(--dn-blue);"></i>
+            <div>
+              <h5 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">Fechar Venda & Ativar Assinatura</h5>
+              <small class="text-muted">Cria o Cliente e gera o Pedido de instalação no banco de dados</small>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body p-4">
+          <form action="{{ url_for('leads.converter_cliente', lead_id=lead.id) }}" method="POST">
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-dark">Plano Contratado da DigitalNet</label>
+              <select name="plano_sugerido" class="form-select bg-light" id="selectPlano">
+                {% for p in planos %}
+                <option value="{{ p.nome }}" data-preco="{{ p.preco }}" {% if p.nome == lead.plano_sugerido %}selected{% endif %}>
+                  {{ p.nome }} ({{ p.download }}) - R$ {{ "%.2f"|format(p.preco)|replace('.', ',') }}/mês
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-dark">Valor da Mensalidade (R$)</label>
+              <input type="number" step="0.01" name="valor_mensal_sugerido" id="inputValor" class="form-control bg-light" value="{{ lead.valor_mensal_sugerido }}" required>
+            </div>
+
+            <div class="alert alert-info border-info bg-info bg-opacity-10 small mb-3 py-2">
+              <i class="bi bi-info-circle-fill text-info me-1"></i>
+              Ao clicar no botão abaixo, este lead será inserido na tabela <strong>clientes</strong> e um <strong>pedido de assinatura</strong> será gerado com totalização automática.
+            </div>
+
+            <button type="submit" class="btn btn-dn-yellow w-100 py-3 fw-bold shadow-sm" style="font-size: 1rem;">
+              <i class="bi bi-check2-circle me-2"></i> Converter em Cliente & Gerar Pedido
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+function copiarScript() {
+  const textarea = document.getElementById('scriptWhatsApp');
+  textarea.select();
+  textarea.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(textarea.value).then(() => {
+    alert('Script de WhatsApp copiado para a área de transferência!');
+  });
+}
+
+document.getElementById('selectPlano').addEventListener('change', function() {
+  const selectedOpt = this.options[this.selectedIndex];
+  const preco = selectedOpt.getAttribute('data-preco');
+  if (preco) {
+    document.getElementById('inputValor').value = preco;
+  }
+});
+</script>
+{% endblock %}
+OMNI_EOF
+
+# --- app/templates/leads/index.html ---
+cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
+{% extends "base.html" %}
+
+{% block title %}Radar de Leads Telecom & Expansão de Fibra - DigitalNet MS{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS para o Mapa de Calor -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(15, 45, 87, 0.22);
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+  }
+  .leaflet-popup-content {
+    margin: 0 !important;
+    line-height: 1.4;
+  }
+  .leaflet-container {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+  }
+  .heat-badge-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .custom-pin-fibra {
+    background: #1b4f99;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(27, 79, 153, 0.45);
+    font-size: 0.85rem;
+  }
+  .custom-pin-lead {
+    background: #f59e0b;
+    color: #0f172a;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.5);
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+  .custom-pin-lead.high-score {
+    background: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.55);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- CABEÇALHO COM IDENTIDADE DIGITALNET -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+    <div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h1 class="h3 mb-0 dn-header-title">Radar de Prospecção & Expansão de Fibra</h1>
+        <span class="badge py-2 px-3 dn-badge-corp rounded-pill">
+          <i class="bi bi-broadcast-pin text-warning me-1"></i> DigitalNet MS &bull; Campo Grande
+        </span>
+      </div>
+      <p class="text-muted small mb-0 mt-1">
+        Geo-prospecção inteligente na mesma região dos clientes ativos com abordagem anti-ban e opt-in via WhatsApp.
+      </p>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#comoFunciona" aria-expanded="false">
+        <i class="bi bi-shield-check text-warning me-1"></i> Blindagem Anti-Ban
+      </button>
+      <button class="btn btn-dn-yellow btn-sm px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalProspectar">
+        <i class="bi bi-lightning-charge-fill me-1"></i> Nova Prospecção Geo
+      </button>
+    </div>
+  </div>
+
+  <!-- BOX EXPLICATIVO ANTI-BAN (COLLAPSIBLE) -->
+  <div class="collapse mb-4" id="comoFunciona">
+    <div class="card border-0 shadow-sm rounded-3" style="background: linear-gradient(135deg, #0f2d57, #1b4f99); color: #ffffff;">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-shield-lock-fill fs-4 text-warning"></i>
+          <h5 class="fw-bold mb-0 text-white">Estratégia Anti-Ban & Prospecção por Nós Ópticos</h5>
+        </div>
+        <div class="row g-3 small">
+          <div class="col-md-4">
+            <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.08);">
+              <strong class="text-warning d-block mb-1"><i class="bi bi-geo-alt-fill me-1"></i>1. Viabilidade por Vizinhos:</strong>
+              Prospecta apenas em quarteirões onde a DigitalNet já possui clientes ativos. Custo de instalação mínimo e viabilidade técnica garantida no poste.
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.08);">
+              <strong class="text-warning d-block mb-1"><i class="bi bi-router-fill me-1"></i>2. Oferta Superior à Concorrência:</strong>
+              Aborda com argumentos imbatíveis contra Vivo/Claro: roteador Wi-Fi 6 comodato, pontos extras DigiMesh, upload de 50% e suporte 24h presencial em Campo Grande.
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.08);">
+              <strong class="text-warning d-block mb-1"><i class="bi bi-chat-check-fill me-1"></i>3. Opt-in Conversacional Obrigatório:</strong>
+              O primeiro contato nunca envia links externos nem arquivos pesados. Pede permissão explícita para enviar o comparativo, blindando o WhatsApp contra bans.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAPA DE CALOR: DENSIDADE ÓPTICA & OPORTUNIDADES EM CAMPO GRANDE -->
+  <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+    <div class="card-header bg-white py-3 border-bottom d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <div class="p-2 rounded-3" style="background: #fef3c7; color: #b45309;">
+          <i class="bi bi-fire fs-5"></i>
+        </div>
+        <div>
+          <h5 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">
+            Mapa de Calor: Cobertura Óptica & Densidade de Oportunidades
+          </h5>
+          <small class="text-muted">Concentração geo-espacial de clientes DigitalNet MS e leads potenciais em Campo Grande</small>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="btn-group btn-group-sm shadow-sm" role="group">
+          <button type="button" class="btn btn-outline-secondary active" id="btnFiltroTodos" onclick="filtrarMapa('todos')">
+            <i class="bi bi-grid-fill me-1"></i> Todos
+          </button>
+          <button type="button" class="btn btn-outline-secondary" id="btnFiltroFibra" onclick="filtrarMapa('fibra')">
+            <i class="bi bi-broadcast text-primary me-1"></i> Nós de Fibra
+          </button>
+          <button type="button" class="btn btn-outline-secondary" id="btnFiltroLeads" onclick="filtrarMapa('leads')">
+            <i class="bi bi-fire text-warning me-1"></i> Oportunidades
+          </button>
+        </div>
+
+        <button type="button" class="btn btn-sm btn-light border shadow-sm" onclick="centralizarCampoGrande()" title="Centralizar em Campo Grande">
+          <i class="bi bi-crosshair me-1"></i> Recentralizar
+        </button>
+      </div>
+    </div>
+
+    <!-- LEGENDA DO MAPA DE CALOR -->
+    <div class="px-3 py-2 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2 small">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <span class="text-muted fw-semibold">Gradiente Térmico:</span>
+        <span class="heat-badge-chip bg-white border">
+          <span style="width: 12px; height: 12px; border-radius: 50%; background: #1b4f99; display: inline-block;"></span>
+          Rede DigitalNet Iluminada (CTO Ativa)
+        </span>
+        <span class="heat-badge-chip bg-white border">
+          <span style="width: 12px; height: 12px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+          Lead Quente (Score 80-89)
+        </span>
+        <span class="heat-badge-chip bg-white border">
+          <span style="width: 12px; height: 12px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+          Alta Prioridade / Alto Ticket (Score 90+)
+        </span>
+      </div>
+      <div class="text-muted small">
+        <i class="bi bi-cursor me-1 text-primary"></i> Clique em qualquer ponto para ver detalhes ou iniciar o WhatsApp
+      </div>
+    </div>
+
+    <!-- CONTAINER LEAFLET -->
+    <div class="position-relative">
+      <div id="mapaCalor" style="height: 440px; width: 100%; z-index: 1;"></div>
+    </div>
+  </div>
+
+  <!-- RADAR DE BAIRROS (CLUSTERS DE REDE ÓPTICA) -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-2">
+        <div class="p-2 rounded-3" style="background: #e8f0fe; color: var(--dn-blue);">
+          <i class="bi bi-geo-alt-fill fs-5"></i>
+        </div>
+        <div>
+          <h5 class="fw-bold mb-0" style="color: var(--dn-blue-dark);">Clusters de Cobertura Óptica (Bairros com Clientes Ativos)</h5>
+          <small class="text-muted">Selecione uma região para prospectar empresas e residências no mesmo nó de fibra da DigitalNet</small>
+        </div>
+      </div>
+      <span class="badge py-2 px-3 rounded-pill bg-light text-dark border fw-semibold">
+        <i class="bi bi-pin-map-fill text-primary me-1"></i> {{ clusters|length }} Regiões Mapeadas
+      </span>
+    </div>
+    <div class="card-body p-3 bg-light bg-opacity-50">
+      <div class="row g-3">
+        {% for c in clusters %}
+        <div class="col-xl-3 col-lg-4 col-md-6">
+          <div class="dn-cluster-card {% if bairro_selecionado == c.bairro %}active-cluster{% endif %} h-100 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h6 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">{{ c.bairro }}</h6>
+              <span class="badge py-1 px-2 rounded-pill" style="background: #e0f2fe; color: #0369a1; font-size: 0.7rem; font-weight: 700;">
+                <i class="bi bi-check-circle-fill me-1 text-success"></i>{{ c.viabilidade_estimada }}
+              </span>
+            </div>
+            
+            <div class="small text-muted mb-2">
+              <i class="bi bi-building text-secondary me-1"></i> {{ c.cidade }} &bull; {{ c.estado }}
+            </div>
+
+            <div class="d-flex justify-content-between text-muted small py-2 my-2 border-top border-bottom">
+              <span><strong class="text-dark">{{ c.total_clientes }}</strong> clientes ativos</span>
+              <span><strong class="text-primary">{{ c.total_leads }}</strong> leads na fila</span>
+            </div>
+
+            <div class="d-flex gap-2 mt-auto pt-2">
+              <a href="{{ url_for('leads.index', bairro=c.bairro) }}" class="btn btn-sm btn-outline-secondary flex-fill" title="Ver leads deste bairro">
+                <i class="bi bi-funnel me-1"></i> Filtrar
+              </a>
+              <form action="{{ url_for('leads.prospectar_regiao') }}" method="POST" class="d-inline flex-fill">
+                <input type="hidden" name="bairro" value="{{ c.bairro }}">
+                <input type="hidden" name="cidade" value="{{ c.cidade }}">
+                <input type="hidden" name="count" value="4">
+                <button type="submit" class="btn btn-sm btn-dn-blue w-100" title="Gerar mais leads vizinhos com IA">
+                  <i class="bi bi-lightning-charge-fill text-warning me-1"></i> Prospectar
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- MÉTRICAS DO FUNIL DE LEADS (KPI CARDS DIGITALNET) -->
+  <div class="row g-3 mb-4">
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid var(--dn-blue);">
+        <span class="kpi-label">Total Leads</span>
+        <div class="kpi-number" style="color: var(--dn-blue);">{{ total_leads }}</div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid #64748b;">
+        <span class="kpi-label">Novos / Fila</span>
+        <div class="kpi-number" style="color: #475569;">{{ total_novos }}</div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid var(--dn-yellow);">
+        <span class="kpi-label">Opt-in Enviado</span>
+        <div class="kpi-number" style="color: var(--dn-yellow-dark);">{{ total_optin_solicitado }}</div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid #0284c7;">
+        <span class="kpi-label">Opt-in Aceito</span>
+        <div class="kpi-number" style="color: #0284c7;">{{ total_optin_aceito }}</div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid #2563eb;">
+        <span class="kpi-label">Proposta Enviada</span>
+        <div class="kpi-number" style="color: #2563eb;">{{ total_proposta }}</div>
+      </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="dn-kpi-card" style="border-top: 3px solid #10b981;">
+        <span class="kpi-label">Convertidos</span>
+        <div class="kpi-number" style="color: #059669;">{{ total_convertidos }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTROS E TABELA DE LEADS -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 border-bottom">
+      <form method="GET" action="{{ url_for('leads.index') }}" class="row g-2 align-items-center">
+        <div class="col-md-4">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-search"></i></span>
+            <input type="text" name="busca" class="form-control border-start-0 bg-light" placeholder="Buscar por empresa, decisor, rua..." value="{{ busca }}">
+          </div>
+        </div>
+        <div class="col-md-3">
+          <select name="bairro" class="form-select form-select-sm bg-light">
+            <option value="">Todos os Bairros</option>
+            {% for c in clusters %}
+            <option value="{{ c.bairro }}" {% if bairro_selecionado == c.bairro %}selected{% endif %}>{{ c.bairro }} ({{ c.total_clientes }} clientes)</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select name="status" class="form-select form-select-sm bg-light">
+            <option value="">Todos os Status</option>
+            <option value="novo" {% if status_selecionado == 'novo' %}selected{% endif %}>Novo Lead</option>
+            <option value="optin_solicitado" {% if status_selecionado == 'optin_solicitado' %}selected{% endif %}>Opt-in Solicitado</option>
+            <option value="optin_aceito" {% if status_selecionado == 'optin_aceito' %}selected{% endif %}>Opt-in Aceito</option>
+            <option value="proposta_enviada" {% if status_selecionado == 'proposta_enviada' %}selected{% endif %}>Proposta Enviada</option>
+            <option value="convertido" {% if status_selecionado == 'convertido' %}selected{% endif %}>Convertido</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-sm btn-dn-blue flex-fill">
+            <i class="bi bi-funnel-fill me-1"></i> Filtrar
+          </button>
+          {% if busca or bairro_selecionado or status_selecionado %}
+          <a href="{{ url_for('leads.index') }}" class="btn btn-sm btn-outline-secondary" title="Limpar filtros">
+            <i class="bi bi-x-lg"></i>
+          </a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="dn-table-header">
+          <tr>
+            <th class="ps-3">Lead / Empresa</th>
+            <th>Localização (MS)</th>
+            <th>Plano Recomendado</th>
+            <th>Operadora Atual</th>
+            <th>Score</th>
+            <th>Opt-in WhatsApp</th>
+            <th>Status</th>
+            <th class="text-end pe-3">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if leads %}
+            {% for l in leads %}
+            <tr>
+              <td class="ps-3">
+                <div class="fw-bold" style="color: var(--dn-blue-deep);">{{ l.empresa }}</div>
+                <small class="text-muted">{{ l.nome }} {% if l.cargo %}&bull; <span class="text-secondary">{{ l.cargo }}</span>{% endif %}</small>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border"><i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ l.bairro }}</span>
+                <div class="small text-muted mt-1">{{ l.logradouro or 'Área Central' }}, {{ l.numero or 'S/N' }}</div>
+              </td>
+              <td>
+                <div class="small fw-bold" style="color: var(--dn-blue);">{{ l.plano_sugerido }}</div>
+                <small class="text-muted">R$ {{ "%.2f"|format(l.valor_mensal_sugerido)|replace('.', ',') }}/mês</small>
+              </td>
+              <td>
+                <span class="badge bg-secondary bg-opacity-10 text-dark border" style="font-size: 0.75rem;">{{ l.operadora_atual }}</span>
+              </td>
+              <td>
+                <span class="badge {% if l.lead_score >= 90 %}bg-success{% elif l.lead_score >= 80 %}bg-primary{% else %}bg-warning text-dark{% endif %} px-2 py-1">
+                  {{ l.lead_score }} pts
+                </span>
+              </td>
+              <td>
+                {% if l.optin_status == 'aceito' %}
+                <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Opt-in Aceito</span>
+                {% elif l.optin_status == 'recusado' %}
+                <span class="badge bg-danger">Recusado</span>
+                {% else %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Pendente</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge {{ l.status_badge_class }}">{{ l.status_label }}</span>
+              </td>
+              <td class="text-end pe-3">
+                <div class="btn-group btn-group-sm">
+                  {% if l.telefone and l.whatsapp_url != '#' %}
+                  <a href="{{ l.whatsapp_url }}" target="_blank" class="btn btn-success" title="Iniciar Abordagem com Opt-in no WhatsApp Web">
+                    <i class="bi bi-whatsapp"></i>
+                  </a>
+                  {% endif %}
+                  <a href="{{ url_for('leads.detail', lead_id=l.id) }}" class="btn btn-dn-blue" title="Abrir Dossiê 360° e Quebra de Objeções">
+                    <i class="bi bi-eye-fill me-1"></i> Dossiê
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="8" class="text-center py-5 text-muted">
+                <i class="bi bi-radar fs-1 d-block mb-3 text-secondary"></i>
+                <p class="mb-2 fw-semibold text-dark">Nenhum lead encontrado para os filtros selecionados.</p>
+                <small>Clique em <strong>"Nova Prospecção Geo"</strong> acima para mapear clientes em Campo Grande!</small>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL PROSPECTAR COM IA (TEMA DIGITALNET) -->
+<div class="modal fade" id="modalProspectar" tabindex="-1" aria-labelledby="modalProspectarLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow-lg">
+      <form action="{{ url_for('leads.prospectar_regiao') }}" method="POST">
+        <div class="modal-header text-white" style="background: linear-gradient(135deg, var(--dn-blue-deep), var(--dn-blue));">
+          <h5 class="modal-title" id="modalProspectarLabel">
+            <i class="bi bi-radar me-2 text-warning"></i>Nova Prospecção Geo-Localizada
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="small text-muted mb-3">
+            O motor de IA identifica novos clientes potenciais no mesmo bairro onde a <strong>DigitalNet MS</strong> já possui rede óptica ativa, garantindo viabilidade e gerando o script anti-ban para WhatsApp.
+          </p>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-dark">Bairro / Região em Campo Grande (MS)</label>
+            <select name="bairro" class="form-select bg-light" required>
+              <option value="Chácara Cachoeira">Chácara Cachoeira (Alta Densidade Empresarial / Clínicas)</option>
+              <option value="Centro">Centro (Comércios, Escritórios e Contabilidades)</option>
+              <option value="Santa Fé">Santa Fé (Boutiques, Estética e Consultórios)</option>
+              <option value="Jardim dos Estados">Jardim dos Estados (Gastronomia e Escritórios)</option>
+              <option value="Tiradentes">Tiradentes (Escolas, Academias e Varejo)</option>
+              <option value="Vilas Boas">Vilas Boas (Comércio Local e Gastronomia)</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-dark">Nicho Comercial / Segmento</label>
+            <input type="text" name="niche" class="form-control bg-light" value="Clínicas, Consultórios e Escritórios" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-dark">Quantidade de Leads para Mapear</label>
+            <select name="count" class="form-select bg-light">
+              <option value="3">3 leads qualificados</option>
+              <option value="5" selected>5 leads qualificados</option>
+              <option value="8">8 leads qualificados</option>
+            </select>
+          </div>
+
+          <div class="alert alert-warning border-warning bg-warning bg-opacity-10 py-2 small mb-0 d-flex align-items-center">
+            <i class="bi bi-shield-check text-warning-emphasis fs-5 me-2"></i>
+            <div>
+              Cada lead virá com <strong>score de qualificação</strong>, <strong>dor mapeada</strong> e o <strong>script de opt-in de 1 clique</strong>.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-dn-blue btn-sm px-3 shadow-sm">
+            <i class="bi bi-lightning-charge-fill text-warning me-1"></i> Iniciar Varredura de Leads
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet JS para Renderização do Mapa de Calor -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+  // Dados passados pelo backend Flask
+  const rawMapPoints = {{ map_points|tojson|safe }};
+  const centroCG = [-20.4600, -54.5980];
+  
+  let mapInstance = null;
+  let layerGroupFibra = null;
+  let layerGroupLeads = null;
+  let layerGroupHeat = null;
+
+  function initMap() {
+    const mapContainer = document.getElementById('mapaCalor');
+    if (!mapContainer || typeof L === 'undefined') return;
+
+    // Inicializa o mapa Leaflet
+    mapInstance = L.map('mapaCalor', {
+      center: centroCG,
+      zoom: 13,
+      zoomControl: true,
+      scrollWheelZoom: false
+    });
+
+    // Camada de Azulejos (CartoDB Voyager - visual executivo e limpo)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(mapInstance);
+
+    // Grupos de camadas
+    layerGroupFibra = L.layerGroup().addTo(mapInstance);
+    layerGroupLeads = L.layerGroup().addTo(mapInstance);
+    layerGroupHeat = L.layerGroup().addTo(mapInstance);
+
+    renderPoints();
+  }
+
+  function renderPoints() {
+    if (!mapInstance) return;
+
+    layerGroupFibra.clearLayers();
+    layerGroupLeads.clearLayers();
+    layerGroupHeat.clearLayers();
+
+    rawMapPoints.forEach(pt => {
+      if (pt.tipo === 'cluster_fibra') {
+        // Círculo de calor térmico para rede ativa
+        const raio = 380 + (pt.clientes * 100);
+        const heatCircle = L.circle([pt.lat, pt.lng], {
+          radius: raio,
+          color: '#1b4f99',
+          fillColor: '#1b4f99',
+          fillOpacity: 0.18,
+          weight: 1.5,
+          dashArray: '4, 4'
+        });
+        layerGroupHeat.addLayer(heatCircle);
+
+        // Marcador do Nó Óptico
+        const iconFibra = L.divIcon({
+          className: 'custom-pin-fibra-wrapper',
+          html: `<div class="custom-pin-fibra" title="${pt.titulo}"><i class="bi bi-broadcast"></i></div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+
+        const marker = L.marker([pt.lat, pt.lng], { icon: iconFibra });
+        const popupContent = `
+          <div style="width: 250px;">
+            <div style="background: linear-gradient(135deg, #0f2d57, #1b4f99); color: white; padding: 12px 14px;">
+              <small style="color: #fbbf24; text-transform: uppercase; font-weight: 700; font-size: 0.7rem;">Nó de Fibra DigitalNet</small>
+              <h6 style="margin: 0; font-weight: 700; font-size: 1rem;">${pt.bairro}</h6>
+            </div>
+            <div style="padding: 12px 14px; background: white; font-size: 0.85rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span style="color: #64748b;">Clientes Ativos:</span>
+                <strong style="color: #0f172a;">${pt.clientes}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span style="color: #64748b;">Leads Mapeados:</span>
+                <strong style="color: #1b4f99;">${pt.leads}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span style="color: #64748b;">Viabilidade:</span>
+                <span style="color: #059669; font-weight: 700;">${pt.viabilidade}</span>
+              </div>
+              <a href="?bairro=${encodeURIComponent(pt.bairro)}" class="btn btn-sm btn-dn-blue w-100" style="padding: 4px 8px; font-size: 0.75rem;">
+                <i class="bi bi-funnel me-1"></i> Filtrar este Bairro
+              </a>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        layerGroupFibra.addLayer(marker);
+
+      } else if (pt.tipo === 'lead_oportunidade') {
+        // Círculo térmico (Amarelo ou Vermelho conforme score)
+        const isHighScore = pt.score >= 90;
+        const heatColor = isHighScore ? '#ef4444' : '#f59e0b';
+        const heatRadius = 220 + (pt.score * 1.5);
+
+        const leadHeat = L.circle([pt.lat, pt.lng], {
+          radius: heatRadius,
+          color: heatColor,
+          fillColor: heatColor,
+          fillOpacity: isHighScore ? 0.28 : 0.20,
+          weight: 1
+        });
+        layerGroupHeat.addLayer(leadHeat);
+
+        // Marcador do Lead
+        const pinClass = isHighScore ? 'custom-pin-lead high-score' : 'custom-pin-lead';
+        const iconLead = L.divIcon({
+          className: 'custom-pin-lead-wrapper',
+          html: `<div class="${pinClass}" title="${pt.titulo}"><i class="bi bi-building"></i></div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+
+        const marker = L.marker([pt.lat, pt.lng], { icon: iconLead });
+        const popupContent = `
+          <div style="width: 270px;">
+            <div style="background: ${isHighScore ? 'linear-gradient(135deg, #b91c1c, #ef4444)' : 'linear-gradient(135deg, #d97706, #f59e0b)'}; color: white; padding: 10px 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <small style="color: white; opacity: 0.85; font-size: 0.7rem; font-weight: 600;">Oportunidade</small>
+                <span style="background: rgba(0,0,0,0.25); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">Score: ${pt.score}</span>
+              </div>
+              <h6 style="margin: 2px 0 0 0; font-weight: 700; font-size: 0.95rem; color: white;">${pt.titulo}</h6>
+            </div>
+            <div style="padding: 12px 14px; background: white; font-size: 0.85rem;">
+              <div style="color: #475569; margin-bottom: 6px; font-size: 0.8rem;">
+                <i class="bi bi-person me-1"></i> ${pt.contato} ${pt.cargo ? '&bull; ' + pt.cargo : ''}
+              </div>
+              <div style="color: #64748b; margin-bottom: 8px; font-size: 0.75rem;">
+                <i class="bi bi-geo-alt me-1 text-danger"></i> ${pt.endereco}
+              </div>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; margin-bottom: 10px;">
+                <div style="color: #1b4f99; font-weight: 700; font-size: 0.8rem;">${pt.plano}</div>
+                <small style="color: #64748b;">${pt.valor} &bull; Operadora atual: <strong>${pt.operadora}</strong></small>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                ${pt.whatsapp_url !== '#' ? `
+                  <a href="${pt.whatsapp_url}" target="_blank" class="btn btn-sm btn-success" style="flex: 1; font-size: 0.75rem; padding: 5px;">
+                    <i class="bi bi-whatsapp me-1"></i> WhatsApp
+                  </a>
+                ` : ''}
+                <a href="${pt.detail_url}" class="btn btn-sm btn-dn-blue" style="flex: 1; font-size: 0.75rem; padding: 5px;">
+                  <i class="bi bi-eye me-1"></i> Dossiê
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        layerGroupLeads.addLayer(marker);
+      }
+    });
+  }
+
+  function filtrarMapa(tipo) {
+    document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+    
+    if (tipo === 'todos') {
+      document.getElementById('btnFiltroTodos').classList.add('active');
+      if (!mapInstance.hasLayer(layerGroupFibra)) mapInstance.addLayer(layerGroupFibra);
+      if (!mapInstance.hasLayer(layerGroupLeads)) mapInstance.addLayer(layerGroupLeads);
+      if (!mapInstance.hasLayer(layerGroupHeat)) mapInstance.addLayer(layerGroupHeat);
+    } else if (tipo === 'fibra') {
+      document.getElementById('btnFiltroFibra').classList.add('active');
+      if (!mapInstance.hasLayer(layerGroupFibra)) mapInstance.addLayer(layerGroupFibra);
+      if (mapInstance.hasLayer(layerGroupLeads)) mapInstance.removeLayer(layerGroupLeads);
+    } else if (tipo === 'leads') {
+      document.getElementById('btnFiltroLeads').classList.add('active');
+      if (mapInstance.hasLayer(layerGroupFibra)) mapInstance.removeLayer(layerGroupFibra);
+      if (!mapInstance.hasLayer(layerGroupLeads)) mapInstance.addLayer(layerGroupLeads);
+    }
+  }
+
+  function centralizarCampoGrande() {
+    if (mapInstance) {
+      mapInstance.setView(centroCG, 13);
+    }
+  }
+
+  // Inicializa quando a página carregar
+  document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+  });
+</script>
 {% endblock %}
 OMNI_EOF
 
@@ -4823,6 +7063,86 @@ def downgrade():
     # ### end Alembic commands ###
 OMNI_EOF
 
+# --- migrations/versions/a1b2c3d4e5f6_add_leads_table.py ---
+cat > 'migrations/versions/a1b2c3d4e5f6_add_leads_table.py' <<'OMNI_EOF'
+"""add_leads_table
+
+Revision ID: a1b2c3d4e5f6
+Revises: 99d1cc5b3cb2
+Create Date: 2026-10-08 15:35:00.000000
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision = 'a1b2c3d4e5f6'
+down_revision = '99d1cc5b3cb2'
+branch_labels = None
+depends_on = None
+
+
+def upgrade():
+    op.create_table('leads',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('nome', sa.String(length=120), nullable=False),
+    sa.Column('empresa', sa.String(length=150), nullable=False),
+    sa.Column('cargo', sa.String(length=100), nullable=True),
+    sa.Column('telefone', sa.String(length=30), nullable=True),
+    sa.Column('email', sa.String(length=120), nullable=True),
+    sa.Column('documento', sa.String(length=30), nullable=True),
+    sa.Column('niche', sa.String(length=100), nullable=True),
+    sa.Column('cep', sa.String(length=15), nullable=True),
+    sa.Column('logradouro', sa.String(length=150), nullable=True),
+    sa.Column('numero', sa.String(length=20), nullable=True),
+    sa.Column('complemento', sa.String(length=50), nullable=True),
+    sa.Column('bairro', sa.String(length=80), nullable=False),
+    sa.Column('cidade', sa.String(length=80), nullable=False),
+    sa.Column('estado', sa.String(length=2), nullable=False),
+    sa.Column('cliente_referencia_id', sa.Integer(), nullable=True),
+    sa.Column('status', sa.String(length=30), nullable=False),
+    sa.Column('optin_status', sa.String(length=20), nullable=False),
+    sa.Column('operadora_atual', sa.String(length=80), nullable=True),
+    sa.Column('plano_sugerido', sa.String(length=120), nullable=True),
+    sa.Column('valor_mensal_sugerido', sa.Float(), nullable=False),
+    sa.Column('lead_score', sa.Integer(), nullable=False),
+    sa.Column('dor_principal', sa.Text(), nullable=True),
+    sa.Column('icebreaker_optin', sa.Text(), nullable=True),
+    sa.Column('dossie_comercial', sa.Text(), nullable=True),
+    sa.Column('observacoes', sa.Text(), nullable=True),
+    sa.Column('cliente_convertido_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['cliente_referencia_id'], ['clientes.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['cliente_convertido_id'], ['clientes.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('leads', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_leads_nome'), ['nome'], unique=False)
+        batch_op.create_index(batch_op.f('ix_leads_empresa'), ['empresa'], unique=False)
+        batch_op.create_index(batch_op.f('ix_leads_bairro'), ['bairro'], unique=False)
+        batch_op.create_index(batch_op.f('ix_leads_cidade'), ['cidade'], unique=False)
+        batch_op.create_index(batch_op.f('ix_leads_status'), ['status'], unique=False)
+        batch_op.create_index(batch_op.f('ix_leads_optin_status'), ['optin_status'], unique=False)
+        batch_op.create_index(batch_op.f('ix_leads_cliente_referencia_id'), ['cliente_referencia_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_leads_cliente_convertido_id'), ['cliente_convertido_id'], unique=False)
+
+
+def downgrade():
+    with op.batch_alter_table('leads', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_leads_cliente_convertido_id'))
+        batch_op.drop_index(batch_op.f('ix_leads_cliente_referencia_id'))
+        batch_op.drop_index(batch_op.f('ix_leads_optin_status'))
+        batch_op.drop_index(batch_op.f('ix_leads_status'))
+        batch_op.drop_index(batch_op.f('ix_leads_cidade'))
+        batch_op.drop_index(batch_op.f('ix_leads_bairro'))
+        batch_op.drop_index(batch_op.f('ix_leads_empresa'))
+        batch_op.drop_index(batch_op.f('ix_leads_nome'))
+
+    op.drop_table('leads')
+OMNI_EOF
+
 # --- migrations/versions/ed09ad0566ba_initial_migration_with_users_clients_.py ---
 cat > 'migrations/versions/ed09ad0566ba_initial_migration_with_users_clients_.py' <<'OMNI_EOF'
 """Initial migration with users, clients and orders
@@ -5390,6 +7710,189 @@ class SecretKeyConfigTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+OMNI_EOF
+
+# --- tests/test_leads.py ---
+cat > 'tests/test_leads.py' <<'OMNI_EOF'
+import unittest
+from app import create_app
+from app.config import Config
+from app.extensions import db
+from app.models.user import User
+from app.models.cliente import Cliente
+from app.models.pedido import Pedido, ItemPedido
+from app.models.lead import Lead
+from app.services.prospector import TelecomProspectorService
+
+
+class TestConfig(Config):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    WTF_CSRF_ENABLED = False
+
+
+class LeadsTestCase(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app(TestConfig)
+        self.client = self.app.test_client()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+        # Create a test user
+        user = User(nome='Vendedor Telecom', username='vendedor', email='vendedor@digitalnet.local')
+        user.set_password('senha12345')
+        db.session.add(user)
+
+        # Create sample active client in Chácara Cachoeira, Campo Grande
+        cliente = Cliente(
+            nome='Consultório Dr. Marcelo',
+            email='marcelo@consultorio.com.br',
+            telefone='(67) 99111-2233',
+            cep='79040-010',
+            logradouro='Rua Raul Pires Barbosa',
+            numero='100',
+            bairro='Chácara Cachoeira',
+            cidade='Campo Grande',
+            estado='MS',
+            ativo=True
+        )
+        db.session.add(cliente)
+        db.session.commit()
+        self.cliente_id = cliente.id
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def login(self):
+        return self.client.post('/auth/login', data={
+            'login': 'vendedor',
+            'password': 'senha12345'
+        }, follow_redirects=True)
+
+    def test_neighborhood_clusters_detection(self):
+        clusters = TelecomProspectorService.get_neighborhood_clusters()
+        self.assertGreater(len(clusters), 0)
+        # Should have detected Chácara Cachoeira as having active clients
+        chacara = next((c for c in clusters if c['bairro'] == 'Chácara Cachoeira'), None)
+        self.assertIsNotNone(chacara)
+        self.assertEqual(chacara['total_clientes'], 1)
+
+    def test_prospect_neighborhood_and_anti_ban_generation(self):
+        prospects = TelecomProspectorService.prospect_neighborhood(
+            bairro='Chácara Cachoeira',
+            cidade='Campo Grande',
+            estado='MS',
+            count=3
+        )
+        self.assertEqual(len(prospects), 3)
+
+        salvos = TelecomProspectorService.save_prospects(prospects, cliente_ref_id=self.cliente_id)
+        self.assertEqual(len(salvos), 3)
+
+        lead = salvos[0]
+        self.assertIn('Chácara Cachoeira', lead.bairro)
+        self.assertIsNotNone(lead.icebreaker_optin)
+        # Anti-ban rules check:
+        # 1) Mentions neighborhood
+        self.assertIn('Chácara Cachoeira', lead.icebreaker_optin)
+        # 2) Contains opt-in question
+        self.assertTrue('Posso te enviar' in lead.icebreaker_optin or 'opt-in' in lead.icebreaker_optin.lower())
+        # 3) WhatsApp URL ready
+        self.assertTrue(lead.whatsapp_url.startswith('https://wa.me/'))
+
+    def test_convert_lead_to_client_and_order(self):
+        lead = Lead(
+            nome='Dra. Vanessa Mendes',
+            empresa='Clínica Odonto Prime',
+            cargo='Diretora Clínica',
+            telefone='(67) 99888-7766',
+            email='contato@odontoprime.com.br',
+            logradouro='Rua Raul Pires Barbosa',
+            numero='550',
+            bairro='Chácara Cachoeira',
+            cidade='Campo Grande',
+            estado='MS',
+            cep='79040-010',
+            plano_sugerido='Fibra 700 + DigiMesh (Wi-Fi 6)',
+            valor_mensal_sugerido=139.90,
+            status='novo',
+            optin_status='pendente'
+        )
+        db.session.add(lead)
+        db.session.commit()
+
+        # Convert to client
+        cliente = TelecomProspectorService.convert_lead_to_client(lead)
+        self.assertIsNotNone(cliente.id)
+        self.assertEqual(lead.status, 'convertido')
+        self.assertEqual(lead.optin_status, 'aceito')
+        self.assertEqual(lead.cliente_convertido_id, cliente.id)
+
+        # Check created order
+        pedido = Pedido.query.filter_by(cliente_id=cliente.id).first()
+        self.assertIsNotNone(pedido)
+        self.assertEqual(pedido.valor_total, 139.90)
+        self.assertEqual(len(pedido.itens), 1)
+        self.assertIn('Fibra 700 + DigiMesh', pedido.itens[0].descricao)
+
+    def test_leads_web_routes(self):
+        self.login()
+
+        # GET /leads/
+        res = self.client.get('/leads/')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('Radar de Prospecção', res.get_data(as_text=True))
+        self.assertIn('Chácara Cachoeira', res.get_data(as_text=True))
+
+        # POST /leads/prospectar
+        res_post = self.client.post('/leads/prospectar', data={
+            'bairro': 'Santa Fé',
+            'cidade': 'Campo Grande',
+            'count': '2'
+        }, follow_redirects=True)
+        self.assertEqual(res_post.status_code, 200)
+        self.assertIn('Santa Fé', res_post.get_data(as_text=True))
+
+        # Check detail page
+        lead = Lead.query.first()
+        self.assertIsNotNone(lead)
+        res_detail = self.client.get(f'/leads/{lead.id}')
+        self.assertEqual(res_detail.status_code, 200)
+        self.assertIn(lead.empresa, res_detail.get_data(as_text=True))
+        self.assertIn('Abordagem WhatsApp com Opt-in Anti-Ban', res_detail.get_data(as_text=True))
+
+        # POST /leads/<id>/status
+        res_status = self.client.post(f'/leads/{lead.id}/status', data={
+            'status': 'optin_aceito',
+            'optin_status': 'aceito'
+        }, follow_redirects=True)
+        self.assertEqual(res_status.status_code, 200)
+        updated_lead = Lead.query.get(lead.id)
+        self.assertEqual(updated_lead.optin_status, 'aceito')
+
+    def test_leads_api_endpoints(self):
+        self.login()
+
+        # GET /leads/api/clusters
+        res = self.client.get('/leads/api/clusters')
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        self.assertIsInstance(data['clusters'], list)
+
+        # POST /leads/api/prospectar
+        res_prospect = self.client.post('/leads/api/prospectar', json={
+            'bairro': 'Centro',
+            'cidade': 'Campo Grande',
+            'count': 2
+        })
+        self.assertEqual(res_prospect.status_code, 200)
+        data_p = res_prospect.get_json()
+        self.assertTrue(data_p['success'])
+        self.assertGreaterEqual(data_p['count'], 1)
 OMNI_EOF
 
 # --- wsgi.py ---

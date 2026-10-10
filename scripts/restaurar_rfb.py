@@ -72,6 +72,39 @@ def baixar_dump(url: str, destino: Path):
         raise RuntimeError(f"Falha ao baixar dump RFB de {url}: {e}")
 
 
+import csv
+
+
+def _restaurar_sql(conn, caminho_gz: Path):
+    open_fn = gzip.open if str(caminho_gz).endswith('.gz') else open
+    with open_fn(caminho_gz, 'rt', encoding='utf-8') as f:
+        sql_content = f.read()
+
+    cur = conn.cursor()
+    cur.execute("DROP TABLE IF EXISTS leeds_campo_grande;")
+
+    # Envolve em transação explícita se ainda não possuir
+    if 'BEGIN TRANSACTION' not in sql_content.upper():
+        sql_content = f"BEGIN TRANSACTION;\n{sql_content}\nCOMMIT;"
+
+    cur.executescript(sql_content)
+
+
+def _restaurar_csv(conn, caminho_gz: Path):
+    open_fn = gzip.open if str(caminho_gz).endswith('.gz') else open
+    with open_fn(caminho_gz, 'rt', encoding='utf-8', newline='') as f:
+        reader = csv.reader(f)
+        header = next(reader)
+        cur = conn.cursor()
+        cur.execute("DROP TABLE IF EXISTS leeds_campo_grande;")
+        cols_def = ", ".join([f'"{c}" TEXT' for c in header])
+        cur.execute(f"CREATE TABLE leeds_campo_grande ({cols_def});")
+        placeholders = ",".join(["?"] * len(header))
+        sql = f"INSERT INTO leeds_campo_grande VALUES ({placeholders})"
+        conn.execute("BEGIN TRANSACTION;")
+        cur.executemany(sql, reader)
+
+
 def restaurar_dump(caminho_gz: Path, db_path: Path, force: bool = False):
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
@@ -82,16 +115,23 @@ def restaurar_dump(caminho_gz: Path, db_path: Path, force: bool = False):
         conn.close()
         return
 
-    print(f"📦 Restaurando leeds_campo_grande a partir de {caminho_gz.name}...")
+    print(f"📦 Restaurando leeds_campo_grande a partir de {caminho_gz.name} com PRAGMAs de alta velocidade...")
     t0 = time.time()
 
-    with gzip.open(caminho_gz, 'rt', encoding='utf-8') as f:
-        sql_content = f.read()
+    # Otimizações críticas de escrita em lote para SQLite
+    conn.execute("PRAGMA synchronous = OFF;")
+    conn.execute("PRAGMA journal_mode = MEMORY;")
+    conn.execute("PRAGMA cache_size = 100000;")
+    conn.execute("PRAGMA temp_store = MEMORY;")
 
-    cur = conn.cursor()
-    cur.executescript(sql_content)
+    ext = caminho_gz.name.lower()
+    if ext.endswith('.csv.gz') or ext.endswith('.csv'):
+        _restaurar_csv(conn, caminho_gz)
+    else:
+        _restaurar_sql(conn, caminho_gz)
+
     conn.commit()
-
+    conn.execute("PRAGMA synchronous = NORMAL;")
     total_final = verificar_tabela_existente(conn)
     conn.close()
 
@@ -100,12 +140,26 @@ def restaurar_dump(caminho_gz: Path, db_path: Path, force: bool = False):
 
 def main():
     parser = argparse.ArgumentParser(description="Restaura a base de inteligência RFB no SQLite.")
-    parser.add_argument('--arquivo', type=str, default=str(LOCAL_DUMP), help="Caminho do arquivo .sql.gz local.")
+    parser.add_argument('--arquivo', type=str, default=None, help="Caminho do arquivo .sql.gz ou .csv.gz local.")
     parser.add_argument('--url', type=str, default=DEFAULT_URL, help="URL pública para download caso arquivo não exista.")
     parser.add_argument('--force', action='store_true', help="Força a recriação mesmo se a tabela já existir.")
     args = parser.parse_args()
 
-    caminho_gz = Path(args.arquivo)
+    caminho_gz = Path(args.arquivo) if args.arquivo else None
+
+    # Se não foi especificado, procura arquivos locais existentes
+    if not caminho_gz or not caminho_gz.exists():
+        for candidato in [
+            ROOT / 'data' / 'leeds_campo_grande.sql.gz',
+            ROOT / 'data' / 'leeds_campo_grande.csv.gz',
+            ROOT / 'leeds_campo_grande.sql.gz',
+            ROOT / 'leeds_campo_grande.csv.gz',
+        ]:
+            if candidato.exists() and candidato.stat().st_size > 1000:
+                caminho_gz = candidato
+                break
+        if not caminho_gz:
+            caminho_gz = LOCAL_DUMP
 
     # 1. Se não existir localmente, tenta baixar
     if not caminho_gz.exists() or caminho_gz.stat().st_size < 1000:
@@ -114,7 +168,7 @@ def main():
                 baixar_dump(args.url, caminho_gz)
             except Exception as e:
                 print(f"⚠️ {e}")
-                print("Dica: coloque o arquivo data/leeds_campo_grande.sql.gz localmente ou forneça uma --url válida.")
+                print("Dica: coloque o arquivo data/leeds_campo_grande.sql.gz ou .csv.gz localmente ou forneça uma --url válida.")
                 sys.exit(1)
         else:
             print(f"ERRO: Arquivo {caminho_gz} não encontrado e nenhuma URL fornecida.")

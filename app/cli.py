@@ -282,7 +282,7 @@ def register_cli_commands(app):
 
                 # Pedido 3 (Total: 890.00)
                 ItemPedido(pedido_id=pedidos_exemplo[2].id, descricao='Kit de Equipamentos de Automação Comercial', quantidade=1.0, valor_unitario=590.00, valor_total=590.00),
-                ItemPedido(pedido_id=pedidos_exemplo[2].id, descricao='Licença Adicional de Terminal OmniGestão', quantidade=1.0, valor_unitario=300.00, valor_total=300.00),
+                ItemPedido(pedido_id=pedidos_exemplo[2].id, descricao='Licença Adicional de Terminal DigitalNet-Prospector', quantidade=1.0, valor_unitario=300.00, valor_total=300.00),
 
                 # Pedido 4 (Total: 6420.50)
                 ItemPedido(pedido_id=pedidos_exemplo[3].id, descricao='Cabo de Rede Furukawa Cat6 (Caixa 100m)', quantidade=2.0, valor_unitario=350.00, valor_total=700.00),

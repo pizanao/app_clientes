@@ -1,208 +1,184 @@
-# Gestão-NET - Sistema de Gestão de Clientes e Pedidos
+# 🚀 DigitalNet MS - Radar de Leads & Gestão Comercial Telecom
 
-Aplicação web desenvolvida em **Python 3 + Flask** com arquitetura moderna e interface completa em **HTML5, CSS3, JavaScript e Bootstrap 5.3**.
+Sistema integrado de **Gestão Comercial, Prospecção Geo-Localizada e Expansão de Infraestrutura Óptica B2B** para a operadora **DigitalNet MS** em Campo Grande - MS.
 
----
-
-## 🚀 Funcionalidades
-
-### 1. Controle de Acesso e Autenticação
-- **Autenticação segura** com `Flask-Login` e senhas criptografadas (`werkzeug.security`).
-- **Cadastro de novos usuários** com validações de unicidade de e-mail e usuário.
-- **Sessões persistentes e seguras** com `Flask-Session` e `cachelib`.
-- **Proteção de rotas** (`@login_required`) em todas as áreas internas do sistema.
-
-### 2. Cadastro de Clientes (CRUD Completo)
-- **Listagem** com busca dinâmica (nome, e-mail, CPF/CNPJ, telefone, cidade) e filtro por status (Todos, Ativos, Inativos).
-- **Cadastro e Edição** com validação de campos obrigatórios e formato de e-mail.
-- **Autocompletar de Endereço via CEP**: Integração automática com a API ViaCEP no front-end.
-- **Máscaras de entrada em tempo real**: CPF/CNPJ, Telefone celular/fixo e CEP.
-- **Visualização Detalhada**: Página de perfil com histórico de pedidos, métricas de faturamento e dados de contato.
-- **Exclusão Segura**: Modal de confirmação com remoção em cascata dos pedidos associados.
-
-### 3. Cadastro de Pedidos e Itens (CRUD Completo com Totalização Automática)
-- **Vínculo relacional obrigatório** entre Pedido e Cliente (`cliente_id` com chave estrangeira).
-- **Estrutura de Itens do Pedido (1 a 10 Itens)**:
-  - Cada pedido possui de **1 a 10 itens** obrigatoriamente.
-  - Para cada item é informado: *Descrição*, *Quantidade*, *Valor Unitário* e *Valor Total do Item*.
-  - **Cálculo automático em tempo real**: O sistema calcula o valor total de cada item (`Quantidade * Valor Unitário`) e a totalização do pedido no formulário.
-  - Interface dinâmica com botões de adicionar e remover itens, contador em tempo real (`X / 10 itens`), trava ao atingir 10 itens e impedimento de exclusão do único item restante.
-- **Geração automática** de código do pedido no padrão `PED-YYYY-XXXX`.
-- **Status do Pedido**: *Pendente*, *Em Processamento*, *Concluído* e *Cancelado* com identificadores visuais (badges coloridos).
-- **Métodos de Pagamento**: PIX, Cartão de Crédito, Cartão de Débito, Boleto Bancário, Transferência / TED e Dinheiro.
-- **Comprovante de Pedido**: Layout comercial com tabela detalhada de itens pronta para impressão (`window.print()`).
-- **Filtros avançados**: Busca por número de pedido, descrição dos itens, cliente e status.
-
-
-### 4. Dashboard Executivo em Tempo Real
-- **KPIs**: Total de Clientes (e ativos), Total de Pedidos, Faturamento Concluído, Ticket Médio e Pedidos Pendentes.
-- **Tabelas de últimos registros**: Acesso rápido aos 5 últimos pedidos e aos 5 clientes mais recentes.
-
-### 5. Radar de Prospecção Geo-Localizada & Expansão de Fibra (DigitalNet MS)
-- **Clusters de Viabilidade Óptica por Clientes Ativos**: O sistema agrupa a base de clientes por bairros e CEPs de Campo Grande - MS (ex: *Chácara Cachoeira*, *Santa Fé*, *Centro*, *Jardim dos Estados*) para garantir viabilidade técnica de quase 100% e custo marginal de instalação mínimo.
-- **Varredura com IA / Motor de Telecom**: Gera leads B2B e comerciais no mesmo nó óptico com pontuação (*lead score*), operadora atual da concorrência (Vivo Fibra / Claro) e dor operacional mapeada.
-- **Abordagem Anti-Ban no WhatsApp com Opt-in Conversacional**:
-  - Gancho hiperlocal sem envio de links frios.
-  - Oferta superior à concorrência (Wi-Fi 6 comodato, pontos DigiMesh, upload simétrico e suporte 24h local em Campo Grande).
-  - Pedido explícito de consentimento (*"Posso te enviar o comparativo sem compromisso?"*) com opção de saída, eliminando risco de banimento de número.
-  - Disparo de 1-clique via link direto `https://wa.me/...`.
-- **Tutor de Quebra de Objeções (SDR Telecom)**: Scripts prontos contra fidelidade na concorrente, preço, desconfiança de marca e comodismo.
-- **Conversão Automática em 1-Clique**: Converte o lead diretamente em Cliente e Pedido no banco com totalização e planos reais da DigitalNet (Fibra 600, 700 + DigiMesh, 900 Advanced e Link Dedicado B2B).
-- **APIs RESTful desacopladas**: Endpoints prontos em `/leads/api/clusters` e `/leads/api/prospectar` para alimentar frontends modernos (React 19 + Vite ou mobile).
+Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Inteligência Artificial (AIsa e Gemini)**, dados geográficos oficiais do **SISGRAN / PLANURB**, mais de **21.000 feições urbanas** (bairros, imóveis e loteamentos) com indexação espacial **R*Tree** no SQLite e uma base de **177.614 empresas da Receita Federal do Brasil**.
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## 📑 Sumário
 
-- **Linguagem**: Python 3.11+
-- **Framework Web**: [Flask](https://flask.palletsprojects.com/)
-- **Autenticação**: [Flask-Login](https://flask-login.readthedocs.io/)
-- **Sessões**: [Flask-Session](https://flask-session.readthedocs.io/) + [cachelib](https://github.com/pallets-eco/cachelib)
-- **ORM / Banco de Dados**: [Flask-SQLAlchemy](https://flask-sqlalchemy.readthedocs.io/) (SQLite / PostgreSQL)
-- **Migrações de Banco**: [Flask-Migrate](https://flask-migrate.readthedocs.io/) (Alembic)
-- **Formulários e CSRF**: [Flask-WTF](https://flask-wtf.readthedocs.io/) e [WTForms](https://wtforms.readthedocs.io/)
-- **Frontend**: HTML5, CSS3 personalizado, JavaScript Vanilla, [Bootstrap 5.3](https://getbootstrap.com/), [Bootstrap Icons](https://icons.getbootstrap.com/)
-- **CLI**: [Flask CLI](https://flask.palletsprojects.com/en/stable/cli/)
+- [Visão Geral e Diferenciais](#-visão-geral-e-diferenciais)
+- [Arquitetura do Sistema](#-arquitetura-do-sistema)
+- [Funcionalidades Principais](#-funcionalidades-principais)
+- [Instalação Rápida com setup.sh](#-instalação-rápida-com-setupsh)
+- [Motores de Prospecção e Inteligência Artificial](#-motores-de-prospecção-e-inteligência-artificial)
+- [Dados Geoespaciais e SISGRAN](#-dados-geoespaciais-e-sisgran)
+- [Base de 177k Empresas da Receita Federal](#-base-de-177k-empresas-da-receita-federal)
+- [Scripts e Ferramentas CLI](#-scripts-e-ferramentas-cli)
+- [Suíte de Testes](#-suíte-de-testes)
+- [Agentes de IA e SKILLs](#-agentes-de-ia-e-skills)
 
 ---
 
-## 📦 Estrutura do Projeto
+## 🌟 Visão Geral e Diferenciais
 
-```
-c:/apps/app_clientes/
-├── app/
-│   ├── __init__.py          # Application Factory (create_app)
-│   ├── config.py            # Configurações de ambiente, banco e sessões
-│   ├── extensions.py        # Instâncias de db, migrate, login_manager, sess
-│   ├── cli.py               # Comandos personalizados CLI (seed, create-admin, init-db)
-│   ├── models/
-│   │   ├── user.py          # Modelo de Usuários
-│   │   ├── cliente.py       # Modelo de Clientes
-│   │   └── pedido.py        # Modelo de Pedidos
-│   ├── forms/
-│   │   ├── auth_forms.py    # Formulários de Login e Cadastro
-│   │   ├── cliente_forms.py # Formulário de Clientes
-│   │   └── pedido_forms.py  # Formulário de Pedidos
-│   ├── routes/
-│   │   ├── auth.py          # Rotas de Autenticação (/auth)
-│   │   ├── main.py          # Dashboard (/ e /dashboard)
-│   │   ├── clientes.py      # CRUD de Clientes (/clientes)
-│   │   └── pedidos.py       # CRUD de Pedidos (/pedidos)
-│   ├── static/
-│   │   ├── css/style.css    # Estilização moderna, glassmorphism e cores
-│   │   └── js/main.js       # Máscaras de input, ViaCEP e modais
-│   ├── templates/
-│   │   ├── base.html        # Layout base com sidebar e navbar
-│   │   ├── auth/            # login.html e register.html
-│   │   ├── dashboard/       # index.html
-│   │   ├── clientes/        # index.html, form.html, detail.html
-│   │   ├── pedidos/         # index.html, form.html, detail.html
-│   │   └── errors/          # 404.html e 500.html
-│   └── utils/
-│       └── filters.py       # Filtros Jinja2 (moeda BRL R$, data brasileira, máscaras)
-├── migrations/              # Histórico de versões do Alembic/Flask-Migrate
-├── instance/                # Banco SQLite local e sessões
-├── tests/
-│   └── test_app.py          # Testes automatizados com unittest
-├── wsgi.py                  # Ponto de entrada da aplicação
-├── requirements.txt         # Dependências do projeto
-├── .env                     # Configurações de ambiente
-└── README.md                # Documentação completa
+- **Viabilidade Óptica Hiperlocal:** O sistema calcula clusters de clientes conectados por bairro de Campo Grande, permitindo prospectar empresas exatamente onde a fibra óptica da DigitalNet já está nos postes (AS61588).
+- **Interatividade nos Nós Ópticos (Offcanvas):** Ao clicar em um nó de fibra no mapa, abre uma gaveta lateral listando as empresas reais daquele raio, com scores, WhatsApp anti-ban em 1-clique e navegação focada no mapa.
+- **Interface Imersiva (Menu Recolhível & Mapa Fullscreen):** Barra lateral retrátil com persistência em `localStorage` e modo Tela Cheia no mapa com ajuste contínuo de tiles Leaflet.
+- **Roteiro WhatsApp Anti-Ban com Opt-in:** Reduz o risco de bloqueio de número para quase zero com um método consultivo em 3 passos, oferecendo Wi-Fi 6 em comodato e pontos DigiMesh sem custos de aluguel.
+- **Cascata Multi-Provedor de Prospecção:** Integração com a API AIsa (`asi1-mini`), Google Gemini AI, banco de dados abertos da RFB e gerador sintético de alta diversidade com mais de 600 combinações.
+- **Banco Espacial Dual (SQLite R*Tree & PostGIS):** Análise e ingestão automática de 21.042 feições urbanas com bounding boxes e centróides tanto em SQLite puro quanto em PostgreSQL + PostGIS.
+- **Conversão em 1-Clique:** Transforma um lead prospectado em Cliente e gera automaticamente o Pedido com planos reais da operadora (Fibra 600, 700 + DigiMesh, 900 Advanced e Link Dedicado Pro).
+- **Deploy Autônomo Blindado (POC em 30s):** `setup.sh` auto-contido para demonstrações de POC, configurando todo o ambiente, as 21k feições urbanas e as 177k empresas da RFB em menos de 30 segundos (offline com pendrive ou online sem login).
+
+---
+
+## 🏗️ Arquitetura do Sistema
+
+```mermaid
+flowchart TD
+    subgraph Frontend["Interface Web (Bootstrap 5.3 + Mapbox GL JS)"]
+        Dash["Dashboard Executivo"]
+        Radar["Radar de Leads & Mapa"]
+        Clientes["Gestão de Clientes"]
+        Pedidos["Gestão de Pedidos (1-10 itens)"]
+    end
+
+    subgraph Backend["Backend Flask 3"]
+        Routes["Rotas & Blueprints (Auth, Leads, Clientes, Pedidos)"]
+        Prospector["TelecomProspectorService"]
+        AI_Gate["Gateway de Prospecção Multi-Provider"]
+    end
+
+    subgraph Data["Camada de Dados (SQLite & Geo)"]
+        MainDB[("SQLite: instance/app_clientes.db")]
+        RFB[("Tabela leeds_campo_grande (177k RFB)")]
+        GeoSQLite[("Tabelas Espaciais R*Tree (geo_*)")]
+        GeoFiles["GeoJSON (bairros, imoveis, parcelamentos)"]
+    end
+
+    subgraph External["Serviços & Provedores Externos"]
+        AIsaAPI["AIsa API (api.aisa.one)"]
+        GeminiAPI["Google Gemini API"]
+        ViaCEP["ViaCEP API"]
+    end
+
+    Frontend <--> Routes
+    Routes --> Prospector
+    Prospector --> AI_Gate
+    AI_Gate --> AIsaAPI
+    AI_Gate --> GeminiAPI
+    AI_Gate --> RFB
+    Prospector <--> MainDB
+    MainDB --- GeoSQLite
+    GeoFiles --> GeoSQLite
+    Routes --> ViaCEP
 ```
 
 ---
 
-## 🐧 Instalação e Execução Automatizada no Linux
+## 🚀 Funcionalidades Principais
 
-Você pode recriar a aplicação inteira do zero em uma pasta vazia em qualquer ambiente Linux (Ubuntu, Debian, Fedora, CentOS, etc.) com um único comando.
+### 1. Radar de Prospecção Geo-Localizada (`/leads/`)
+- Mapa interativo com nós ópticos (clientes ativos) e oportunidades de leads com scores de conversão.
+- Filtros por bairro oficial do SISGRAN (*Chácara Cachoeira, Centro, Santa Fé, Jardim dos Estados, etc.*).
+- Dossiê comercial completo com perfil do decisor, dores de rede da concorrência e argumento de vendas.
 
-### 1. Executar o Script Autônomo
-Copie o arquivo `setup.sh` para uma pasta vazia e execute no terminal:
+### 2. Central WhatsApp & Abordagem Consultiva
+- Script personalizado gerado sob demanda contendo gancho territorial, comparativo de plano e pedido explícito de opt-in.
+- Botão de disparo direto via WhatsApp Web (`https://wa.me/...`).
+- Tutor de Quebra de Objeções para SDRs com scripts imediatos contra fidelidade na concorrência, preço e comodismo.
+
+### 3. Gestão Completa de Clientes e Pedidos
+- CRUD de Clientes com preenchimento automático de CEP via ViaCEP e máscaras de CNPJ/Telefone.
+- CRUD de Pedidos de 1 a 10 itens com totalização automática em tempo real e comprovante de impressão comercial.
+- Dashboard executivo com métricas de faturamento, ticket médio e clientes ativos.
+
+---
+
+## 📦 Instalação Rápida com `setup.sh`
+
+O projeto inclui o instalador autônomo `setup.sh`. Em um ambiente Linux limpo:
+
 ```bash
+# 1. Dar permissão de execução:
 chmod +x setup.sh
+
+# 2. Executar a instalação automática (cria venv, dependências, banco e seed):
 ./setup.sh
+
+# 3. Ativar o ambiente e iniciar a aplicação:
+source .venv/bin/activate
+flask run --host=0.0.0.0 --port=5000
 ```
-
-O script cuidará de:
-1. Validar o ambiente Python 3;
-2. Criar toda a estrutura de diretórios do projeto;
-3. Gerar todos os arquivos fonte (Models, Forms, Routes, Templates, CSS, JS, Migrations, Testes);
-4. Criar o arquivo `.env` com uma `SECRET_KEY` aleatória;
-5. Criar o ambiente virtual `.venv` e instalar as dependências do `requirements.txt`;
-6. Aplicar as migrações do banco (`flask db upgrade`);
-7. Inserir dados de teste e o usuário `admin` com senha aleatória (`flask seed`);
-8. Executar os testes automatizados para certificar a integridade do sistema.
-
-> **Mantenedores:** o `setup.sh` é gerado a partir dos arquivos versionados. Após alterar o código, regenere-o com:
-> ```bash
-> python scripts/gerar_setup.py
-> ```
-
-### 2. Scripts Utilitários no Linux
-Após a execução do `setup.sh`, os seguintes comandos ficam disponíveis na raiz:
-- **`./run.sh`**: Inicia o servidor Flask na porta 5000 (`http://localhost:5000`).
-- **`./test.sh`**: Executa a suíte de testes automatizados com `unittest`.
-- **`./seed.sh`**: Popula novamente o banco com dados de teste e usuário admin.
 
 ---
 
-### 1. Ativar o Ambiente Virtual
-No terminal PowerShell ou CMD:
-```powershell
-.venv\Scripts\Activate.ps1
-```
+## 🤖 Motores de Prospecção e Inteligência Artificial
 
-### 2. Instalar Dependências (caso necessário)
-```powershell
-pip install -r requirements.txt
-```
-
-### 3. Migrações e Inicialização do Banco
-O banco já vem pré-configurado e com migrações prontas. Para recriar ou atualizar:
-```powershell
-flask db upgrade
-```
-
-### 4. Popular Dados de Exemplo (Seed)
-Execute para criar o usuário administrador e clientes/pedidos de demonstração:
-```powershell
-flask seed
-```
-
-### 5. Iniciar o Servidor
-```powershell
-flask run --debug
-# ou
-python wsgi.py
-```
-Acesse no seu navegador: **`http://127.0.0.1:5000`**
+O sistema implementa uma cascata de 4 camadas:
+1. **AIsa API:** Suporte nativo ao endpoint `/v1/chat/completions` da AIsa com o modelo `asi1-mini`. Configuração via `AISA_API_KEY` no `.env`.
+2. **Google Gemini:** Prospecção com modelo Gemini via `GEMINI_API_KEY`.
+3. **Motor Local RFB (`leeds_campo_grande`):** Quando as chaves externas não estão presentes ou atingem limite de cota, o sistema seleciona empresas reais ativas de Campo Grande para o CEP do bairro.
+4. **Gerador Sintético Dinâmico:** Combina 15 setores comerciais com 40 sobrenomes locais e garante que nenhum nome duplicado seja gerado.
 
 ---
 
-## 🔑 Credenciais de Acesso
+## 🗺️ Dados Geoespaciais e SISGRAN
 
-- **Usuário:** `admin` (ou `admin@exemplo.com`)
-- **Senha:** gerada aleatoriamente pelo `flask seed` e exibida **uma única vez** no terminal.
-  Para definir uma senha conhecida, exporte `SEED_ADMIN_PASSWORD` antes do seed.
+O sistema integra 4 arquivos GeoJSON oficiais em `geojson/`:
+- `bairros.geojson`: 74 polígonos de bairros municipais.
+- `imoveis.geojson`: 20.000 imóveis urbanos com numeração predial e ruas reais.
+- `parcelamentos.geojson`: 894 loteamentos aprovados.
+- `pd-macrozonas-urbanas.geojson`: Macrozonas urbanas do Plano Diretor.
 
-Para criar outro administrador (a senha é solicitada de forma oculta):
-```powershell
-flask create-admin --username gerente --email gerente@empresa.com
+### Carregando no SQLite com Suporte a R*Tree:
+```bash
+python scripts/carregar_geojson_sqlite.py --execute
 ```
-
-*Você também pode criar novos usuários a qualquer momento pelo botão "Cadastre-se gratuitamente" na tela de login.*
-
-## 🔒 Produção
-
-- Defina `FLASK_DEBUG=0` e uma `SECRET_KEY` própria (`python -c "import secrets; print(secrets.token_hex(32))"`).
-  Sem ela, a aplicação **se recusa a iniciar** fora do modo debug.
-- Use um servidor WSGI (ex.: `gunicorn wsgi:app` ou `waitress-serve wsgi:app`) em vez de `python wsgi.py`.
+Todas as feições são armazenadas com colunas de bounding box (`min_lng, min_lat, max_lng, max_lat`), centróides geométricos e indexação virtual R*Tree.
 
 ---
 
-## 🧪 Executando os Testes Automatizados
+## 🏛️ Base de 177k Empresas da Receita Federal
 
-Para rodar os testes unitários e de integração:
-```powershell
-.venv\Scripts\python -m unittest tests/test_app.py
+O arquivo SQLite inclui a tabela `leeds_campo_grande` contendo 177.614 empresas de Campo Grande.
+Para enriquecer a base de clientes distribuindo empresas reais pelos bairros:
+
+```bash
+# Enriquece a tabela clientes com 150 empresas reais da RFB:
+python scripts/enriquecer_clientes_rfb.py --limit 150
 ```
+
+---
+
+## 🛠️ Scripts e Ferramentas CLI
+
+| Script | Finalidade |
+| :--- | :--- |
+| `python scripts/carregar_geojson_sqlite.py --execute` | Carrega camadas GeoJSON no SQLite com índices espaciais R*Tree. |
+| `python scripts/enriquecer_clientes_rfb.py` | Enriquece clientes com dados da Receita Federal e SISGRAN. |
+| `python scripts/gerar_perfis_sisgran.py` | Atualiza o catálogo territorial em `app/data/perfis_sisgran.py`. |
+| `python scripts/analisar_geojson_postgis.py --execute` | Importa os GeoJSONs para PostgreSQL + PostGIS (opcional). |
+| `python scripts/gerar_setup.py` | Regenera o instalador autônomo `setup.sh`. |
+| `python scripts/setup_agents.py` | Regenera `AGENTS.md`, `README.md` e instala as SKILLs. |
+
+---
+
+## 🧪 Suíte de Testes
+
+O projeto possui **28 testes unitários** cobrindo autenticação, CRUDs de clientes e pedidos, totalização automática de itens, integridade de senhas do seed, rotas do radar de leads, geojson layers e prevenção estrita de leads duplicados:
+
+```bash
+.venv/bin/python -m unittest discover -s tests -v
+```
+
+---
+
+## 🧠 Agentes de IA e SKILLs
+
+As diretrizes detalhadas para LLMs e agentes de codificação estão estruturadas em:
+- **`AGENTS.md`**: Regras de arquitetura, convenções e catalogo de tabelas.
+- **`.agents/skills/enriquecer-prospectar-rfb/SKILL.md`**: Runbook completo para uso da base RFB e prospecção de ISP.
+- **`.agents/skills/carregar-geojson-sqlite/SKILL.md`**: Guia para análise e consultas geoespaciais em SQLite com R*Tree.

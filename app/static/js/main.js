@@ -1,19 +1,43 @@
 document.addEventListener('DOMContentLoaded', function () {
-  // 1. Sidebar Toggle on Mobile
+  // 1. Sidebar Toggle (Mobile Drawer & Desktop Collapse)
   const sidebarToggle = document.getElementById('sidebarToggle');
   const sidebar = document.getElementById('sidebar');
   const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+  const appWrapper = document.querySelector('.app-wrapper') || document.body;
 
-  if (sidebarToggle && sidebar && sidebarBackdrop) {
+  // Restaurar estado recolhido no desktop via localStorage
+  if (appWrapper && window.innerWidth >= 992) {
+    if (localStorage.getItem('sidebar_collapsed') === 'true') {
+      appWrapper.classList.add('sidebar-collapsed');
+    }
+  }
+
+  if (sidebarToggle && sidebar) {
     sidebarToggle.addEventListener('click', function () {
-      sidebar.classList.toggle('show');
-      sidebarBackdrop.classList.toggle('show');
+      if (window.innerWidth < 992) {
+        // Modo Mobile: Abre/fecha drawer com backdrop
+        sidebar.classList.toggle('show');
+        if (sidebarBackdrop) sidebarBackdrop.classList.toggle('show');
+      } else {
+        // Modo Desktop: Recolhe/expande barra lateral
+        if (appWrapper) {
+          appWrapper.classList.toggle('sidebar-collapsed');
+          const isCollapsed = appWrapper.classList.contains('sidebar-collapsed');
+          localStorage.setItem('sidebar_collapsed', isCollapsed ? 'true' : 'false');
+          // Dispara resize para Leaflet e gráficos se adaptarem perfeitamente
+          setTimeout(function () {
+            window.dispatchEvent(new Event('resize'));
+          }, 320);
+        }
+      }
     });
 
-    sidebarBackdrop.addEventListener('click', function () {
-      sidebar.classList.remove('show');
-      sidebarBackdrop.classList.remove('show');
-    });
+    if (sidebarBackdrop) {
+      sidebarBackdrop.addEventListener('click', function () {
+        sidebar.classList.remove('show');
+        sidebarBackdrop.classList.remove('show');
+      });
+    }
   }
 
   // 2. Auto-dismiss flash alerts after 6 seconds

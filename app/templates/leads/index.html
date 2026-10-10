@@ -127,7 +127,7 @@
   <div class="row g-4 mb-4 align-items-stretch">
     <!-- COLUNA 1 (6x12): MAPA DE CALOR -->
     <div class="col-lg-6 d-flex flex-column">
-      <div class="card border-0 shadow-sm h-100 overflow-hidden d-flex flex-column">
+      <div class="card border-0 shadow-sm h-100 overflow-hidden d-flex flex-column" id="cardMapaCalor">
         <div class="card-header bg-white py-3 border-bottom d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
           <div class="d-flex align-items-center gap-2">
             <div class="p-2 rounded-3" style="background: #fef3c7; color: #b45309;">
@@ -223,11 +223,15 @@
             <button type="button" class="btn btn-sm btn-light border shadow-sm" onclick="centralizarCampoGrande()" title="Centralizar em Campo Grande">
               <i class="bi bi-crosshair me-1"></i> Recentralizar
             </button>
+
+            <button type="button" class="btn btn-sm btn-light border shadow-sm" id="btnToggleFullscreenMap" onclick="toggleFullscreenMapa()" title="Alternar Modo Tela Cheia">
+              <i class="bi bi-arrows-fullscreen me-1" id="iconFullscreenMap"></i> <span id="labelFullscreenMap" class="d-none d-sm-inline">Tela Cheia</span>
+            </button>
           </div>
         </div>
 
         <!-- LEGENDA DO MAPA DE CALOR -->
-        <div class="px-3 py-2 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2 small">
+        <div class="px-3 py-2 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2 small heat-legend-bar">
           <div class="d-flex align-items-center gap-2 flex-wrap">
             <span class="heat-badge-chip bg-white border py-1 px-2">
               <span style="width: 10px; height: 10px; border-radius: 50%; background: #1b4f99; display: inline-block;"></span>
@@ -248,7 +252,7 @@
         </div>
 
         <!-- CONTAINER LEAFLET -->
-        <div class="position-relative flex-grow-1" style="min-height: 480px;">
+        <div class="position-relative flex-grow-1 map-wrapper-inner" style="min-height: 480px;">
           <div id="mapaCalor" style="height: 100%; min-height: 480px; width: 100%; z-index: 1;"></div>
         </div>
       </div>
@@ -534,6 +538,49 @@
     </div>
   </div>
 </div>
+
+<!-- OFFCANVAS: EMPRESAS NO RAIO DO NÓ ÓPTICO DIGITALNET -->
+<div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasNodoEmpresas" aria-labelledby="offcanvasNodoLabel" style="width: 440px; max-width: 95vw; z-index: 1070;">
+  <div class="offcanvas-header text-white" style="background: linear-gradient(135deg, #0f2d57, #1b4f99); border-bottom: 2px solid #fbbf24;">
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge py-1 px-2 rounded-pill" style="background: #fbbf24; color: #0f172a; font-weight: 700; font-size: 0.65rem;">
+          <i class="bi bi-broadcast-pin me-1"></i> Nó Óptico DigitalNet
+        </span>
+        <span class="badge bg-white bg-opacity-20 text-white" style="font-size: 0.65rem;" id="offcanvasBadgeViabilidade">Viabilidade 99%</span>
+      </div>
+      <h5 class="offcanvas-title fw-bold text-white mt-1 mb-0" id="offcanvasNodoLabel">
+        Empresas no Nó
+      </h5>
+      <small class="text-white text-opacity-75" style="font-size: 0.75rem;" id="offcanvasNodoSub">
+        Cobertura direta no poste &bull; Campo Grande - MS
+      </small>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
+  </div>
+  <div class="offcanvas-body p-3 bg-light">
+    <div id="offcanvasLoading" class="text-center py-5 d-none">
+      <div class="spinner-border text-primary mb-2" role="status"></div>
+      <div class="fw-semibold text-dark small">Localizando empresas no raio da fibra...</div>
+      <small class="text-muted">Cruzando dados RFB e inteligência territorial</small>
+    </div>
+
+    <div id="offcanvasConteudo">
+      <div class="d-flex align-items-center justify-content-between mb-3 px-1">
+        <span class="small text-muted" id="offcanvasTotalEmpresas">
+          <strong>0</strong> empresas identificadas
+        </span>
+        <a href="#" id="offcanvasLinkFiltrarBairro" class="btn btn-sm btn-outline-primary" style="font-size: 0.72rem; padding: 3px 8px;">
+          <i class="bi bi-funnel me-1"></i> Ver todas no Funil
+        </a>
+      </div>
+
+      <div id="offcanvasListaEmpresas" class="d-flex flex-column gap-3">
+        <!-- Cards dinâmicos inseridos via JS -->
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -549,6 +596,7 @@
   let layerGroupFibra = null;
   let layerGroupLeads = null;
   let layerGroupHeat = null;
+  let layerGroupNodoEmpresas = null;
   let currentBaseLayer = null;
 
   function initMap() {
@@ -576,6 +624,7 @@
     layerGroupFibra = L.layerGroup().addTo(mapInstance);
     layerGroupLeads = L.layerGroup().addTo(mapInstance);
     layerGroupHeat = L.layerGroup().addTo(mapInstance);
+    layerGroupNodoEmpresas = L.layerGroup().addTo(mapInstance);
 
     renderPoints();
 
@@ -616,8 +665,16 @@
         });
 
         const marker = L.marker([pt.lat, pt.lng], { icon: iconFibra });
+
+        // Hook de clique direto no Nó Óptico
+        marker.on('click', function(e) {
+          if (typeof window.onSelectNodoFibra === 'function') {
+            window.onSelectNodoFibra(pt);
+          }
+        });
+
         const popupContent = `
-          <div style="width: 250px;">
+          <div style="width: 260px;">
             <div style="background: linear-gradient(135deg, #0f2d57, #1b4f99); color: white; padding: 12px 14px;">
               <small style="color: #fbbf24; text-transform: uppercase; font-weight: 700; font-size: 0.7rem;">Nó de Fibra DigitalNet</small>
               <h6 style="margin: 0; font-weight: 700; font-size: 1rem;">${pt.bairro}</h6>
@@ -635,8 +692,11 @@
                 <span style="color: #64748b;">Viabilidade:</span>
                 <span style="color: #059669; font-weight: 700;">${pt.viabilidade}</span>
               </div>
-              <a href="?bairro=${encodeURIComponent(pt.bairro)}" class="btn btn-sm btn-dn-blue w-100" style="padding: 4px 8px; font-size: 0.75rem;">
-                <i class="bi bi-funnel me-1"></i> Filtrar este Bairro
+              <button type="button" class="btn btn-sm btn-dn-yellow w-100 fw-bold mb-2 shadow-sm" onclick="carregarEmpresasDoNodo('${escape(pt.bairro)}', ${pt.lat}, ${pt.lng})">
+                <i class="bi bi-buildings-fill me-1"></i> Carregar Empresas do Nó
+              </button>
+              <a href="?bairro=${encodeURIComponent(pt.bairro)}" class="btn btn-sm btn-outline-primary w-100" style="padding: 4px 8px; font-size: 0.75rem;">
+                <i class="bi bi-funnel me-1"></i> Filtrar Leads Deste Bairro
               </a>
             </div>
           </div>
@@ -930,6 +990,301 @@
         badge.classList.add('d-none');
       }
     }
+  }
+
+  // =========================================================================
+  // MODO TELA CHEIA (FULLSCREEN) DO MAPA
+  // =========================================================================
+  function toggleFullscreenMapa() {
+    const card = document.getElementById('cardMapaCalor');
+    const icon = document.getElementById('iconFullscreenMap');
+    const label = document.getElementById('labelFullscreenMap');
+    if (!card) return;
+
+    const isCurrentlyFullscreen = card.classList.contains('map-card-fullscreen');
+    if (!isCurrentlyFullscreen) {
+      card.classList.add('map-card-fullscreen');
+      if (icon) {
+        icon.classList.remove('bi-arrows-fullscreen');
+        icon.classList.add('bi-fullscreen-exit');
+      }
+      if (label) label.textContent = 'Sair da Tela Cheia';
+
+      // Tenta acionar HTML5 Fullscreen API se disponível e permitido
+      if (card.requestFullscreen && !document.fullscreenElement) {
+        card.requestFullscreen().catch(() => {});
+      }
+    } else {
+      card.classList.remove('map-card-fullscreen');
+      if (icon) {
+        icon.classList.remove('bi-fullscreen-exit');
+        icon.classList.add('bi-arrows-fullscreen');
+      }
+      if (label) label.textContent = 'Tela Cheia';
+
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    // Invalida tamanho do Leaflet para atualizar tiles instantaneamente
+    if (mapInstance) {
+      setTimeout(() => mapInstance.invalidateSize(), 100);
+      setTimeout(() => mapInstance.invalidateSize(), 320);
+    }
+  }
+
+  // Escuta alteração nativa de Fullscreen (ex: usuário apertou ESC ou F11)
+  document.addEventListener('fullscreenchange', function() {
+    const card = document.getElementById('cardMapaCalor');
+    if (!document.fullscreenElement && card && card.classList.contains('map-card-fullscreen')) {
+      card.classList.remove('map-card-fullscreen');
+      const icon = document.getElementById('iconFullscreenMap');
+      const label = document.getElementById('labelFullscreenMap');
+      if (icon) {
+        icon.classList.remove('bi-fullscreen-exit');
+        icon.classList.add('bi-arrows-fullscreen');
+      }
+      if (label) label.textContent = 'Tela Cheia';
+      if (mapInstance) {
+        setTimeout(() => mapInstance.invalidateSize(), 100);
+        setTimeout(() => mapInstance.invalidateSize(), 300);
+      }
+    }
+  });
+
+  // Escuta tecla ESC para sair do modo tela cheia CSS
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const card = document.getElementById('cardMapaCalor');
+      if (card && card.classList.contains('map-card-fullscreen')) {
+        toggleFullscreenMapa();
+      }
+    }
+  });
+
+  // =========================================================================
+  // HOOK DE INTEGRAÇÃO & CARREGAMENTO DINÂMICO: NÓ DE FIBRA DIGITALNET
+  // =========================================================================
+  window.carregarEmpresasDoNodo = async function(bairroEscaped, lat, lng) {
+    const bairro = unescape(bairroEscaped);
+    console.log(`[DigitalNet] Carregando empresas do Nó Óptico: ${bairro} (${lat}, ${lng})`);
+
+    // 1. Dispara evento customizado da DigitalNet
+    const event = new CustomEvent('digitalnet:nodo_fibra_clicado', {
+      detail: { bairro: bairro, lat: lat, lng: lng }
+    });
+    window.dispatchEvent(event);
+
+    // 2. Elementos da interface Offcanvas
+    const offcanvasEl = document.getElementById('offcanvasNodoEmpresas');
+    const labelEl = document.getElementById('offcanvasNodoLabel');
+    const subEl = document.getElementById('offcanvasNodoSub');
+    const loadingEl = document.getElementById('offcanvasLoading');
+    const conteudoEl = document.getElementById('offcanvasConteudo');
+    const listaEl = document.getElementById('offcanvasListaEmpresas');
+    const totalEl = document.getElementById('offcanvasTotalEmpresas');
+    const linkFiltrarEl = document.getElementById('offcanvasLinkFiltrarBairro');
+
+    if (labelEl) labelEl.textContent = `Nó Óptico: ${bairro}`;
+    if (subEl) subEl.innerHTML = `Raio de Cobertura de Fibra &bull; Campo Grande - MS`;
+    if (linkFiltrarEl) linkFiltrarEl.href = `?bairro=${encodeURIComponent(bairro)}`;
+    if (loadingEl) loadingEl.classList.remove('d-none');
+    if (conteudoEl) conteudoEl.classList.add('d-none');
+    if (listaEl) listaEl.innerHTML = '';
+
+    // Abre a gaveta lateral (Offcanvas)
+    if (offcanvasEl) {
+      const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
+      bsOffcanvas.show();
+    }
+
+    // 3. Centraliza a visualização do mapa nas coordenadas do Nó
+    if (mapInstance && lat && lng) {
+      mapInstance.flyTo([lat, lng], 15, { animate: true, duration: 1.0 });
+    }
+
+    mostrarNotificacaoNodo(`Varrendo empresas no raio do Nó [${bairro}]...`);
+
+    try {
+      const url = `/leads/api/nodo/${encodeURIComponent(bairro)}/empresas?lat=${lat || ''}&lng=${lng || ''}&limite=8`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`Falha HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      if (!data.success || !Array.isArray(data.empresas)) {
+        throw new Error(data.error || 'Resposta inválida do servidor');
+      }
+
+      const empresas = data.empresas;
+      if (totalEl) {
+        totalEl.innerHTML = `<strong>${empresas.length}</strong> empresas identificadas no poste`;
+      }
+
+      // 4. Desenha círculo de abrangência e marcadores no mapa
+      if (layerGroupNodoEmpresas) {
+        layerGroupNodoEmpresas.clearLayers();
+
+        if (lat && lng) {
+          const circleCobertura = L.circle([lat, lng], {
+            radius: 420,
+            color: '#fbbf24',
+            fillColor: '#fbbf24',
+            fillOpacity: 0.14,
+            weight: 2,
+            dashArray: '5, 5'
+          });
+          layerGroupNodoEmpresas.addLayer(circleCobertura);
+        }
+
+        empresas.forEach((emp, index) => {
+          const isHighScore = emp.lead_score >= 90;
+          const pinHtml = `
+            <div class="custom-pin-lead ${isHighScore ? 'high-score' : ''}" style="border: 2px solid #fbbf24; transform: scale(1.12); box-shadow: 0 0 10px rgba(251, 191, 36, 0.75);">
+              <i class="bi bi-buildings"></i>
+            </div>
+          `;
+          const icon = L.divIcon({
+            className: 'custom-pin-nodo-empresa',
+            html: pinHtml,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+          });
+
+          const marker = L.marker([emp.lat, emp.lng], { icon: icon });
+          const popupHtml = `
+            <div style="width: 270px; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="background: linear-gradient(135deg, #0f2d57, #1b4f99); color: white; padding: 10px 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="badge" style="background: #fbbf24; color: #0f172a; font-weight: 700; font-size: 0.65rem;">
+                    ${emp.distancia_estimada_m ? `${emp.distancia_estimada_m}m do Nó` : 'No Raio da Fibra'}
+                  </span>
+                  <span class="badge bg-danger" style="font-size: 0.7rem;">${emp.lead_score} pts</span>
+                </div>
+                <h6 style="margin: 4px 0 0 0; font-weight: 700; color: white;">${emp.empresa}</h6>
+              </div>
+              <div style="padding: 12px 14px; background: white; font-size: 0.82rem;">
+                <div class="text-muted mb-1"><i class="bi bi-person me-1"></i>${emp.nome} &bull; <span class="text-secondary">${emp.cargo}</span></div>
+                <div class="text-muted mb-2"><i class="bi bi-geo-alt me-1 text-danger"></i>${emp.logradouro}, ${emp.numero}</div>
+                <div class="p-2 rounded mb-2" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                  <div class="fw-bold" style="color: #1b4f99;">${emp.plano_sugerido}</div>
+                  <small class="text-muted">R$ ${emp.valor_mensal_sugerido.toFixed(2).replace('.', ',')}/mês &bull; Operadora: <strong>${emp.operadora_atual}</strong></small>
+                </div>
+                <div class="d-flex gap-2">
+                  ${emp.whatsapp_url && emp.whatsapp_url !== '#' ? `
+                    <a href="${emp.whatsapp_url}" target="_blank" class="btn btn-sm btn-success flex-fill" style="font-size: 0.75rem; padding: 5px;">
+                      <i class="bi bi-whatsapp me-1"></i> WhatsApp
+                    </a>
+                  ` : ''}
+                  <a href="${emp.detail_url}" class="btn btn-sm btn-dn-blue flex-fill" style="font-size: 0.75rem; padding: 5px;">
+                    <i class="bi bi-eye me-1"></i> Dossiê
+                  </a>
+                </div>
+              </div>
+            </div>
+          `;
+          marker.bindPopup(popupHtml);
+          layerGroupNodoEmpresas.addLayer(marker);
+
+          emp._leafletMarker = marker;
+        });
+      }
+
+      // 5. Renderiza os cards na gaveta lateral (Offcanvas)
+      if (listaEl) {
+        listaEl.innerHTML = empresas.map((emp, i) => `
+          <div class="card border border-light-subtle shadow-sm rounded-3 p-3 bg-white" style="transition: all 0.2s ease;">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h6 class="fw-bold mb-1 text-dark" style="font-size: 0.95rem;">${emp.empresa}</h6>
+                <div class="small text-muted"><i class="bi bi-person-circle me-1 text-primary"></i>${emp.nome} (${emp.cargo})</div>
+              </div>
+              <span class="badge ${emp.lead_score >= 90 ? 'bg-danger' : 'bg-primary'} px-2 py-1" style="font-size: 0.75rem;">
+                ${emp.lead_score} pts
+              </span>
+            </div>
+
+            <div class="small text-muted mb-2">
+              <i class="bi bi-geo-alt-fill text-danger me-1"></i>${emp.logradouro}, ${emp.numero}
+              <span class="badge bg-light text-dark border ms-1">${emp.distancia_estimada_m ? `${emp.distancia_estimada_m}m do Nó` : 'Fibra Ativa'}</span>
+            </div>
+
+            <div class="p-2 rounded-2 mb-2" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <strong style="color: #1b4f99; font-size: 0.8rem;">${emp.plano_sugerido}</strong>
+                <span class="text-dark fw-bold" style="font-size: 0.8rem;">R$ ${emp.valor_mensal_sugerido.toFixed(2).replace('.', ',')}</span>
+              </div>
+              <div class="text-muted" style="font-size: 0.72rem;">
+                Operadora Atual: <strong class="text-dark">${emp.operadora_atual}</strong> &bull; Dor: ${emp.dor_principal}
+              </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 pt-1 border-top">
+              ${emp.whatsapp_url && emp.whatsapp_url !== '#' ? `
+                <a href="${emp.whatsapp_url}" target="_blank" class="btn btn-sm btn-success flex-fill" style="font-size: 0.75rem; padding: 5px 8px;">
+                  <i class="bi bi-whatsapp me-1"></i> WhatsApp Anti-Ban
+                </a>
+              ` : ''}
+              <a href="${emp.detail_url}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem; padding: 5px 8px;" title="Ver Dossiê Completo">
+                <i class="bi bi-file-earmark-person"></i>
+              </a>
+              <button type="button" class="btn btn-sm btn-light border" style="font-size: 0.75rem; padding: 5px 8px;" onclick="focarEmpresaNoMapa(${i})" title="Localizar no Mapa">
+                <i class="bi bi-crosshair"></i>
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      window._nodoEmpresasAtuais = empresas;
+
+      if (loadingEl) loadingEl.classList.add('d-none');
+      if (conteudoEl) conteudoEl.classList.remove('d-none');
+
+      mostrarNotificacaoNodo(`${empresas.length} empresas carregadas no Nó [${bairro}]!`);
+
+    } catch (err) {
+      console.error('Erro ao carregar empresas do nó:', err);
+      if (loadingEl) loadingEl.classList.add('d-none');
+      if (conteudoEl) conteudoEl.classList.remove('d-none');
+      if (listaEl) {
+        listaEl.innerHTML = `
+          <div class="alert alert-danger small mb-0">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> Não foi possível carregar as empresas do nó no momento. Tente novamente.
+          </div>
+        `;
+      }
+      mostrarNotificacaoNodo(`Erro ao buscar empresas para o bairro ${bairro}.`);
+    }
+  };
+
+  window.focarEmpresaNoMapa = function(index) {
+    if (!window._nodoEmpresasAtuais || !window._nodoEmpresasAtuais[index]) return;
+    const emp = window._nodoEmpresasAtuais[index];
+    if (mapInstance && emp.lat && emp.lng) {
+      mapInstance.flyTo([emp.lat, emp.lng], 16.5, { animate: true, duration: 0.8 });
+      if (emp._leafletMarker) {
+        setTimeout(() => emp._leafletMarker.openPopup(), 850);
+      }
+    }
+  };
+
+  function mostrarNotificacaoNodo(mensagem) {
+    let toast = document.getElementById('dnNodoToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'dnNodoToast';
+      toast.style.cssText = 'position: fixed; bottom: 24px; right: 24px; z-index: 2000; background: linear-gradient(135deg, #0f2d57, #1b4f99); color: white; padding: 12px 18px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-size: 0.875rem; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(251, 191, 36, 0.4); transition: opacity 0.3s ease;';
+      document.body.appendChild(toast);
+    }
+    toast.innerHTML = `<i class="bi bi-broadcast text-warning fs-5"></i> <div><strong>Nó DigitalNet</strong><div style="font-size: 0.78rem; opacity: 0.9;">${mensagem}</div></div>`;
+    toast.style.opacity = '1';
+    toast.style.display = 'flex';
+    clearTimeout(window._nodoToastTimer);
+    window._nodoToastTimer = setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.style.display = 'none', 300);
+    }, 4500);
   }
 
   // Inicializa quando a página carregar

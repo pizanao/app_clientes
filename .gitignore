@@ -31,8 +31,7 @@ ENV/
 instance/
 *.db
 # GeoJSON temporários e pesados
-
-
+geojson/*.json
 # Environment
 .env
 .env.local
@@ -42,9 +41,7 @@ instance/
 .idea/
 *.sublime-project
 *.sublime-workspace
-run.sh
-seed.sh
-test.sh
+
 
 # Screenshots & temporários
 *.png
@@ -52,3 +49,8 @@ test.sh
 *.jpeg
 /secrets/
 /tmp/
+
+# Generated runner scripts from setup.sh
+run.sh
+test.sh
+seed.sh

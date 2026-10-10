@@ -29,7 +29,7 @@ EXCLUIR = {
     'README.md',              # documentação do repositório
     'scripts/gerar_setup.py', # ferramenta de manutenção
 }
-EXCLUIR_PREFIXOS = ('.idea/', '.vscode/', 'instance/', '.venv/')
+EXCLUIR_PREFIXOS = ('.idea/', '.vscode/', 'instance/', '.venv/', 'data/')
 
 
 def listar_arquivos():
@@ -68,7 +68,7 @@ def bloco_arquivo(caminho):
 
 CABECALHO = r'''#!/usr/bin/env bash
 # ==============================================================================
-# Script de Criação e Configuração Automatizada - OmniGestão (Linux)
+# Script de Criação e Configuração Automatizada - DigitalNet-Prospector (Linux)
 # ==============================================================================
 # ARQUIVO GERADO AUTOMATICAMENTE por scripts/gerar_setup.py — não edite à mão.
 # Para atualizar após mudanças no código: python scripts/gerar_setup.py
@@ -99,7 +99,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}===================================================================${NC}"
-echo -e "${BLUE}    Iniciando a instalação e recriação do projeto OmniGestão       ${NC}"
+echo -e "${BLUE}    Iniciando a instalação e recriação do projeto DigitalNet-Prospector       ${NC}"
 echo -e "${BLUE}===================================================================${NC}"
 
 # 1. Verificação de pré-requisitos no Linux
@@ -178,7 +178,7 @@ source .venv/bin/activate
 export FLASK_APP=wsgi.py
 export HOST="${HOST:-127.0.0.1}"
 export PORT="${PORT:-5000}"
-echo "Iniciando servidor OmniGestão em http://${HOST}:${PORT} ..."
+echo "Iniciando servidor DigitalNet-Prospector em http://${HOST}:${PORT} ..."
 python3 wsgi.py
 OMNI_EOF
 
@@ -221,6 +221,25 @@ echo -e "\n${YELLOW}[6/6] Aplicando migrações e populando o banco de dados...$
 export FLASK_APP=wsgi.py
 .venv/bin/flask db upgrade
 .venv/bin/flask seed
+
+echo -e "\n${YELLOW}• Carregando camadas geoespaciais urbanas no SQLite...${NC}"
+.venv/bin/python scripts/carregar_geojson_sqlite.py --execute
+
+echo -e "\n${YELLOW}• Configurando base de dados RFB (177.614 empresas de Campo Grande)...${NC}"
+mkdir -p data
+# Se o dump comprimido estiver junto no pendrive ou pasta atual, copia para data/
+if [ ! -f data/leeds_campo_grande.sql.gz ]; then
+    if [ -f leeds_campo_grande.sql.gz ]; then
+        cp leeds_campo_grande.sql.gz data/
+    elif [ -f ../leeds_campo_grande.sql.gz ]; then
+        cp ../leeds_campo_grande.sql.gz data/
+    fi
+fi
+.venv/bin/python scripts/restaurar_rfb.py || true
+
+# Enriquece clientes com dados reais da RFB
+echo -e "\n${YELLOW}• Enriquecendo clientes ativos com empresas reais da RFB...${NC}"
+.venv/bin/python scripts/enriquecer_clientes_rfb.py --limit 150 || true
 
 echo -e "\n${YELLOW}Executando testes automatizados para validação do sistema...${NC}"
 .venv/bin/python3 -m unittest discover -s tests

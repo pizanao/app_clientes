@@ -1,3 +1,4 @@
+import html
 import json
 import unittest
 from app import create_app
@@ -88,6 +89,46 @@ class LeadsTestCase(unittest.TestCase):
         # 3) WhatsApp URL ready
         self.assertTrue(lead.whatsapp_url.startswith('https://wa.me/'))
 
+    def test_no_duplicate_leads_on_consecutive_prospecting(self):
+        # Primeira rodada de prospecção na Chácara Cachoeira
+        p1 = TelecomProspectorService.prospect_neighborhood(
+            bairro='Chácara Cachoeira',
+            cidade='Campo Grande',
+            count=3
+        )
+        salvos_1 = TelecomProspectorService.save_prospects(p1, cliente_ref_id=self.cliente_id)
+        self.assertEqual(len(salvos_1), 3)
+
+        # Segunda rodada consecutiva no mesmo bairro
+        p2 = TelecomProspectorService.prospect_neighborhood(
+            bairro='Chácara Cachoeira',
+            cidade='Campo Grande',
+            count=3
+        )
+        salvos_2 = TelecomProspectorService.save_prospects(p2, cliente_ref_id=self.cliente_id)
+        self.assertEqual(len(salvos_2), 3)
+
+        # Garante que não houve empresas repetidas
+        empresas_1 = {l.empresa.lower() for l in salvos_1}
+        empresas_2 = {l.empresa.lower() for l in salvos_2}
+        self.assertEqual(len(empresas_1.intersection(empresas_2)), 0)
+
+        # Terceira rodada em outro bairro (Centro)
+        p3 = TelecomProspectorService.prospect_neighborhood(
+            bairro='Centro',
+            cidade='Campo Grande',
+            count=3
+        )
+        salvos_3 = TelecomProspectorService.save_prospects(p3, cliente_ref_id=self.cliente_id)
+        self.assertEqual(len(salvos_3), 3)
+        empresas_3 = {l.empresa.lower() for l in salvos_3}
+        self.assertEqual(len(empresas_1.intersection(empresas_3)), 0)
+        self.assertEqual(len(empresas_2.intersection(empresas_3)), 0)
+
+        # Tentativa de salvar os mesmos dados novamente não deve duplicar nenhum registro
+        salvos_duplicados = TelecomProspectorService.save_prospects(p1, cliente_ref_id=self.cliente_id)
+        self.assertEqual(len(salvos_duplicados), 0)
+
     def test_convert_lead_to_client_and_order(self):
         lead = Lead(
             nome='Dra. Vanessa Mendes',
@@ -131,6 +172,12 @@ class LeadsTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIn('Radar de Prospecção', res.get_data(as_text=True))
         self.assertIn('Chácara Cachoeira', res.get_data(as_text=True))
+        # Verifica que o mapa possui suporte a fullscreen e nó de fibra
+        self.assertIn('id="cardMapaCalor"', res.get_data(as_text=True))
+        self.assertIn('btnToggleFullscreenMap', res.get_data(as_text=True))
+        self.assertIn('toggleFullscreenMapa', res.get_data(as_text=True))
+        self.assertIn('carregarEmpresasDoNodo', res.get_data(as_text=True))
+        self.assertIn('offcanvasNodoEmpresas', res.get_data(as_text=True))
         # Verifica que o mapa não possui mais a URL do Carto que causava a marca d'água de API Key
         self.assertNotIn('cartocdn.com', res.get_data(as_text=True))
 
@@ -155,7 +202,7 @@ class LeadsTestCase(unittest.TestCase):
         self.assertIsNotNone(lead)
         res_detail = self.client.get(f'/leads/{lead.id}')
         self.assertEqual(res_detail.status_code, 200)
-        self.assertIn(lead.empresa, res_detail.get_data(as_text=True))
+        self.assertIn(lead.empresa, html.unescape(res_detail.get_data(as_text=True)))
         self.assertIn('Abordagem WhatsApp com Opt-in Anti-Ban', res_detail.get_data(as_text=True))
 
         # POST /leads/<id>/status
@@ -187,6 +234,21 @@ class LeadsTestCase(unittest.TestCase):
         data_p = res_prospect.get_json()
         self.assertTrue(data_p['success'])
         self.assertGreaterEqual(data_p['count'], 1)
+
+        # GET /leads/api/nodo/<bairro>/empresas
+        res_nodo = self.client.get('/leads/api/nodo/Chácara%20Cachoeira/empresas?lat=-20.455&lng=-54.582&limite=3')
+        self.assertEqual(res_nodo.status_code, 200)
+        data_nodo = res_nodo.get_json()
+        self.assertTrue(data_nodo['success'])
+        self.assertEqual(data_nodo['bairro'], 'Chácara Cachoeira')
+        self.assertIsInstance(data_nodo['empresas'], list)
+        self.assertGreaterEqual(len(data_nodo['empresas']), 1)
+        primeira_emp = data_nodo['empresas'][0]
+        self.assertIn('empresa', primeira_emp)
+        self.assertIn('lead_score', primeira_emp)
+        self.assertIn('lat', primeira_emp)
+        self.assertIn('lng', primeira_emp)
+        self.assertIn('whatsapp_url', primeira_emp)
 
     def test_leads_api_geojson_layers(self):
         # Deve exigir login

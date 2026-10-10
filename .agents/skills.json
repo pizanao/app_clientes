@@ -1,0 +1,14 @@
+{
+  "skills": [
+    {
+      "name": "enriquecer-prospectar-rfb",
+      "path": "skills/enriquecer-prospectar-rfb/SKILL.md",
+      "description": "Enriquecimento e prospecção com dados da RFB e inteligência territorial SISGRAN."
+    },
+    {
+      "name": "carregar-geojson-sqlite",
+      "path": "skills/carregar-geojson-sqlite/SKILL.md",
+      "description": "Carregamento e indexação espacial de GeoJSON no SQLite com R*Tree."
+    }
+  ]
+}

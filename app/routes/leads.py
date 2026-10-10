@@ -233,6 +233,42 @@ def api_clusters():
     return jsonify({'success': True, 'clusters': clusters})
 
 
+@leads_bp.route('/api/nodo/<bairro>/empresas', methods=['GET'])
+@leads_bp.route('/api/nodo/empresas', methods=['GET', 'POST'])
+@login_required
+def api_nodo_empresas(bairro: str = ''):
+    """
+    Retorna as empresas ativas e oportunidades no raio do Nó Óptico.
+    Suporta rota direta /api/nodo/<bairro>/empresas ou query params / JSON.
+    """
+    if not bairro:
+        if request.is_json and request.get_json():
+            bairro = request.get_json().get('bairro', '')
+        else:
+            bairro = request.args.get('bairro', '')
+
+    bairro = (bairro or 'Chácara Cachoeira').strip()
+    lat = request.args.get('lat', type=float)
+    lng = request.args.get('lng', type=float)
+    limite = request.args.get('limite', default=8, type=int)
+
+    empresas = TelecomProspectorService.get_empresas_no_nodo(
+        bairro=bairro,
+        lat=lat,
+        lng=lng,
+        limite=min(limite, 20)
+    )
+
+    return jsonify({
+        'success': True,
+        'bairro': bairro,
+        'lat': lat,
+        'lng': lng,
+        'total': len(empresas),
+        'empresas': empresas
+    })
+
+
 @leads_bp.route('/api/prospectar', methods=['POST'])
 @login_required
 def api_prospectar():

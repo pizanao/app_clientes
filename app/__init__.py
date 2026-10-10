@@ -27,6 +27,13 @@ def create_app(config_class=Config):
     # Register custom Jinja filters
     init_filters(app)
 
+    # Injeta variáveis globais nos templates
+    @app.context_processor
+    def inject_global_vars():
+        return {
+            'mapbox_api_key': app.config.get('MAPBOX_API_KEY') or ''
+        }
+
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.main import main_bp

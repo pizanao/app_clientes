@@ -6,7 +6,7 @@ import random
 import re
 import urllib.parse
 import urllib.request
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from flask import current_app
 from app.extensions import db
 from app.models.cliente import Cliente
@@ -48,55 +48,36 @@ PLANOS_DIGITALNET = [
     },
 ]
 
-# Ruas e perfis de empresas em Campo Grande - MS para Fallback
-PERFIS_CAMPO_GRANDE = {
-    'Chácara Cachoeira': {
-        'ruas': ['Rua Raul Pires Barbosa', 'Rua Afonso Pena', 'Rua Jeribá', 'Rua Dr. Paulo Machado'],
-        'cep_prefix': '79040',
-        'nichos': ['Clínicas Médicas & Odontológicas', 'Escritórios de Advocacia', 'Coworkings & Startups', 'Consultórios'],
-    },
-    'Centro': {
-        'ruas': ['Rua 14 de Julho', 'Avenida Calógeras', 'Rua Dom Aquino', 'Rua Barão do Rio Branco'],
-        'cep_prefix': '79002',
-        'nichos': ['Comércio & Varejo', 'Escritórios de Contabilidade', 'Imobiliárias', 'Restaurantes & Lanchonetes'],
-    },
-    'Santa Fé': {
-        'ruas': ['Rua Ceará', 'Rua Abrão Júlio Rahe', 'Rua Alagoas', 'Rua Goiás'],
-        'cep_prefix': '79021',
-        'nichos': ['Clínicas de Estética', 'Escritórios Corporativos', 'Agências de Marketing', 'Boutiques'],
-    },
-    'Jardim dos Estados': {
-        'ruas': ['Rua Euclides da Cunha', 'Rua Rio Grande do Sul', 'Rua Bahia', 'Avenida Mato Grosso'],
-        'cep_prefix': '79020',
-        'nichos': ['Escritórios Executivos', 'Restaurantes Gastronômicos', 'Centros Médicos', 'Empresas de TI'],
-    },
-    'Tiradentes': {
-        'ruas': ['Avenida Marquês de Pombal', 'Rua José Nogueira Vieira', 'Avenida Três Barras'],
-        'cep_prefix': '79041',
-        'nichos': ['Supermercados & Farmácias', 'Auto Centers', 'Academias', 'Escolas & Cursos'],
-    },
-    'Vilas Boas': {
-        'ruas': ['Avenida Bom Pastor', 'Rua Domingos Jorge Velho', 'Rua Cel. Salustiano'],
-        'cep_prefix': '79051',
-        'nichos': ['Gastronomia & Restaurantes', 'Lojas de Conveniência', 'Pet Shops & Veterinárias'],
-    },
-}
-
-# Coordenadas geográficas reais dos bairros de Campo Grande - MS para o Mapa de Calor
-COORDENADAS_BAIRROS = {
-    'Chácara Cachoeira': (-20.4578, -54.5824),
-    'Centro': (-20.4628, -54.6156),
-    'Santa Fé': (-20.4485, -54.5952),
-    'Jardim dos Estados': (-20.4552, -54.6063),
-    'Tiradentes': (-20.4682, -54.5615),
-    'Vilas Boas': (-20.4851, -54.5889),
-    'Bela Vista': (-20.4720, -54.5900),
-    'Copacabana': (-20.4900, -54.6300),
-}
+# ==============================================================================
+# PERFIS TERRITORIAIS E COORDENADAS OFICIAIS DE CAMPO GRANDE (SISGRAN / PLANURB)
+# ==============================================================================
+from app.data.perfis_sisgran import (
+    PERFIS_CAMPO_GRANDE,
+    COORDENADAS_BAIRROS,
+    resolver_bairro,
+    obter_perfil_bairro,
+    obter_coordenadas_bairro,
+)
 
 
 class TelecomProspectorService:
     COORDENADAS_BAIRROS = COORDENADAS_BAIRROS
+    PERFIS_CAMPO_GRANDE = PERFIS_CAMPO_GRANDE
+
+    @classmethod
+    def get_bairro_profile(cls, bairro: str) -> Dict[str, Any]:
+        """Retorna os metadados territoriais do bairro oficial (SISGRAN/PLANURB)."""
+        return obter_perfil_bairro(bairro)
+
+    @classmethod
+    def get_bairro_coordenadas(cls, bairro: str) -> Tuple[float, float]:
+        """Retorna as coordenadas reais (lat, lng) do centróide do bairro (SISGRAN)."""
+        return obter_coordenadas_bairro(bairro)
+
+    @classmethod
+    def resolver_bairro(cls, bairro: str) -> Optional[str]:
+        """Localiza o nome oficial do bairro a partir de qualquer variação ou parcelamento."""
+        return resolver_bairro(bairro)
 
     @staticmethod
     def get_neighborhood_clusters() -> List[Dict[str, Any]]:
@@ -147,7 +128,7 @@ class TelecomProspectorService:
             total_leads = Lead.query.filter_by(bairro=bairro).count()
             leads_convertidos = Lead.query.filter_by(bairro=bairro, status='convertido').count()
 
-            coords = COORDENADAS_BAIRROS.get(bairro, (-20.4697, -54.6201))
+            coords = TelecomProspectorService.get_bairro_coordenadas(bairro)
             resultado.append({
                 'cidade': dado['cidade'],
                 'bairro': bairro,
@@ -197,18 +178,30 @@ class TelecomProspectorService:
         cidade: str = 'Campo Grande',
         estado: str = 'MS',
         niche: str = 'Empresas e Comércios',
-        count: int = 5,
+        count: int = 50,
         cliente_ref_id: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         Gera leads vizinhos qualificados na mesma região dos clientes.
-        Tenta chamar o Google Gemini se GEMINI_API_KEY estiver configurado;
-        caso contrário, usa o motor heurístico local hiper-realista.
+        Cascata de provedores:
+        1. AIsa API (se AISA_API_KEY configurada)
+        2. Google Gemini API (se GEMINI_API_KEY configurada)
+        3. Motor Heurístico Local de Telecomunicações (SISGRAN / PLANURB)
         """
-        api_key = current_app.config.get('GEMINI_API_KEY')
-        if api_key:
+        aisa_key = current_app.config.get('AISA_API_KEY')
+        if aisa_key and aisa_key.strip():
             try:
-                leads_ai = cls._call_gemini_prospector(bairro, cidade, estado, niche, count, api_key)
+                model = current_app.config.get('AISA_MODEL') or 'asi1-mini'
+                leads_aisa = cls._call_aisa_prospector(bairro, cidade, estado, niche, count, aisa_key.strip(), model)
+                if leads_aisa:
+                    return leads_aisa
+            except Exception as e:
+                logger.warning(f"Falha na chamada à AIsa API ({e}). Tentando provedor secundário...")
+
+        api_key = current_app.config.get('GEMINI_API_KEY')
+        if api_key and api_key.strip():
+            try:
+                leads_ai = cls._call_gemini_prospector(bairro, cidade, estado, niche, count, api_key.strip())
                 if leads_ai:
                     return leads_ai
             except Exception as e:
@@ -252,7 +245,8 @@ Retorne EXCLUSIVAMENTE um JSON array (sem formatação markdown, sem ```json) co
   }}
 ]"""
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={api_key}"
         payload = json.dumps({
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.4}
@@ -277,6 +271,205 @@ Retorne EXCLUSIVAMENTE um JSON array (sem formatação markdown, sem ```json) co
         return []
 
     @classmethod
+    def _call_aisa_prospector(
+        cls,
+        bairro: str,
+        cidade: str,
+        estado: str,
+        niche: str,
+        count: int,
+        api_key: str,
+        model: str = 'asi1-mini'
+    ) -> List[Dict[str, Any]]:
+        """Chama a API da AIsa (api.aisa.one) via endpoint OpenAI-compatible /v1/chat/completions."""
+        system_prompt = (
+            "Você é o motor de prospecção corporativa B2B e expansão da operadora DigitalNet MS. "
+            "Sua missão é retornar uma lista estruturada de empresas comerciais/B2B com dados de contato "
+            "válidos e viabilidade de conectividade de fibra óptica em Campo Grande - MS. "
+            "Retorne EXCLUSIVAMENTE um objeto JSON contendo a propriedade 'leads' com um array de itens."
+        )
+
+        user_prompt = f"""Gere uma lista de {count} empresas/leads B2B com alto potencial de contratação de fibra óptica e Wi-Fi 6 corporativo no bairro "{bairro}" em "{cidade} - {estado}", nicho "{niche}".
+
+ESTRUTURA DO JSON OBRIGATÓRIA:
+{{
+  "leads": [
+    {{
+      "company_name": "Nome da Empresa / Comércio / Clínica",
+      "contact_name": "Nome do Decisor ou Responsável Comercial",
+      "cargo": "Sócio-Diretor / Gerente Geral / Coordenador",
+      "phone": "(67) 99876-1234",
+      "whatsapp": "67998761234",
+      "email": "contato@empresa.com.br",
+      "address": "Rua ou Avenida real deste bairro em Campo Grande",
+      "numero": "120",
+      "cep": "79000-000",
+      "operadora_atual": "Vivo Fibra ou Claro NET",
+      "plano_sugerido": "Fibra 700 + DigiMesh (Wi-Fi 6) ou DigitalNet B2B Link Dedicado Pro",
+      "valor_mensal_sugerido": 139.90,
+      "score": 88,
+      "description": "Dor ou motivo de prospecção (ex: lentidão no horário de pico, falha de maquininha, sinal fraco)",
+      "icebreaker_optin": "Mensagem consultiva curta para WhatsApp pedindo opt-in"
+    }}
+  ]
+}}"""
+
+        url = "https://api.aisa.one/v1/chat/completions"
+        payload = json.dumps({
+            "model": model or "asi1-mini",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": 0.3,
+            "response_format": {"type": "json_object"}
+        }).encode('utf-8')
+
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {api_key}',
+                'User-Agent': 'DigitalNet-Telecom-Prospector/1.0'
+            },
+            method='POST'
+        )
+
+        with urllib.request.urlopen(req, timeout=15) as response:
+            res_data = json.loads(response.read().decode('utf-8'))
+            content = res_data.get('choices', [{}])[0].get('message', {}).get('content', '')
+            text_clean = re.sub(r'^```json\s*', '', content.strip(), flags=re.MULTILINE)
+            text_clean = re.sub(r'```$', '', text_clean.strip(), flags=re.MULTILINE)
+            parsed = json.loads(text_clean)
+            raw_leads = parsed.get('leads') if isinstance(parsed, dict) else (parsed if isinstance(parsed, list) else [])
+
+            leads_padronizados = []
+            for item in raw_leads:
+                empresa = item.get('company_name') or item.get('empresa') or 'Empresa Prospectada'
+                nome = item.get('contact_name') or item.get('nome') or 'Responsável Comercial'
+                leads_padronizados.append({
+                    'empresa': empresa,
+                    'nome': nome,
+                    'cargo': item.get('cargo', 'Decisor'),
+                    'telefone': item.get('phone') or item.get('telefone') or '(67) 99876-0000',
+                    'email': item.get('email') or f"contato@{re.sub(r'[^a-z0-9]', '', empresa.lower())[:12]}.com.br",
+                    'logradouro': item.get('address') or item.get('logradouro') or 'Avenida Principal',
+                    'numero': str(item.get('numero', '100')),
+                    'bairro': bairro,
+                    'cidade': cidade,
+                    'estado': estado,
+                    'cep': item.get('cep', '79000-000'),
+                    'niche': niche,
+                    'operadora_atual': item.get('operadora_atual', 'Vivo Fibra / Claro NET'),
+                    'plano_sugerido': item.get('plano_sugerido', 'Fibra 700 + DigiMesh (Wi-Fi 6)'),
+                    'valor_mensal_sugerido': float(item.get('valor_mensal_sugerido', 139.90)),
+                    'lead_score': int(item.get('score', item.get('lead_score', 85))),
+                    'dor_principal': item.get('description', item.get('dor_principal', 'Instabilidade e lentidão de conexão')),
+                    'icebreaker_optin': item.get('icebreaker_optin'),
+                })
+            return leads_padronizados
+
+    @classmethod
+    def test_aisa_connection(cls, api_key: str, model: str = 'asi1-mini') -> Dict[str, Any]:
+        """Testa a conexão com a API da AIsa consultando /v1/models ou chat rápido."""
+        url = "https://api.aisa.one/v1/models"
+        req = urllib.request.Request(
+            url,
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json'
+            },
+            method='GET'
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                models = [m.get('id', str(m)) for m in data.get('data', [])] if isinstance(data.get('data'), list) else []
+                return {'success': True, 'models': models[:15], 'status': 'connected'}
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                return {'success': False, 'error': f'Chave recusada pela AIsa (HTTP {e.code}).', 'status': 'unauthorized'}
+            # Tenta chat completions minimal
+            chat_url = "https://api.aisa.one/v1/chat/completions"
+            payload = json.dumps({
+                "model": model,
+                "messages": [{"role": "user", "content": "ping"}],
+                "max_tokens": 5
+            }).encode('utf-8')
+            chat_req = urllib.request.Request(
+                chat_url,
+                data=payload,
+                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                method='POST'
+            )
+            try:
+                with urllib.request.urlopen(chat_req, timeout=8) as chat_resp:
+                    return {'success': True, 'models': [model], 'status': 'connected'}
+            except Exception as inner_e:
+                return {'success': False, 'error': str(inner_e), 'status': 'error'}
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'status': 'error'}
+
+    @classmethod
+    def generate_pitch(cls, lead: Lead, channel: str = 'whatsapp', tone: str = 'consultative') -> Dict[str, Any]:
+        """Gera roteiro de abordagem comercial via IA (AIsa / Gemini) ou fallback."""
+        aisa_key = current_app.config.get('AISA_API_KEY')
+        if aisa_key and aisa_key.strip():
+            try:
+                system_prompt = (
+                    "Você é um especialista em prospecção B2B de telecom e vendas consultivas da DigitalNet MS. "
+                    "Gere uma abordagem persuasiva e personalizada para o lead. "
+                    "Retorne EXCLUSIVAMENTE um objeto JSON com: 'subject', 'message', 'key_points', 'call_to_action'."
+                )
+                user_prompt = (
+                    f"Lead: {lead.empresa} (Decisor: {lead.nome}, Cargo: {lead.cargo or 'Decisor'})\n"
+                    f"Bairro: {lead.bairro}, Cidade: {lead.cidade}\n"
+                    f"Operadora Atual: {lead.operadora_atual}, Dor: {lead.dor_principal}\n"
+                    f"Plano Sugerido: {lead.plano_sugerido} (R$ {lead.valor_mensal_sugerido:.2f})\n"
+                    f"Canal: {channel.upper()}, Tom: {tone}"
+                )
+                payload = json.dumps({
+                    "model": current_app.config.get('AISA_MODEL') or 'asi1-mini',
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "temperature": 0.4,
+                    "response_format": {"type": "json_object"}
+                }).encode('utf-8')
+                req = urllib.request.Request(
+                    "https://api.aisa.one/v1/chat/completions",
+                    data=payload,
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Authorization': f"Bearer {aisa_key.strip()}"
+                    },
+                    method='POST'
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode('utf-8'))
+                    content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                    text_clean = re.sub(r'^```json\s*', '', content.strip(), flags=re.MULTILINE)
+                    text_clean = re.sub(r'```$', '', text_clean.strip(), flags=re.MULTILINE)
+                    return json.loads(text_clean)
+            except Exception as e:
+                logger.warning(f"Falha ao gerar pitch via AIsa ({e}). Usando roteiro nativo.")
+
+        # Fallback nativo estruturado
+        return {
+            'subject': f"Modernização de Fibra Óptica no {lead.bairro} - {lead.empresa}",
+            'message': cls.generate_anti_ban_whatsapp_script(lead),
+            'key_points': [
+                f"Rede própria de fibra ativa no poste do bairro {lead.bairro}",
+                "Wi-Fi 6 de alta densidade sem aluguel",
+                "Suporte presencial 24h com base técnica em Campo Grande"
+            ],
+            'call_to_action': "Posso te enviar um comparativo de 1 minuto sem compromisso?",
+            'suggested_next_step': "Enviar mensagem de opt-in pelo WhatsApp e aguardar resposta afirmativa."
+        }
+
+    @classmethod
     def _generate_fallback_prospects(
         cls,
         bairro: str,
@@ -285,15 +478,10 @@ Retorne EXCLUSIVAMENTE um JSON array (sem formatação markdown, sem ```json) co
         niche: str,
         count: int
     ) -> List[Dict[str, Any]]:
-        """Motor heurístico de telecomunicações para Campo Grande."""
-        info_bairro = PERFIS_CAMPO_GRANDE.get(bairro, {
-            'ruas': ['Avenida Principal', 'Rua Central', 'Rua das Palmeiras'],
-            'cep_prefix': '79000',
-            'nichos': ['Comércio & Serviços', 'Consultórios', 'Escritórios'],
-        })
-
-        ruas = info_bairro['ruas']
-        cep_prefix = info_bairro['cep_prefix']
+        """Motor heurístico de telecomunicações para Campo Grande enriquecido com SISGRAN."""
+        info_bairro = cls.get_bairro_profile(bairro)
+        ruas = info_bairro.get('ruas', ['Avenida Principal', 'Rua Central'])
+        cep_prefix = info_bairro.get('cep_prefix', '79002')
 
         templates_empresas = [
             {
@@ -366,8 +554,17 @@ Retorne EXCLUSIVAMENTE um JSON array (sem formatação markdown, sem ```json) co
             sobrenome = sobrenomes[i % len(sobrenomes)]
             empresa = t['empresa_tpl'].format(sobrenome=sobrenome)
             nome_contato = t['contato'].format(sobrenome=sobrenome)
-            rua = ruas[i % len(ruas)]
-            num = str(100 + i * 85)
+
+            # Prioriza endereços e números reais de imóveis mapeados no PostGIS
+            amostras = info_bairro.get('amostra_imoveis', [])
+            if amostras:
+                am = amostras[i % len(amostras)]
+                rua = am.get('logradouro') or ruas[i % len(ruas)]
+                num = str(am.get('numero') or (100 + i * 85))
+            else:
+                rua = ruas[i % len(ruas)]
+                num = str(100 + i * 85)
+
             tel = f"(67) 9{random.randint(9100, 9999)}-{random.randint(1000, 9999)}"
             email_empresa = f"contato@{re.sub(r'[^a-z0-9]', '', empresa.lower())[:14]}.com.br"
             cep = f"{cep_prefix}-{random.randint(100, 999):03d}"
@@ -400,6 +597,7 @@ Retorne EXCLUSIVAMENTE um JSON array (sem formatação markdown, sem ```json) co
                 'perfil_decisor': f"{nome_contato} ({t['cargo']}) busca estabilidade de rede e atendimento direto sem burocracia.",
                 'vantagem_digitalnet': 'Fibra óptica com Wi-Fi 6 de alta densidade + suporte presencial 24h com equipe em Campo Grande.',
                 'angulo_venda': f"Focar na eliminação da dor de '{t['dor']}' demonstrando que a DigitalNet já atende vizinhos nesta mesma rua.",
+                'perfil_territorial': f"Região {info_bairro.get('regiao_urbana', 'Urbana')} ({info_bairro.get('macrozona', '')}). Perfil: {info_bairro.get('perfil_predominante', 'Comercial')}.",
             }, ensure_ascii=False)
 
             resultado.append(lead_item)

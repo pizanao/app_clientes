@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+import os
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, abort, current_app
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.lead import Lead
@@ -65,7 +66,7 @@ def index():
         })
 
     for l in leads:
-        base_coords = TelecomProspectorService.COORDENADAS_BAIRROS.get(l.bairro, (-20.4697, -54.6201))
+        base_coords = TelecomProspectorService.get_bairro_coordenadas(l.bairro)
         jitter_lat = ((l.id * 17) % 19 - 9) * 0.00075
         jitter_lng = ((l.id * 31) % 19 - 9) * 0.00075
         map_points.append({
@@ -105,6 +106,7 @@ def index():
         status_selecionado=status_filtro,
         busca=busca,
         map_points=map_points,
+        mapbox_api_key=current_app.config.get('MAPBOX_API_KEY') or '',
     )
 
 
@@ -114,7 +116,7 @@ def prospectar_regiao():
     """Dispara a geração de leads vizinhos baseada na região selecionada."""
     bairro = request.form.get('bairro', '').strip() or 'Chácara Cachoeira'
     cidade = request.form.get('cidade', '').strip() or 'Campo Grande'
-    niche = request.form.get('niche', '').strip() or 'Empresas e Clínicas'
+    niche = request.form.get('niche', '').strip() or 'Empresas e Clínicas e Comércios'
     count = int(request.form.get('count', 5))
     cliente_ref_id = request.form.get('cliente_referencia_id')
 
@@ -269,3 +271,94 @@ def api_prospectar():
             for l in salvos
         ]
     })
+
+
+GEOJSON_LAYERS = {
+    'bairros': 'bairros.geojson',
+    'macrozonas': 'pd-macrozonas-urbanas.geojson',
+    'parcelamentos': 'parcelamentos.geojson',
+}
+
+
+@leads_bp.route('/api/geojson/<camada>', methods=['GET'])
+@login_required
+def api_geojson(camada: str):
+    """Retorna os dados GeoJSON das camadas municipais de Campo Grande MS."""
+    key = camada.lower().strip()
+    filename = GEOJSON_LAYERS.get(key)
+    if not filename:
+        abort(404, description=f"Camada '{camada}' não reconhecida.")
+
+    base_dir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+    file_path = os.path.join(base_dir, 'geojson', filename)
+
+    if not os.path.isfile(file_path):
+        abort(404, description=f"Arquivo '{filename}' não encontrado.")
+
+    return send_file(
+        file_path,
+        mimetype='application/geo+json',
+        as_attachment=False,
+        max_age=3600
+    )
+
+
+@leads_bp.route('/api/aisa/status', methods=['GET'])
+@login_required
+def api_aisa_status():
+    """Retorna o status de conexão dos motores de IA (AIsa e Gemini)."""
+    aisa_key = current_app.config.get('AISA_API_KEY')
+    gemini_key = current_app.config.get('GEMINI_API_KEY')
+    aisa_model = current_app.config.get('AISA_MODEL') or 'asi1-mini'
+
+    has_aisa = bool(aisa_key and aisa_key.strip())
+    has_gemini = bool(gemini_key and gemini_key.strip())
+
+    active_provider = 'AIsa (api.aisa.one)' if has_aisa else ('Google Gemini' if has_gemini else 'Motor Heurístico Local')
+
+    return jsonify({
+        'success': True,
+        'aisa_configured': has_aisa,
+        'aisa_model': aisa_model,
+        'gemini_configured': has_gemini,
+        'active_provider': active_provider,
+    })
+
+
+@leads_bp.route('/api/aisa/connect', methods=['POST'])
+@login_required
+def api_aisa_connect():
+    """Valida uma API Key da AIsa diretamente com a api.aisa.one."""
+    data = request.get_json() or {}
+    api_key = data.get('apiKey', '').strip() or (current_app.config.get('AISA_API_KEY') or '').strip()
+
+    if not api_key:
+        return jsonify({'success': False, 'error': 'Chave de API não informada.'}), 400
+
+    model = data.get('model', '').strip() or current_app.config.get('AISA_MODEL') or 'asi1-mini'
+    resultado = TelecomProspectorService.test_aisa_connection(api_key, model=model)
+    return jsonify(resultado)
+
+
+@leads_bp.route('/api/aisa/pitch', methods=['POST'])
+@login_required
+def api_aisa_pitch():
+    """Gera script/pitch consultivo para um lead específico via IA da AIsa."""
+    data = request.get_json() or {}
+    lead_id = data.get('lead_id')
+    channel = data.get('channel', 'whatsapp')
+    tone = data.get('tone', 'consultative')
+
+    if not lead_id:
+        return jsonify({'success': False, 'error': 'lead_id é obrigatório.'}), 400
+
+    lead = Lead.query.get_or_404(lead_id)
+    pitch_data = TelecomProspectorService.generate_pitch(lead, channel=channel, tone=tone)
+
+    return jsonify({
+        'success': True,
+        'lead_id': lead.id,
+        'empresa': lead.empresa,
+        'pitch': pitch_data
+    })
+

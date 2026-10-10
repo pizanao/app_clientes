@@ -1,3 +1,4 @@
+import json
 import unittest
 from app import create_app
 from app.config import Config
@@ -130,6 +131,15 @@ class LeadsTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIn('Radar de Prospecção', res.get_data(as_text=True))
         self.assertIn('Chácara Cachoeira', res.get_data(as_text=True))
+        # Verifica que o mapa não possui mais a URL do Carto que causava a marca d'água de API Key
+        self.assertNotIn('cartocdn.com', res.get_data(as_text=True))
+
+        # Testa injeção da chave do Mapbox
+        self.app.config['MAPBOX_API_KEY'] = 'pk.test_mapbox_secret_123'
+        res_with_key = self.client.get('/leads/')
+        self.assertEqual(res_with_key.status_code, 200)
+        self.assertIn('pk.test_mapbox_secret_123', res_with_key.get_data(as_text=True))
+        self.assertIn('Mapbox Ativo', res_with_key.get_data(as_text=True))
 
         # POST /leads/prospectar
         res_post = self.client.post('/leads/prospectar', data={
@@ -177,3 +187,149 @@ class LeadsTestCase(unittest.TestCase):
         data_p = res_prospect.get_json()
         self.assertTrue(data_p['success'])
         self.assertGreaterEqual(data_p['count'], 1)
+
+    def test_leads_api_geojson_layers(self):
+        # Deve exigir login
+        res_anon = self.client.get('/leads/api/geojson/bairros')
+        self.assertIn(res_anon.status_code, (302, 401))
+
+        self.login()
+
+        # Camada de Bairros
+        res_bairros = self.client.get('/leads/api/geojson/bairros')
+        self.assertEqual(res_bairros.status_code, 200)
+        geo_bairros = res_bairros.get_json()
+        self.assertEqual(geo_bairros.get('type'), 'FeatureCollection')
+        self.assertGreater(len(geo_bairros.get('features', [])), 0)
+        self.assertIn('bairro', geo_bairros['features'][0]['properties'])
+
+        # Camada de Macrozonas
+        res_macro = self.client.get('/leads/api/geojson/macrozonas')
+        self.assertEqual(res_macro.status_code, 200)
+        geo_macro = res_macro.get_json()
+        self.assertEqual(geo_macro.get('type'), 'FeatureCollection')
+        self.assertGreater(len(geo_macro.get('features', [])), 0)
+
+        # Camada de Parcelamentos
+        res_parc = self.client.get('/leads/api/geojson/parcelamentos')
+        self.assertEqual(res_parc.status_code, 200)
+        geo_parc = res_parc.get_json()
+        self.assertEqual(geo_parc.get('type'), 'FeatureCollection')
+        self.assertGreater(len(geo_parc.get('features', [])), 0)
+
+        # Camada inexistente deve retornar 404
+        res_404 = self.client.get('/leads/api/geojson/camada_inexistente')
+        self.assertEqual(res_404.status_code, 404)
+
+    def test_perfis_campo_grande_sisgran_enrichment(self):
+        from app.services.prospector import PERFIS_CAMPO_GRANDE, COORDENADAS_BAIRROS
+
+        # Deve conter todos os 74 bairros oficiais do SISGRAN
+        self.assertGreaterEqual(len(COORDENADAS_BAIRROS), 74)
+        self.assertGreaterEqual(len(PERFIS_CAMPO_GRANDE), 74)
+
+        # Bairros de diferentes regiões urbanas devem estar presentes com metadados do SISGRAN
+        amambai = TelecomProspectorService.get_bairro_profile('Amambaí')
+        self.assertEqual(amambai['regiao_urbana'].upper(), 'CENTRO')
+        self.assertIn('MZ 1', amambai['macrozona'])
+        self.assertIsInstance(amambai['parcelamentos'], list)
+
+        aero_rancho = TelecomProspectorService.get_bairro_profile('aero rancho')
+        self.assertEqual(aero_rancho['regiao_urbana'].upper(), 'ANHANDUIZINHO')
+        self.assertIn('MZ 2', aero_rancho['macrozona'])
+        self.assertGreater(len(aero_rancho['parcelamentos']), 0)
+
+        # Resolução de coordenadas deve funcionar com acento ou sem acento
+        coords_com_acento = TelecomProspectorService.get_bairro_coordenadas('Chácara Cachoeira')
+        coords_sem_acento = TelecomProspectorService.get_bairro_coordenadas('chacara cachoeira')
+        self.assertEqual(coords_com_acento, coords_sem_acento)
+        self.assertAlmostEqual(coords_com_acento[0], -20.4578, delta=0.01)
+
+        # Resolução por nome de parcelamento/vila contida no bairro
+        perfil_por_vila = TelecomProspectorService.get_bairro_profile('Vila Nogueira')
+        self.assertEqual(perfil_por_vila['nome_oficial'], 'CENTENÁRIO')
+
+    def test_aisa_api_endpoints_and_pitch(self):
+        self.login()
+
+        # Status da AIsa
+        res_status = self.client.get('/leads/api/aisa/status')
+        self.assertEqual(res_status.status_code, 200)
+        data_status = res_status.get_json()
+        self.assertTrue(data_status['success'])
+        self.assertIn('active_provider', data_status)
+        self.assertIn('aisa_model', data_status)
+
+        # Validação sem lead_id deve retornar 400
+        res_pitch_invalido = self.client.post('/leads/api/aisa/pitch', json={})
+        self.assertEqual(res_pitch_invalido.status_code, 400)
+
+        # Geração de pitch consultivo para lead real
+        lead = Lead(
+            nome='Dr. Carlos Santana',
+            empresa='Clínica Oftalmo Campo Grande',
+            cargo='Diretor Clínico',
+            telefone='(67) 99222-3344',
+            bairro='Centro',
+            cidade='Campo Grande',
+            estado='MS',
+            dor_principal='Queda frequente de link nas cirurgias e consultas',
+            plano_sugerido='DigitalNet B2B Link Dedicado Pro',
+            valor_mensal_sugerido=399.90
+        )
+        db.session.add(lead)
+        db.session.commit()
+
+        res_pitch = self.client.post('/leads/api/aisa/pitch', json={'lead_id': lead.id, 'channel': 'whatsapp'})
+        self.assertEqual(res_pitch.status_code, 200)
+        pitch_json = res_pitch.get_json()
+        self.assertTrue(pitch_json['success'])
+        self.assertIn('pitch', pitch_json)
+        self.assertIn('message', pitch_json['pitch'])
+
+    def test_aisa_prospector_mocked(self):
+        from unittest.mock import patch, MagicMock
+        import io
+
+        mock_aisa_response = {
+            'choices': [{
+                'message': {
+                    'content': json.dumps({
+                        'leads': [{
+                            'company_name': 'Hospital de Olhos MS',
+                            'contact_name': 'Dr. Eduardo Fontes',
+                            'cargo': 'Diretor Técnico',
+                            'phone': '(67) 99888-1122',
+                            'email': 'contato@olhosms.com.br',
+                            'address': 'Rua Rui Barbosa',
+                            'numero': '300',
+                            'cep': '79002-000',
+                            'operadora_atual': 'Vivo Fibra',
+                            'plano_sugerido': 'DigitalNet B2B Link Dedicado Pro',
+                            'valor_mensal_sugerido': 399.90,
+                            'score': 96,
+                            'description': 'Necessidade de link redundante e baixa latência.',
+                            'icebreaker_optin': 'Olá Dr. Eduardo, podemos enviar um comparativo de fibra dedicada?'
+                        }]
+                    })
+                }
+            }]
+        }
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(mock_aisa_response).encode('utf-8')
+        mock_resp.__enter__.return_value = mock_resp
+        mock_resp.__exit__.return_value = False
+
+        with patch('urllib.request.urlopen', return_value=mock_resp):
+            with patch.dict(self.app.config, {'AISA_API_KEY': 'test-aisa-key-123'}):
+                leads = TelecomProspectorService.prospect_neighborhood(
+                    bairro='Centro',
+                    cidade='Campo Grande',
+                    count=1
+                )
+                self.assertEqual(len(leads), 1)
+                self.assertEqual(leads[0]['empresa'], 'Hospital de Olhos MS')
+                self.assertEqual(leads[0]['cargo'], 'Diretor Técnico')
+                self.assertEqual(leads[0]['lead_score'], 96)
+

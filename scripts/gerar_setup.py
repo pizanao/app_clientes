@@ -85,6 +85,9 @@ CABECALHO = r'''#!/usr/bin/env bash
 # Variáveis opcionais:
 #   SEED_ADMIN_PASSWORD=MinhaSenha ./setup.sh   # senha do usuário "admin"
 #   (se omitida, uma senha aleatória é gerada e exibida ao final do seed)
+#   AISA_API_KEY=xxx ./setup.sh                 # chave de API da AIsa (api.aisa.one)
+#   AISA_MODEL=asi1-mini ./setup.sh             # modelo da AIsa (default: asi1-mini)
+#   MAPBOX_API_KEY=pk.xxx ./setup.sh            # chave/token de API do Mapbox
 # ==============================================================================
 
 set -euo pipefail
@@ -145,11 +148,21 @@ def gerar():
 RODAPE = r'''# --- .env (gerado com SECRET_KEY aleatória; preserva um .env existente) ---
 if [ ! -f .env ]; then
     SECRET_KEY_GERADA="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+    MAPBOX_KEY_CONFIG="${MAPBOX_API_KEY:-${MAPBOX_ACCESS_TOKEN:-}}"
+    AISA_KEY_CONFIG="${AISA_API_KEY:-}"
+    AISA_MODEL_CONFIG="${AISA_MODEL:-asi1-mini}"
     cat > .env <<EOF_ENV
 FLASK_APP=wsgi.py
 FLASK_DEBUG=1
 SECRET_KEY=${SECRET_KEY_GERADA}
 DATABASE_URL=sqlite:///app_clientes.db
+
+# Chave de API da AIsa (api.aisa.one)
+AISA_API_KEY=${AISA_KEY_CONFIG}
+AISA_MODEL=${AISA_MODEL_CONFIG}
+
+# Chave de API / Access Token do Mapbox
+MAPBOX_API_KEY=${MAPBOX_KEY_CONFIG}
 EOF_ENV
     echo -e "${GREEN}✓ Arquivo .env criado com SECRET_KEY aleatória.${NC}"
 else

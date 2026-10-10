@@ -30,7 +30,8 @@ ENV/
 # Database & Sessions
 instance/
 *.db
-*.sqlite3
+# GeoJSON temporários e pesados
+
 
 # Environment
 .env
@@ -44,3 +45,10 @@ instance/
 run.sh
 seed.sh
 test.sh
+
+# Screenshots & temporários
+*.png
+*.jpg
+*.jpeg
+/secrets/
+/tmp/

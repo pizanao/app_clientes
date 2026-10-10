@@ -1,7 +1,9 @@
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
 
 BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
 os.makedirs(INSTANCE_DIR, exist_ok=True)
 
@@ -40,3 +42,10 @@ class Config:
 
     # Google Gemini AI (Telecom Prospector)
     GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
+    # AIsa API (Provedor de Leads e Inteligência Comercial)
+    AISA_API_KEY = os.environ.get('AISA_API_KEY')
+    AISA_MODEL = os.environ.get('AISA_MODEL') or 'asi1-mini'
+
+    # Mapbox API (Telecom Geo-visualização)
+    MAPBOX_API_KEY = os.environ.get('MAPBOX_API_KEY') or os.environ.get('MAPBOX_ACCESS_TOKEN')

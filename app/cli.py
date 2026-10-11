@@ -4,10 +4,11 @@ import click
 from datetime import datetime, timedelta
 from flask.cli import with_appcontext
 from app.extensions import db
-from app.models.user import User
+from app.models.user import User, Grupo, PERFIL_ADMIN, PERFIL_LIDER, PERFIL_AGENTE
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido, ItemPedido
 from app.models.lead import Lead
+from app.models.plano import Plano
 from app.services.prospector import TelecomProspectorService
 
 
@@ -35,89 +36,202 @@ def register_cli_commands(app):
             click.echo(f'Usuário {username} ou e-mail {email} já existe.')
             return
 
+        grupo_admin = Grupo.query.filter_by(nome='Administração').first()
+        if not grupo_admin:
+            grupo_admin = Grupo(
+                nome='Administração',
+                papel=PERFIL_ADMIN,
+                descricao='Grupo master de administradores do sistema.'
+            )
+            db.session.add(grupo_admin)
+
         admin = User(
             nome='Administrador do Sistema',
             username=username,
             email=email,
+            perfil=PERFIL_ADMIN,
             ativo=True
         )
         admin.set_password(password)
+        admin.grupos.append(grupo_admin)
         db.session.add(admin)
         db.session.commit()
         click.echo(f'Administrador "{username}" criado com sucesso!')
 
+    @app.cli.command('set-admin-password')
+    @click.argument('password')
+    @with_appcontext
+    def set_admin_password_command(password):
+        """Redefine a senha do usuário admin e sincroniza instance/.admin_password."""
+        admin = User.query.filter_by(username='admin').first()
+        if not admin:
+            click.echo('Usuário admin não encontrado.')
+            return
+        admin.set_password(password)
+        db.session.commit()
+        try:
+            os.makedirs('instance', exist_ok=True)
+            with open(os.path.join('instance', '.admin_password'), 'w', encoding='utf-8') as f:
+                f.write(password)
+        except Exception:
+            pass
+        click.echo('Senha do usuário "admin" atualizada com sucesso no banco de dados e em instance/.admin_password!')
+
+    @app.cli.command('seed-planos')
+    @with_appcontext
+    def seed_planos_command():
+        """Popula ou sincroniza os planos oficiais da DigitalNet (PF e PJ)."""
+        db.create_all()
+        total = Plano.seed_planos_iniciais()
+        click.echo(f'{total} planos padrão oficiais da DigitalNet MS (PF e PJ) carregados com sucesso!')
+
     @app.cli.command('seed')
     @with_appcontext
     def seed_command():
-        """Popula o banco com usuário admin e dados fictícios de exemplo."""
+        """Popula o banco com usuário admin, grupos de acesso, planos e dados fictícios de exemplo."""
         db.create_all()
 
-        # Admin user
+        # 1. Grupos de Acesso Padrão
+        grupo_admin = Grupo.query.filter_by(nome='Administração').first()
+        if not grupo_admin:
+            grupo_admin = Grupo(
+                nome='Administração',
+                papel=PERFIL_ADMIN,
+                descricao='Controle total do sistema, auditoria, configurações e gestão de usuários.'
+            )
+            db.session.add(grupo_admin)
+
+        grupo_lider = Grupo.query.filter_by(nome='Liderança Técnica').first()
+        if not grupo_lider:
+            grupo_lider = Grupo(
+                nome='Liderança Técnica',
+                papel=PERFIL_LIDER,
+                descricao='Supervisão técnica, gestão de clientes, pedidos e expansão óptica.'
+            )
+            db.session.add(grupo_lider)
+
+        grupo_comercial = Grupo.query.filter_by(nome='Equipe Comercial').first()
+        if not grupo_comercial:
+            grupo_comercial = Grupo(
+                nome='Equipe Comercial',
+                papel=PERFIL_AGENTE,
+                descricao='Agentes de prospecção geo-localizada, abordagem WhatsApp e novos pedidos.'
+            )
+            db.session.add(grupo_comercial)
+
+        db.session.flush()
+
+        # 2. Usuário Admin Principal
         admin = User.query.filter_by(username='admin').first()
         if not admin:
-            # Sem senha fixa no código: usa SEED_ADMIN_PASSWORD ou gera uma aleatória
             senha_admin = os.environ.get('SEED_ADMIN_PASSWORD') or secrets.token_urlsafe(9)
             admin = User(
                 nome='Administrador Master',
                 username='admin',
                 email='admin@exemplo.com',
+                perfil=PERFIL_ADMIN,
                 ativo=True
             )
             admin.set_password(senha_admin)
+            admin.grupos.append(grupo_admin)
             db.session.add(admin)
+
+            # Persiste a senha do admin gerada em instance/.admin_password para exibição no resumo final
+            try:
+                os.makedirs('instance', exist_ok=True)
+                with open(os.path.join('instance', '.admin_password'), 'w', encoding='utf-8') as f:
+                    f.write(senha_admin)
+            except Exception:
+                pass
+
             if os.environ.get('SEED_ADMIN_PASSWORD'):
                 click.echo('Criado usuário "admin" com a senha definida em SEED_ADMIN_PASSWORD.')
             else:
-                click.echo(f'Criado usuário "admin" com senha gerada: {senha_admin}')
-                click.echo('Anote esta senha agora: ela não será exibida novamente.')
+                click.echo('Criado usuário "admin" com a seguinte senha gerada:')
+                click.echo(f'  {senha_admin}')
+                click.echo('Recomenda-se alterar esta senha após o primeiro acesso.')
+        else:
+            if not admin.grupos:
+                admin.grupos.append(grupo_admin)
+            if os.environ.get('SEED_ADMIN_PASSWORD'):
+                senha_env = os.environ.get('SEED_ADMIN_PASSWORD')
+                admin.set_password(senha_env)
+                try:
+                    os.makedirs('instance', exist_ok=True)
+                    with open(os.path.join('instance', '.admin_password'), 'w', encoding='utf-8') as f:
+                        f.write(senha_env)
+                except Exception:
+                    pass
+                click.echo('Senha do usuário "admin" sincronizada conforme SEED_ADMIN_PASSWORD.')
+            else:
+                click.echo('Usuário "admin" já existe.')
+
+        # 3. Usuários Operacionais Exemplares (Líder Técnico e Agente)
+        lider = User.query.filter_by(username='lider.tecnico').first()
+        if not lider:
+            lider = User(
+                nome='Carlos Eduardo Mendes',
+                username='lider.tecnico',
+                email='carlos.mendes@digitalnetms.com.br',
+                perfil=PERFIL_LIDER,
+                ativo=True
+            )
+            lider.set_password('Lider#2026')
+            lider.grupos.append(grupo_lider)
+            db.session.add(lider)
+            click.echo('Criado usuário líder técnico: "lider.tecnico" (Senha: Lider#2026)')
+
+        agente = User.query.filter_by(username='agente.comercial').first()
+        if not agente:
+            agente = User(
+                nome='Mariana Souza',
+                username='agente.comercial',
+                email='mariana.souza@digitalnetms.com.br',
+                perfil=PERFIL_AGENTE,
+                ativo=True
+            )
+            agente.set_password('Agente#2026')
+            agente.grupos.append(grupo_comercial)
+            db.session.add(agente)
+            click.echo('Criado usuário agente comercial: "agente.comercial" (Senha: Agente#2026)')
+
+        # 4. Planos de Banda Larga Oficiais DigitalNet (PF e PJ)
+        if Plano.query.count() == 0:
+            total_planos = Plano.seed_planos_iniciais()
+            click.echo(f'{total_planos} Planos oficiais de banda larga (PF e PJ) cadastrados com sucesso!')
 
         # Sample clients
         if Cliente.query.count() == 0:
             clientes_exemplo = [
                 Cliente(
-                    nome='TechNova Soluções Digitais Ltda',
-                    email='contato@technova.com.br',
+                    nome='Maria Silva Santos',
+                    email='maria.silva@exemplo.com',
                     telefone='(11) 98765-4321',
-                    documento='12.345.678/0001-90',
+                    documento='123.456.789-00',
                     cep='01310-100',
                     logradouro='Avenida Paulista',
                     numero='1000',
-                    complemento='Conjunto 502',
+                    complemento='Apto 42',
                     bairro='Bela Vista',
                     cidade='São Paulo',
                     estado='SP',
                     ativo=True,
-                    observacoes='Cliente corporativo, faturamento mensal.'
+                    observacoes='Cliente preferencial, contato apenas no período da tarde.'
                 ),
                 Cliente(
-                    nome='Mariana Albuquerque Silva',
-                    email='mariana.albuquerque@gmail.com',
-                    telefone='(21) 99876-5432',
-                    documento='123.456.789-00',
-                    cep='22041-001',
-                    logradouro='Rua Barata Ribeiro',
-                    numero='340',
-                    complemento='Apto 402',
-                    bairro='Copacabana',
-                    cidade='Rio de Janeiro',
-                    estado='RJ',
+                    nome='TechSolutions Tecnologia Ltda',
+                    email='contato@techsolutions.com.br',
+                    telefone='(11) 3456-7890',
+                    documento='12.345.678/0001-90',
+                    cep='04543-011',
+                    logradouro='Avenida Presidente Juscelino Kubitschek',
+                    numero='2041',
+                    complemento='Torre E, 15º andar',
+                    bairro='Itaim Bibi',
+                    cidade='São Paulo',
+                    estado='SP',
                     ativo=True,
-                    observacoes='Cliente VIP desde 2024.'
-                ),
-                Cliente(
-                    nome='Carlos Eduardo Mendes',
-                    email='carlos.mendes@outlook.com',
-                    telefone='(31) 98452-1122',
-                    documento='987.654.321-99',
-                    cep='30130-110',
-                    logradouro='Avenida Afonso Pena',
-                    numero='1500',
-                    complemento='',
-                    bairro='Centro',
-                    cidade='Belo Horizonte',
-                    estado='MG',
-                    ativo=True,
-                    observacoes='Prefere pagamentos via PIX.'
+                    observacoes='Empresa do setor de TI, faturamento no dia 10 de cada mês.'
                 ),
                 Cliente(
                     nome='Distribuidora Sul Brasil',
@@ -181,40 +295,25 @@ def register_cli_commands(app):
                     observacoes='Link Fibra 700 + DigiMesh em comodato com suporte 24h.'
                 ),
                 Cliente(
-                    nome='Escritório Silva & Associados Advocacia',
-                    email='administrativo@silvaadvocacia.com.br',
-                    telefone='(67) 3388-9900',
-                    documento='22.333.444/0001-55',
-                    cep='79002-001',
-                    logradouro='Rua 14 de Julho',
-                    numero='2100',
-                    complemento='Andar 4',
+                    nome='Auto Posto Afonso Pena & Conveniência',
+                    email='gerencia@postoafonsopena.com.br',
+                    telefone='(67) 3383-1122',
+                    documento='25.654.321/0001-89',
+                    cep='79002-071',
+                    logradouro='Avenida Afonso Pena',
+                    numero='2450',
+                    complemento=None,
                     bairro='Centro',
                     cidade='Campo Grande',
                     estado='MS',
                     ativo=True,
-                    observacoes='Link Dedicado Pro com IP Fixo e redundância.'
-                ),
-                Cliente(
-                    nome='Restaurante e Parrilla Pantaneira',
-                    email='financeiro@parrillapantaneira.com.br',
-                    telefone='(67) 3356-7890',
-                    documento='33.444.555/0001-66',
-                    cep='79020-000',
-                    logradouro='Rua Euclides da Cunha',
-                    numero='650',
-                    complemento='',
-                    bairro='Jardim dos Estados',
-                    cidade='Campo Grande',
-                    estado='MS',
-                    ativo=True,
-                    observacoes='Wi-Fi 6 de alta densidade para 80 clientes simultâneos.'
-                ),
+                    observacoes='Cliente corporativo DigiCorp com Wi-Fi 6 e redundância para maquininhas de cartão.'
+                )
             ]
             db.session.add_all(clientes_exemplo)
             db.session.flush()
 
-            # Sample orders with items
+            # Sample orders
             pedidos_exemplo = [
                 Pedido(
                     numero_pedido='PED-2026-0001',

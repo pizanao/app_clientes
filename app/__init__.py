@@ -40,18 +40,24 @@ def create_app(config_class=Config):
     from app.routes.clientes import clientes_bp
     from app.routes.pedidos import pedidos_bp
     from app.routes.leads import leads_bp
+    from app.routes.admin import admin_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(clientes_bp)
     app.register_blueprint(pedidos_bp)
     app.register_blueprint(leads_bp)
+    app.register_blueprint(admin_bp)
 
     # Register CLI commands
     from app.cli import register_cli_commands
     register_cli_commands(app)
 
     # Error handlers
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        return render_template('errors/403.html'), 403
+
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template('errors/404.html'), 404

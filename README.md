@@ -1,105 +1,46 @@
-# 🚀 DigitalNet MS - Radar de Leads & Gestão Comercial Telecom
+# DigitalNet-Prospector
 
-Sistema integrado de **Gestão Comercial, Prospecção Geo-Localizada e Expansão de Infraestrutura Óptica B2B** para a operadora **DigitalNet MS** em Campo Grande - MS.
-
-Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Inteligência Artificial (AIsa e Gemini)**, dados geográficos oficiais do **SISGRAN / PLANURB**, mais de **21.000 feições urbanas** (bairros, imóveis e loteamentos) com indexação espacial **R*Tree** no SQLite e uma base de **177.614 empresas da Receita Federal do Brasil**.
+Sistema integrado de CRM, Gestão de Pedidos e Prospecção B2B Geo-localizada para a DigitalNet Telecomunicações (Campo Grande - MS), enriquecido com inteligência territorial de camadas GeoJSON (SISGRAN / PLANURB) e a base de 177.614 empresas ativas da Receita Federal do Brasil (RFB).
 
 ---
 
-## 📑 Sumário
+## Funcionalidades Principais
 
-- [Visão Geral e Diferenciais](#-visão-geral-e-diferenciais)
-- [Arquitetura do Sistema](#-arquitetura-do-sistema)
-- [Funcionalidades Principais](#-funcionalidades-principais)
-- [Instalação Rápida com setup.sh](#-instalação-rápida-com-setupsh)
-- [Motores de Prospecção e Inteligência Artificial](#-motores-de-prospecção-e-inteligência-artificial)
-- [Dados Geoespaciais e SISGRAN](#-dados-geoespaciais-e-sisgran)
-- [Base de 177k Empresas da Receita Federal](#-base-de-177k-empresas-da-receita-federal)
-- [Scripts e Ferramentas CLI](#-scripts-e-ferramentas-cli)
-- [Suíte de Testes](#-suíte-de-testes)
-- [Agentes de IA e SKILLs](#-agentes-de-ia-e-skills)
+### 1. Radar de Leads & Expansão de Rede Óptica
+- Mapa interativo com círculos térmicos de cobertura e nós de fibra óptica (CTO) em bairros de Campo Grande (Chácara Cachoeira, Centro, Santa Fé, Carandá Bosque, etc.).
+- Carregamento sob demanda de camadas GeoJSON oficiais do município: Bairros, Macrozonas Urbanas e Parcelamentos.
+- Prospecção de empresas vizinhas a nós de rede em 1 clique, com busca na base da Receita Federal por proximidade de CEP.
+- Carregamento de empresas ativas diretamente no raio de cobertura do nó através de gaveta lateral (Offcanvas) com visualização em cards e mapa.
 
----
-
-## 🌟 Visão Geral e Diferenciais
-
-- **Viabilidade Óptica Hiperlocal:** O sistema calcula clusters de clientes conectados por bairro de Campo Grande, permitindo prospectar empresas exatamente onde a fibra óptica da DigitalNet já está nos postes (AS61588).
-- **Interatividade nos Nós Ópticos (Offcanvas):** Ao clicar em um nó de fibra no mapa, abre uma gaveta lateral listando as empresas reais daquele raio, com scores, WhatsApp anti-ban em 1-clique e navegação focada no mapa.
-- **Interface Imersiva (Menu Recolhível & Mapa Fullscreen):** Barra lateral retrátil com persistência em `localStorage` e modo Tela Cheia no mapa com ajuste contínuo de tiles Leaflet.
-- **Roteiro WhatsApp Anti-Ban com Opt-in:** Reduz o risco de bloqueio de número para quase zero com um método consultivo em 3 passos, oferecendo Wi-Fi 6 em comodato e pontos DigiMesh sem custos de aluguel.
-- **Cascata Multi-Provedor de Prospecção:** Integração com a API AIsa (`asi1-mini`), Google Gemini AI, banco de dados abertos da RFB e gerador sintético de alta diversidade com mais de 600 combinações.
-- **Banco Espacial Dual (SQLite R*Tree & PostGIS):** Análise e ingestão automática de 21.042 feições urbanas com bounding boxes e centróides tanto em SQLite puro quanto em PostgreSQL + PostGIS.
-- **Conversão em 1-Clique:** Transforma um lead prospectado em Cliente e gera automaticamente o Pedido com planos reais da operadora (Fibra 600, 700 + DigiMesh, 900 Advanced e Link Dedicado Pro).
-- **Deploy Autônomo Blindado (POC em 30s):** `setup.sh` auto-contido para demonstrações de POC, configurando todo o ambiente, as 21k feições urbanas e as 177k empresas da RFB em menos de 30 segundos (offline com pendrive ou online sem login).
-
----
-
-## 🏗️ Arquitetura do Sistema
-
-```mermaid
-flowchart TD
-    subgraph Frontend["Interface Web (Bootstrap 5.3 + Mapbox GL JS)"]
-        Dash["Dashboard Executivo"]
-        Radar["Radar de Leads & Mapa"]
-        Clientes["Gestão de Clientes"]
-        Pedidos["Gestão de Pedidos (1-10 itens)"]
-    end
-
-    subgraph Backend["Backend Flask 3"]
-        Routes["Rotas & Blueprints (Auth, Leads, Clientes, Pedidos)"]
-        Prospector["TelecomProspectorService"]
-        AI_Gate["Gateway de Prospecção Multi-Provider"]
-    end
-
-    subgraph Data["Camada de Dados (SQLite & Geo)"]
-        MainDB[("SQLite: instance/app_clientes.db")]
-        RFB[("Tabela leeds_campo_grande (177k RFB)")]
-        GeoSQLite[("Tabelas Espaciais R*Tree (geo_*)")]
-        GeoFiles["GeoJSON (bairros, imoveis, parcelamentos)"]
-    end
-
-    subgraph External["Serviços & Provedores Externos"]
-        AIsaAPI["AIsa API (api.aisa.one)"]
-        GeminiAPI["Google Gemini API"]
-        ViaCEP["ViaCEP API"]
-    end
-
-    Frontend <--> Routes
-    Routes --> Prospector
-    Prospector --> AI_Gate
-    AI_Gate --> AIsaAPI
-    AI_Gate --> GeminiAPI
-    AI_Gate --> RFB
-    Prospector <--> MainDB
-    MainDB --- GeoSQLite
-    GeoFiles --> GeoSQLite
-    Routes --> ViaCEP
-```
-
----
-
-## 🚀 Funcionalidades Principais
-
-### 1. Radar de Prospecção Geo-Localizada (`/leads/`)
-- Mapa interativo com nós ópticos (clientes ativos) e oportunidades de leads com scores de conversão.
-- Filtros por bairro oficial do SISGRAN (*Chácara Cachoeira, Centro, Santa Fé, Jardim dos Estados, etc.*).
+### 2. Dossiê 360° do Lead & Qualificação com IA
+- Cálculo automático de viabilidade técnica no poste e Lead Score (0 a 100).
+- Tutor de Quebra de Objeções (SDR Telecom) para contornar objeções de preço, fidelidade contratual com Vivo/Claro e receio técnico.
 - Dossiê comercial completo com perfil do decisor, dores de rede da concorrência e argumento de vendas.
 
-### 2. Central WhatsApp & Abordagem Consultiva
+### 3. Central WhatsApp & Abordagem Consultiva
 - Script personalizado gerado sob demanda contendo gancho territorial, comparativo de plano e pedido explícito de opt-in.
 - Botão de disparo direto via WhatsApp Web (`https://wa.me/...`).
-- Tutor de Quebra de Objeções para SDRs com scripts imediatos contra fidelidade na concorrência, preço e comodismo.
 
-### 3. Gestão Completa de Clientes e Pedidos
+### 4. Gestão Completa de Clientes e Pedidos
 - CRUD de Clientes com preenchimento automático de CEP via ViaCEP e máscaras de CNPJ/Telefone.
 - CRUD de Pedidos de 1 a 10 itens com totalização automática em tempo real e comprovante de impressão comercial.
 - Dashboard executivo com métricas de faturamento, ticket médio e clientes ativos.
 
+### 5. Tabelas Interativas com DataTables Responsive e Linhas Aninhadas
+- **DataTables 2 & Extensão Responsive:** As tabelas de Clientes (/clientes/) e Leads (/leads/) adaptam-se com fluidez a qualquer resolução de tela (desktop, tablet e mobile).
+- **Linhas Aninhadas (Child Rows com Subtabelas):** O botão interativo Detalhes expande painéis avançados sob demanda:
+  - *Tabela de Clientes:* Dossiê cadastral, endereço completo, total gasto acumulado e subtabela aninhada com o histórico de pedidos conectados e atalhos rápidos de WhatsApp.
+  - *Tabela de Leads:* Acordeão técnico com inteligência territorial de Campo Grande (CTO no quarteirão), script anti-ban para WhatsApp com botão de cópia de 1 clique, e pacote recomendado DigitalNet com botão de conversão imediata em cliente.
+
+### 6. Catálogo e Gestão de Planos de Banda Larga (PF & PJ)
+- **Painel Administrativo (/admin/planos):** Interface completa para cadastrar, editar, ativar/desativar e excluir planos de internet fibra oferecidos pela operadora.
+- **Planos Residenciais (Pessoa Física):** Baseados no catálogo oficial (https://digitalnetms.com.br/clientepf/), cobrindo de 600 a 900 Mega com roteadores Wi-Fi 6, pontos DigiMesh, Skeelo e aplicativos de streaming (Grade Standard e Grade Top).
+- **Planos Corporativos (Pessoa Jurídica):** Baseados nos Combos DigiCorp (https://digitalnetms.com.br/clientepj/), cobrindo 500 a 900 Mega com telefonia digital ilimitada, Tronco SIP (2 a 4 linhas simultâneas), PABX Virtual em nuvem (até 5 ramais + URA personalizada), IP fixo válido e SLA garantido em contrato (12h a 24h).
+- **Sincronização em 1-Clique:** Botão para restaurar e sincronizar os 9 planos oficiais diretamente da base padrão.
+
 ---
 
-## 📦 Instalação Rápida com `setup.sh`
-
-O projeto inclui o instalador autônomo `setup.sh`. Em um ambiente Linux limpo:
+## Instalação Rápida com `setup.sh`
 
 ```bash
 # 1. Dar permissão de execução:
@@ -113,47 +54,19 @@ source .venv/bin/activate
 flask run --host=0.0.0.0 --port=5000
 ```
 
----
+### Credenciais de Acesso Exibidas ao Final do Setup
 
-## 🤖 Motores de Prospecção e Inteligência Artificial
+Ao concluir a instalação, o `setup.sh` exibe um resumo final destacado com os usuários e senhas prontos para uso (a senha gerada para o admin é preservada em `instance/.admin_password` e não se perde no log):
 
-O sistema implementa uma cascata de 4 camadas:
-1. **AIsa API:** Suporte nativo ao endpoint `/v1/chat/completions` da AIsa com o modelo `asi1-mini`. Configuração via `AISA_API_KEY` no `.env`.
-2. **Google Gemini:** Prospecção com modelo Gemini via `GEMINI_API_KEY`.
-3. **Motor Local RFB (`leeds_campo_grande`):** Quando as chaves externas não estão presentes ou atingem limite de cota, o sistema seleciona empresas reais ativas de Campo Grande para o CEP do bairro.
-4. **Gerador Sintético Dinâmico:** Combina 15 setores comerciais com 40 sobrenomes locais e garante que nenhum nome duplicado seja gerado.
-
----
-
-## 🗺️ Dados Geoespaciais e SISGRAN
-
-O sistema integra 4 arquivos GeoJSON oficiais em `geojson/`:
-- `bairros.geojson`: 74 polígonos de bairros municipais.
-- `imoveis.geojson`: 20.000 imóveis urbanos com numeração predial e ruas reais.
-- `parcelamentos.geojson`: 894 loteamentos aprovados.
-- `pd-macrozonas-urbanas.geojson`: Macrozonas urbanas do Plano Diretor.
-
-### Carregando no SQLite com Suporte a R*Tree:
-```bash
-python scripts/carregar_geojson_sqlite.py --execute
-```
-Todas as feições são armazenadas com colunas de bounding box (`min_lng, min_lat, max_lng, max_lat`), centróides geométricos e indexação virtual R*Tree.
+| Perfil | Usuário | Senha Padrão | Observações |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | `admin` | *Exibida no resumo final* | Gerada dinamicamente ou definida via `SEED_ADMIN_PASSWORD=... ./setup.sh` |
+| **Líder Técnico** | `lider.tecnico` | `Lider#2026` | Supervisão técnica e aprovação operacional |
+| **Agente Comercial** | `agente.comercial` | `Agente#2026` | Operação de prospecção e abordagem WhatsApp |
 
 ---
 
-## 🏛️ Base de 177k Empresas da Receita Federal
-
-O arquivo SQLite inclui a tabela `leeds_campo_grande` contendo 177.614 empresas de Campo Grande.
-Para enriquecer a base de clientes distribuindo empresas reais pelos bairros:
-
-```bash
-# Enriquece a tabela clientes com 150 empresas reais da RFB:
-python scripts/enriquecer_clientes_rfb.py --limit 150
-```
-
----
-
-## 🛠️ Scripts e Ferramentas CLI
+## Scripts e Ferramentas CLI
 
 | Script | Finalidade |
 | :--- | :--- |
@@ -166,9 +79,9 @@ python scripts/enriquecer_clientes_rfb.py --limit 150
 
 ---
 
-## 🧪 Suíte de Testes
+## Suíte de Testes
 
-O projeto possui **28 testes unitários** cobrindo autenticação, CRUDs de clientes e pedidos, totalização automática de itens, integridade de senhas do seed, rotas do radar de leads, geojson layers e prevenção estrita de leads duplicados:
+O projeto possui **53 testes unitários** cobrindo autenticação, controle de acesso RBAC, administração de usuários e grupos, catálogo e CRUD de planos de banda larga (PF/PJ), CRUDs de clientes e pedidos, totalização automática de itens, integridade de senhas do seed, rotas do radar de leads, geojson layers e prevenção de leads duplicados:
 
 ```bash
 .venv/bin/python -m unittest discover -s tests -v
@@ -176,7 +89,7 @@ O projeto possui **28 testes unitários** cobrindo autenticação, CRUDs de clie
 
 ---
 
-## 🧠 Agentes de IA e SKILLs
+## Agentes de IA e SKILLs
 
 As diretrizes detalhadas para LLMs e agentes de codificação estão estruturadas em:
 - **`AGENTS.md`**: Regras de arquitetura, convenções e catalogo de tabelas.

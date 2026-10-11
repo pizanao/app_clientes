@@ -42,11 +42,13 @@ geojson/*.json
 *.sublime-project
 *.sublime-workspace
 
-
-# Screenshots & temporários
+# Screenshots, Vídeos & temporários
 *.png
 *.jpg
 *.jpeg
+*.webm
+*.mp4
+videos/
 /secrets/
 /tmp/
 

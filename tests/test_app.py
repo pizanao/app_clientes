@@ -383,12 +383,12 @@ class AppTestCase(unittest.TestCase):
     # --- CLI ---
     def test_seed_nao_usa_senha_fixa(self):
         runner = self.app.test_cli_runner()
-        with mock.patch.dict(os.environ, {'SEED_ADMIN_PASSWORD': 'SenhaSeed#2026'}):
+        with mock.patch.dict(os.environ, {'SEED_ADMIN_PASSWORD': 'SenhaSeed*2026'}):
             result = runner.invoke(args=['seed'])
         self.assertEqual(result.exit_code, 0, result.output)
-        self.assertNotIn('SenhaSeed#2026', result.output)
+        self.assertNotIn('SenhaSeed*2026', result.output)
         admin = User.query.filter_by(username='admin').first()
-        self.assertTrue(admin.check_password('SenhaSeed#2026'))
+        self.assertTrue(admin.check_password('SenhaSeed*2026'))
         self.assertFalse(admin.check_password('admin123'))
 
     def test_create_admin_nao_exibe_senha(self):

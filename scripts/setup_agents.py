@@ -282,16 +282,16 @@ def build_agents_md() -> str:
     return """# AGENTS.md - Diretrizes de Desenvolvimento e Arquitetura do Workspace
 
 Bem-vindo ao workspace do **DigitalNet MS - Radar de Leads & Sistema de Gestão**.
-Este documento define as regras de desenvolvimento, catálogo de modelos de dados, motores de inteligência artificial, regras espaciais e fluxos de trabalho obrigatórios para todos os agentes de IA atuando neste repositório.
+Este documento define as regras de desenvolvimento, catálogo de modelos de dados, motores de inteligência artificial, controle de acesso e regras espaciais obrigatórias para todos os agentes de IA atuando neste repositório.
 
 ---
 
 ## 1. Visão Geral do Sistema
 
-A aplicação é uma plataforma completa de **Gestão Comercial e Radar de Expansão de Telecomunicações** (ISP B2B) para a **DigitalNet MS** em Campo Grande - MS.
+A aplicação é uma plataforma completa de **Gestão Comercial, Controle de Acesso (RBAC) e Radar de Expansão de Telecomunicações** (ISP B2B) para a **DigitalNet MS** em Campo Grande - MS.
 - **Stack:** Python 3.11+, Flask 3, Flask-SQLAlchemy, Flask-Migrate (Alembic), Flask-Login, Flask-WTF, Bootstrap 5.3, Mapbox GL JS / Leaflet.
 - **Bancos de Dados:**
-  - **SQLite Primário:** `instance/app_clientes.db` (armazenamento de Usuários, Clientes, Pedidos, Leads, Tabelas Espaciais e Base RFB).
+  - **SQLite Primário:** `instance/app_clientes.db` (armazenamento de Usuários, Grupos de Acesso, Clientes, Pedidos, Leads, Tabelas Espaciais e Base RFB).
   - **PostgreSQL + PostGIS (Opcional/Espacial):** `localhost:5432/db_geo` para análises espaciais avançadas (`ST_Intersects`).
 - **Deploy Autônomo:** `setup.sh` (script bash auto-contido gerado via `scripts/gerar_setup.py`).
 
@@ -300,7 +300,8 @@ A aplicação é uma plataforma completa de **Gestão Comercial e Radar de Expan
 ## 2. Catálogo de Modelos de Dados e Tabelas
 
 ### 2.1 Tabelas Transacionais da Aplicação
-- **`usuarios` (`app/models/user.py`):** Usuários do sistema, permissões, hash seguro com `werkzeug.security`.
+- **`usuarios` (`app/models/user.py`):** Usuários do sistema, perfil de acesso (`administrador`, `lider_tecnico`, `agente`), status de ativação, hash seguro com `werkzeug.security`.
+- **`grupos` e `usuario_grupos` (`app/models/user.py`):** Grupos de acesso configuráveis com atribuição de papel (`papel`), descrição e relacionamento many-to-many com usuários para herança coletiva de permissões.
 - **`clientes` (`app/models/cliente.py`):** Clientes corporativos e residenciais ativos com endereço, CEP e coordenadas.
 - **`pedidos` e `itens_pedido` (`app/models/pedido.py`):** Pedidos comerciais vinculados a clientes, de 1 a 10 itens com totalização automática em centavos (`REAL`).
 - **`leads` (`app/models/lead.py`):** Oportunidades comerciais de prospecção geo-localizada, com pontuação (`lead_score`), operadora atual (Vivo Fibra / Claro), dor operacional mapeada, roteiro WhatsApp anti-ban, dossiê comercial e vínculo de conversão (`cliente_convertido_id`).
@@ -317,7 +318,21 @@ Carregadas no SQLite via `scripts/carregar_geojson_sqlite.py` ou PostGIS via `sc
 
 ---
 
-## 3. Motores de Prospecção e Cascata de IA (`TelecomProspectorService`)
+## 3. Controle de Acesso por Perfis (RBAC) e Painel Administrativo
+
+O sistema implementa três perfis de acesso hierárquicos:
+1. **Administrador (`administrador`):** Acesso irrestrito a todas as funcionalidades, incluindo o Painel de Administração de Usuários (`/admin/usuarios`), Grupos de Acesso (`/admin/grupos`), configurações gerais e exclusões.
+2. **Líder Técnico (`lider_tecnico`):** Coordenação operacional e técnica com permissão para gerenciar clientes, pedidos, radar de leads e executar exclusões de clientes e pedidos.
+3. **Agente (`agente`):** Operação comercial diária (prospecção de leads, abordagem WhatsApp, cadastro e edição de pedidos/clientes). Não possui acesso ao painel admin nem permissão para excluir registros críticos.
+
+Decorators de autorização em `app/utils/auth_decorators.py`:
+- `@admin_required`: Restringe o endpoint exclusivamente a Administradores.
+- `@lider_required`: Restringe o endpoint a Líderes Técnicos e Administradores.
+- `@perfil_required(*perfis)`: Permite múltiplos perfis autorizados.
+
+---
+
+## 4. Motores de Prospecção e Cascata de IA (`TelecomProspectorService`)
 
 O serviço [`TelecomProspectorService`](file:///home/pizani/Projects/app_clientes/app/services/prospector.py) implementa uma cascata com failover automático:
 
@@ -337,15 +352,9 @@ flowchart TD
     Deduplicacao --> Banco[("Salva na Tabela leads")]
 ```
 
-### Regras de Deduplicação Mandatórias em `save_prospects`:
-1. **Documento:** NUNCA inserir leads cujo CNPJ já esteja cadastrado em `Lead` ou `Cliente`.
-2. **Razão Social:** Comparação `func.lower(Lead.empresa) == empresa.lower()`.
-3. **Telefone no Bairro:** Normalização dos dígitos e checagem de concorrência.
-4. **Clientes Ativos:** Se a empresa já constar na tabela `Cliente`, o lead é descartado.
-
 ---
 
-## 4. SKILLs Disponíveis no Workspace
+## 5. SKILLs Disponíveis no Workspace
 
 As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos comprovados do repositório:
 - **`enriquecer-prospectar-rfb` (`.agents/skills/enriquecer-prospectar-rfb/SKILL.md`):** Procedimento de enriquecimento e prospecção com a base de 177k empresas da RFB, scripts anti-ban no WhatsApp e conversão em 1-clique.
@@ -353,11 +362,11 @@ As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos com
 
 ---
 
-## 5. Comandos e Ferramentas Essenciais do Repositório
+## 6. Comandos e Ferramentas Essenciais do Repositório
 
 | Comando | Descrição |
 | :--- | :--- |
-| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de testes unitários (28 testes mandatórios). |
+| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de testes unitários (41 testes automatizados). |
 | `python scripts/carregar_geojson_sqlite.py --execute` | Carrega as camadas GeoJSON no SQLite com índices espaciais R*Tree. |
 | `python scripts/restaurar_rfb.py` | Restaura a base de 177.614 empresas da RFB a partir do dump compactado ou URL pública. |
 | `python scripts/enriquecer_clientes_rfb.py --limit 150` | Enriquece a tabela `clientes` com empresas reais da RFB. |
@@ -367,7 +376,7 @@ As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos com
 
 ---
 
-## 6. Regras de Conduta para Agentes de IA
+## 7. Regras de Conduta para Agentes de IA
 
 1. **Evidência Antes de Afirmações:** Nunca declare uma alteração concluída sem rodar a suíte de testes (`unittest`) e confirmar código de saída 0.
 2. **Integridade de Documentação:** Mantenha docstrings e comentários existentes.
@@ -382,43 +391,46 @@ As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos com
 # ==============================================================================
 
 def build_readme_md() -> str:
-    return """# 🚀 DigitalNet MS - Radar de Leads & Gestão Comercial Telecom
+    return """# DigitalNet MS - Radar de Leads, Gestão Comercial & Controle de Acesso (RBAC)
 
-Sistema integrado de **Gestão Comercial, Prospecção Geo-Localizada e Expansão de Infraestrutura Óptica B2B** para a operadora **DigitalNet MS** em Campo Grande - MS.
+Sistema integrado de **Gestão Comercial, Controle de Acesso por Perfis & Grupos, Prospecção Geo-Localizada e Expansão de Infraestrutura Óptica B2B** para a operadora **DigitalNet MS** em Campo Grande - MS.
 
-Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Inteligência Artificial (AIsa e Gemini)**, dados geográficos oficiais do **SISGRAN / PLANURB**, mais de **21.000 feições urbanas** (bairros, imóveis e loteamentos) com indexação espacial **R*Tree** no SQLite e uma base de **177.614 empresas da Receita Federal do Brasil**.
-
----
-
-## 📑 Sumário
-
-- [Visão Geral e Diferenciais](#-visão-geral-e-diferenciais)
-- [Arquitetura do Sistema](#-arquitetura-do-sistema)
-- [Funcionalidades Principais](#-funcionalidades-principais)
-- [Instalação Rápida com setup.sh](#-instalação-rápida-com-setupsh)
-- [Motores de Prospecção e Inteligência Artificial](#-motores-de-prospecção-e-inteligência-artificial)
-- [Dados Geoespaciais e SISGRAN](#-dados-geoespaciais-e-sisgran)
-- [Base de 177k Empresas da Receita Federal](#-base-de-177k-empresas-da-receita-federal)
-- [Scripts e Ferramentas CLI](#-scripts-e-ferramentas-cli)
-- [Suíte de Testes](#-suíte-de-testes)
-- [Agentes de IA e SKILLs](#-agentes-de-ia-e-skills)
+Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Controle de Acesso RBAC**, **Inteligência Artificial (AIsa e Gemini)**, dados geográficos oficiais do **SISGRAN / PLANURB**, mais de **21.000 feições urbanas** (bairros, imóveis e loteamentos) com indexação espacial **R*Tree** no SQLite e uma base de **177.614 empresas da Receita Federal do Brasil**.
 
 ---
 
-## 🌟 Visão Geral e Diferenciais
+## Sumário
 
+- [Visão Geral e Diferenciais](#visao-geral-e-diferenciais)
+- [Arquitetura do Sistema](#arquitetura-do-sistema)
+- [Controle de Acesso e Perfis (RBAC)](#controle-de-acesso-e-perfis-rbac)
+- [Funcionalidades Principais](#funcionalidades-principais)
+- [Instalação Rápida com setup.sh](#instalacao-rapida-com-setupsh)
+- [Motores de Prospecção e Inteligência Artificial](#motores-de-prospeccao-e-inteligencia-artificial)
+- [Dados Geoespaciais e SISGRAN](#dados-geoespaciais-e-sisgran)
+- [Base de 177k Empresas da Receita Federal](#base-de-177k-empresas-da-receita-federal)
+- [Scripts e Ferramentas CLI](#scripts-e-ferramentas-cli)
+- [Suíte de Testes](#suite-de-testes)
+- [Agentes de IA e SKILLs](#agentes-de-ia-e-skills)
+
+---
+
+## Visão Geral e Diferenciais
+
+- **Controle de Acesso por Perfis (RBAC):** Hierarquia de permissões estruturada para **Administrador**, **Líder Técnico** e **Agente**, além de grupos de trabalho customizáveis.
+- **Painel Administrativo Completo:** Gestão centralizada de usuários (`/admin/usuarios`) com criação, edição de perfis, ativação/desativação e grupos de acesso (`/admin/grupos`).
 - **Viabilidade Óptica Hiperlocal:** O sistema calcula clusters de clientes conectados por bairro de Campo Grande, permitindo prospectar empresas exatamente onde a fibra óptica da DigitalNet já está nos postes (AS61588).
 - **Interatividade nos Nós Ópticos (Offcanvas):** Ao clicar em um nó de fibra no mapa, abre uma gaveta lateral listando as empresas reais daquele raio, com scores, WhatsApp anti-ban em 1-clique e navegação focada no mapa.
-- **Interface Imersiva (Menu Recolhível & Mapa Fullscreen):** Barra lateral retrátil com persistência em `localStorage` e modo Tela Cheia no mapa com ajuste contínuo de tiles Leaflet.
+- **Interface Imersiva (Menu Recolhível & Mapa Fullscreen):** Barra lateral retrátil com persistência em `localStorage` e badges identificadores do perfil do operador.
 - **Roteiro WhatsApp Anti-Ban com Opt-in:** Reduz o risco de bloqueio de número para quase zero com um método consultivo em 3 passos, oferecendo Wi-Fi 6 em comodato e pontos DigiMesh sem custos de aluguel.
-- **Cascata Multi-Provedor de Prospecção:** Integração com a API AIsa (`asi1-mini`), Google Gemini AI, banco de dados abertos da RFB e gerador sintético de alta diversidade com mais de 600 combinações.
+- **Cascata Multi-Provedor de Prospecção:** Integração com a API AIsa (`asi1-mini`), Google Gemini AI, banco de dados abertos da RFB e gerador sintético de alta diversidade.
 - **Banco Espacial Dual (SQLite R*Tree & PostGIS):** Análise e ingestão automática de 21.042 feições urbanas com bounding boxes e centróides tanto em SQLite puro quanto em PostgreSQL + PostGIS.
-- **Conversão em 1-Clique:** Transforma um lead prospectado em Cliente e gera automaticamente o Pedido com planos reais da operadora (Fibra 600, 700 + DigiMesh, 900 Advanced e Link Dedicado Pro).
-- **Deploy Autônomo Blindado (POC em 30s):** `setup.sh` auto-contido para demonstrações de POC, configurando todo o ambiente, as 21k feições urbanas e as 177k empresas da RFB em menos de 30 segundos (offline com pendrive ou online sem login).
+- **Conversão em 1-Clique:** Transforma um lead prospectado em Cliente e gera automaticamente o Pedido com planos reais da operadora.
+- **Deploy Autônomo Blindado (POC em 30s):** `setup.sh` auto-contido para demonstrações de POC, configurando todo o ambiente em menos de 30 segundos.
 
 ---
 
-## 🏗️ Arquitetura do Sistema
+## Arquitetura do Sistema
 
 ```mermaid
 flowchart TD
@@ -427,63 +439,77 @@ flowchart TD
         Radar["Radar de Leads & Mapa"]
         Clientes["Gestão de Clientes"]
         Pedidos["Gestão de Pedidos (1-10 itens)"]
+        AdminPanel["Painel Admin: Usuários & Grupos"]
     end
 
     subgraph Backend["Backend Flask 3"]
-        Routes["Rotas & Blueprints (Auth, Leads, Clientes, Pedidos)"]
+        Routes["Rotas & Blueprints (Admin, Auth, Leads, Clientes, Pedidos)"]
+        RBAC["Camada RBAC & Auth Decorators"]
         Prospector["TelecomProspectorService"]
         AI_Gate["Gateway de Prospecção Multi-Provider"]
     end
 
     subgraph Data["Camada de Dados (SQLite & Geo)"]
         MainDB[("SQLite: instance/app_clientes.db")]
+        UsersDB[("Tabelas: usuarios, grupos, usuario_grupos")]
         RFB[("Tabela leeds_campo_grande (177k RFB)")]
         GeoSQLite[("Tabelas Espaciais R*Tree (geo_*)")]
         GeoFiles["GeoJSON (bairros, imoveis, parcelamentos)"]
     end
 
-    subgraph External["Serviços & Provedores Externos"]
-        AIsaAPI["AIsa API (api.aisa.one)"]
-        GeminiAPI["Google Gemini API"]
-        ViaCEP["ViaCEP API"]
-    end
-
     Frontend <--> Routes
+    Routes --> RBAC
     Routes --> Prospector
     Prospector --> AI_Gate
-    AI_Gate --> AIsaAPI
-    AI_Gate --> GeminiAPI
-    AI_Gate --> RFB
     Prospector <--> MainDB
+    MainDB --- UsersDB
     MainDB --- GeoSQLite
     GeoFiles --> GeoSQLite
-    Routes --> ViaCEP
 ```
 
 ---
 
-## 🚀 Funcionalidades Principais
+## Controle de Acesso e Perfis (RBAC)
 
-### 1. Radar de Prospecção Geo-Localizada (`/leads/`)
+| Perfil | Escopo e Responsabilidades | Acesso ao Painel Admin | Exclusão de Registros |
+| :--- | :--- | :---: | :---: |
+| **Administrador** | Gestão irrestrita do sistema, criação de usuários, auditoria, configurações e criação de grupos de acesso. | Sim (`/admin/`) | Sim |
+| **Líder Técnico** | Supervisão técnica e comercial, gestão de clientes, pedidos, conversão e exclusão autorizada de cadastros. | Não | Sim |
+| **Agente** | Operação comercial, prospecção geo-localizada, disparo consultivo WhatsApp, cadastro de clientes e pedidos. | Não | Não |
+
+---
+
+## Funcionalidades Principais
+
+### 1. Painel de Administração de Usuários & Grupos (`/admin/`)
+- Listagem completa com filtros por perfil, status ativo/inativo e grupo de trabalho.
+- Cadastro de novos operadores com atribuição imediata de perfil e grupos associados.
+- Edição cadastral, redefinição segura de senha e proteção estrita contra auto-exclusão ou exclusão do último administrador ativo.
+- Criação e gerenciamento de grupos de acesso com papel herdado.
+
+### 2. Radar de Prospecção Geo-Localizada (`/leads/`)
 - Mapa interativo com nós ópticos (clientes ativos) e oportunidades de leads com scores de conversão.
 - Filtros por bairro oficial do SISGRAN (*Chácara Cachoeira, Centro, Santa Fé, Jardim dos Estados, etc.*).
 - Dossiê comercial completo com perfil do decisor, dores de rede da concorrência e argumento de vendas.
 
-### 2. Central WhatsApp & Abordagem Consultiva
+### 3. Central WhatsApp & Abordagem Consultiva
 - Script personalizado gerado sob demanda contendo gancho territorial, comparativo de plano e pedido explícito de opt-in.
 - Botão de disparo direto via WhatsApp Web (`https://wa.me/...`).
-- Tutor de Quebra de Objeções para SDRs com scripts imediatos contra fidelidade na concorrência, preço e comodismo.
 
-### 3. Gestão Completa de Clientes e Pedidos
+### 4. Gestão Completa de Clientes e Pedidos
 - CRUD de Clientes com preenchimento automático de CEP via ViaCEP e máscaras de CNPJ/Telefone.
 - CRUD de Pedidos de 1 a 10 itens com totalização automática em tempo real e comprovante de impressão comercial.
 - Dashboard executivo com métricas de faturamento, ticket médio e clientes ativos.
 
+### 5. Tabelas Interativas com DataTables Responsive e Linhas Aninhadas
+- **DataTables 2 & Extensão Responsive:** As tabelas de Clientes (/clientes/) e Leads (/leads/) adaptam-se com fluidez a qualquer resolução de tela (desktop, tablet e mobile).
+- **Linhas Aninhadas (Child Rows com Subtabelas):** O botão interativo Detalhes expande painéis avançados sob demanda:
+  - *Tabela de Clientes:* Dossiê cadastral, endereço completo, total gasto acumulado e subtabela aninhada com o histórico de pedidos conectados e atalhos rápidos de WhatsApp.
+  - *Tabela de Leads:* Acordeão técnico com inteligência territorial de Campo Grande (CTO no quarteirão), script anti-ban para WhatsApp com botão de cópia de 1 clique, e pacote recomendado DigitalNet com botão de conversão imediata em cliente.
+
 ---
 
-## 📦 Instalação Rápida com `setup.sh`
-
-O projeto inclui o instalador autônomo `setup.sh`. Em um ambiente Linux limpo:
+## Instalação Rápida com `setup.sh`
 
 ```bash
 # 1. Dar permissão de execução:
@@ -497,47 +523,19 @@ source .venv/bin/activate
 flask run --host=0.0.0.0 --port=5000
 ```
 
----
+### Credenciais de Acesso Exibidas ao Final do Setup
 
-## 🤖 Motores de Prospecção e Inteligência Artificial
+Ao concluir a instalação, o `setup.sh` exibe um resumo final destacado com os usuários e senhas prontos para uso (a senha gerada para o admin é preservada em `instance/.admin_password` e não se perde no log):
 
-O sistema implementa uma cascata de 4 camadas:
-1. **AIsa API:** Suporte nativo ao endpoint `/v1/chat/completions` da AIsa com o modelo `asi1-mini`. Configuração via `AISA_API_KEY` no `.env`.
-2. **Google Gemini:** Prospecção com modelo Gemini via `GEMINI_API_KEY`.
-3. **Motor Local RFB (`leeds_campo_grande`):** Quando as chaves externas não estão presentes ou atingem limite de cota, o sistema seleciona empresas reais ativas de Campo Grande para o CEP do bairro.
-4. **Gerador Sintético Dinâmico:** Combina 15 setores comerciais com 40 sobrenomes locais e garante que nenhum nome duplicado seja gerado.
-
----
-
-## 🗺️ Dados Geoespaciais e SISGRAN
-
-O sistema integra 4 arquivos GeoJSON oficiais em `geojson/`:
-- `bairros.geojson`: 74 polígonos de bairros municipais.
-- `imoveis.geojson`: 20.000 imóveis urbanos com numeração predial e ruas reais.
-- `parcelamentos.geojson`: 894 loteamentos aprovados.
-- `pd-macrozonas-urbanas.geojson`: Macrozonas urbanas do Plano Diretor.
-
-### Carregando no SQLite com Suporte a R*Tree:
-```bash
-python scripts/carregar_geojson_sqlite.py --execute
-```
-Todas as feições são armazenadas com colunas de bounding box (`min_lng, min_lat, max_lng, max_lat`), centróides geométricos e indexação virtual R*Tree.
+| Perfil | Usuário | Senha Padrão | Observações |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | `admin` | *Exibida no resumo final* | Gerada dinamicamente ou definida via `SEED_ADMIN_PASSWORD=... ./setup.sh` |
+| **Líder Técnico** | `lider.tecnico` | `Lider#2026` | Supervisão técnica e aprovação operacional |
+| **Agente Comercial** | `agente.comercial` | `Agente#2026` | Operação de prospecção e abordagem WhatsApp |
 
 ---
 
-## 🏛️ Base de 177k Empresas da Receita Federal
-
-O arquivo SQLite inclui a tabela `leeds_campo_grande` contendo 177.614 empresas de Campo Grande.
-Para enriquecer a base de clientes distribuindo empresas reais pelos bairros:
-
-```bash
-# Enriquece a tabela clientes com 150 empresas reais da RFB:
-python scripts/enriquecer_clientes_rfb.py --limit 150
-```
-
----
-
-## 🛠️ Scripts e Ferramentas CLI
+## Scripts e Ferramentas CLI
 
 | Script | Finalidade |
 | :--- | :--- |
@@ -550,9 +548,9 @@ python scripts/enriquecer_clientes_rfb.py --limit 150
 
 ---
 
-## 🧪 Suíte de Testes
+## Suíte de Testes
 
-O projeto possui **28 testes unitários** cobrindo autenticação, CRUDs de clientes e pedidos, totalização automática de itens, integridade de senhas do seed, rotas do radar de leads, geojson layers e prevenção estrita de leads duplicados:
+O projeto possui **41 testes unitários** cobrindo autenticação, controle de acesso RBAC, administração de usuários e grupos, CRUDs de clientes e pedidos, totalização automática de itens, integridade de senhas do seed, rotas do radar de leads, geojson layers e prevenção de leads duplicados:
 
 ```bash
 .venv/bin/python -m unittest discover -s tests -v
@@ -560,7 +558,7 @@ O projeto possui **28 testes unitários** cobrindo autenticação, CRUDs de clie
 
 ---
 
-## 🧠 Agentes de IA e SKILLs
+## Agentes de IA e SKILLs
 
 As diretrizes detalhadas para LLMs e agentes de codificação estão estruturadas em:
 - **`AGENTS.md`**: Regras de arquitetura, convenções e catalogo de tabelas.
@@ -577,7 +575,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 75)
-    print("🤖 SETUP AGENTS - GERADOR DE AGENTS.MD, README.MD E SKILLS")
+    print("=== SETUP AGENTS - GERADOR DE AGENTS.MD, README.MD E SKILLS")
     print("=" * 75)
 
     # 1. Cria diretórios de SKILLs no workspace
@@ -593,7 +591,7 @@ def main():
     # 2. Grava SKILLs no Workspace
     rfb_file.write_text(SKILL_ENRIQUECER_PROSPECTAR_RFB.strip() + "\n", encoding='utf-8')
     geo_file.write_text(SKILL_CARREGAR_GEOJSON_SQLITE.strip() + "\n", encoding='utf-8')
-    print("✅ SKILLs gravadas no workspace:")
+    print("[OK] SKILLs gravadas no workspace:")
     print(f"   - {rfb_file.relative_to(ROOT)}")
     print(f"   - {geo_file.relative_to(ROOT)}")
 
@@ -614,7 +612,7 @@ def main():
     }
     manifest_file = WORKSPACE_AGENTS_DIR / 'skills.json'
     manifest_file.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding='utf-8')
-    print(f"✅ Manifesto registrado em: {manifest_file.relative_to(ROOT)}")
+    print(f"[OK] Manifesto registrado em: {manifest_file.relative_to(ROOT)}")
 
     # 4. Instala nas SKILLs globais do usuário se diretório existir (~/.gemini/config/skills)
     if GLOBAL_SKILLS_DIR.exists():
@@ -624,30 +622,30 @@ def main():
         global_geo.mkdir(parents=True, exist_ok=True)
         (global_rfb / 'SKILL.md').write_text(SKILL_ENRIQUECER_PROSPECTAR_RFB.strip() + "\n", encoding='utf-8')
         (global_geo / 'SKILL.md').write_text(SKILL_CARREGAR_GEOJSON_SQLITE.strip() + "\n", encoding='utf-8')
-        print(f"✅ SKILLs espelhadas no catálogo global do usuário: {GLOBAL_SKILLS_DIR}")
+        print(f"[OK] SKILLs espelhadas no catálogo global do usuário: {GLOBAL_SKILLS_DIR}")
 
     # 5. Gera AGENTS.md
     agents_content = build_agents_md().strip() + "\n"
     if args.check and AGENTS_MD_PATH.exists():
         if AGENTS_MD_PATH.read_text(encoding='utf-8') != agents_content:
-            print("❌ AGENTS.md está desatualizado!")
+            print("[ERRO] AGENTS.md está desatualizado!")
             sys.exit(1)
     else:
         AGENTS_MD_PATH.write_text(agents_content, encoding='utf-8')
-        print(f"✅ AGENTS.md gerado com sucesso: {AGENTS_MD_PATH.name}")
+        print(f"[OK] AGENTS.md gerado com sucesso: {AGENTS_MD_PATH.name}")
 
     # 6. Gera README.md
     readme_content = build_readme_md().strip() + "\n"
     if args.check and README_MD_PATH.exists():
         if README_MD_PATH.read_text(encoding='utf-8') != readme_content:
-            print("❌ README.md está desatualizado!")
+            print("[ERRO] README.md está desatualizado!")
             sys.exit(1)
     else:
         README_MD_PATH.write_text(readme_content, encoding='utf-8')
-        print(f"✅ README.md gerado com sucesso: {README_MD_PATH.name}")
+        print(f"[OK] README.md gerado com sucesso: {README_MD_PATH.name}")
 
     print("=" * 75)
-    print("🎉 SETUP DE AGENTES, DOCUMENTAÇÃO E SKILLS CONCLUÍDO COM SUCESSO!")
+    print("=== SETUP DE AGENTES, DOCUMENTAÇÃO E SKILLS CONCLUÍDO COM SUCESSO!")
     print("=" * 75)
 
 

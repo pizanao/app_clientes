@@ -151,6 +151,7 @@ if [ ! -f .env ]; then
     MAPBOX_KEY_CONFIG="${MAPBOX_API_KEY:-${MAPBOX_ACCESS_TOKEN:-}}"
     AISA_KEY_CONFIG="${AISA_API_KEY:-}"
     AISA_MODEL_CONFIG="${AISA_MODEL:-asi1-mini}"
+    SEED_ADMIN_PASSWORD="${SEED_ADMIN_PASSWORD:-SenhaSeed*2026}"
     cat > .env <<EOF_ENV
 FLASK_APP=wsgi.py
 FLASK_DEBUG=1
@@ -160,6 +161,7 @@ DATABASE_URL=sqlite:///app_clientes.db
 # Chave de API da AIsa (api.aisa.one)
 AISA_API_KEY=${AISA_KEY_CONFIG}
 AISA_MODEL=${AISA_MODEL_CONFIG}
+SEED_ADMIN_PASSWORD="SenhaSeed*2026"
 
 # Chave de API / Access Token do Mapbox
 MAPBOX_API_KEY=${MAPBOX_KEY_CONFIG}
@@ -220,6 +222,9 @@ echo -e "${GREEN}✓ Todas as dependências foram instaladas com sucesso.${NC}"
 echo -e "\n${YELLOW}[6/6] Aplicando migrações e populando o banco de dados...${NC}"
 export FLASK_APP=wsgi.py
 .venv/bin/flask db upgrade
+if [ -z "${SEED_ADMIN_PASSWORD:-}" ] && [ ! -f instance/.admin_password ]; then
+    export SEED_ADMIN_PASSWORD="$(.venv/bin/python -c 'import secrets; print(secrets.token_urlsafe(9))')"
+fi
 .venv/bin/flask seed
 
 echo -e "\n${YELLOW}• Carregando camadas geoespaciais urbanas no SQLite...${NC}"
@@ -244,8 +249,15 @@ echo -e "\n${YELLOW}• Enriquecendo clientes ativos com empresas reais da RFB..
 echo -e "\n${YELLOW}Executando testes automatizados para validação do sistema...${NC}"
 .venv/bin/python3 -m unittest discover -s tests
 
+ADMIN_PASS=""
+if [ -f instance/.admin_password ]; then
+    ADMIN_PASS="$(cat instance/.admin_password)"
+elif [ -n "${SEED_ADMIN_PASSWORD:-}" ]; then
+    ADMIN_PASS="${SEED_ADMIN_PASSWORD}"
+fi
+
 echo -e "\n${BLUE}===================================================================${NC}"
-echo -e "${GREEN}🎉 PROJETO CRIADO E CONFIGURADO COM SUCESSO!${NC}"
+echo -e "${GREEN}PROJETO CRIADO E CONFIGURADO COM SUCESSO!${NC}"
 echo -e "${BLUE}===================================================================${NC}"
 echo -e "Para iniciar o servidor agora mesmo, execute:"
 echo -e "  ${YELLOW}./run.sh${NC}"
@@ -253,8 +265,15 @@ echo -e "\nOu manualmente:"
 echo -e "  ${YELLOW}source .venv/bin/activate${NC}"
 echo -e "  ${YELLOW}python3 wsgi.py${NC}"
 echo -e "\nAcesse no navegador: ${BLUE}http://localhost:5000${NC}"
-echo -e "Usuário: ${YELLOW}admin${NC} — senha exibida acima pelo seed (ou a definida em SEED_ADMIN_PASSWORD)."
-echo -e "Para criar outro administrador: ${YELLOW}.venv/bin/flask create-admin${NC}"
+echo -e "\n${GREEN}Credenciais de Acesso ao Sistema:${NC}"
+if [ -n "$ADMIN_PASS" ]; then
+    echo -e "  • ${YELLOW}Administrador:${NC}  ${BLUE}admin${NC}            — Senha: ${GREEN}${ADMIN_PASS}${NC}"
+else
+    echo -e "  • ${YELLOW}Administrador:${NC}  ${BLUE}admin${NC}            — Senha: ${GREEN}(mantida a senha anterior)${NC}"
+fi
+echo -e "  • ${YELLOW}Líder Técnico:${NC}  ${BLUE}lider.tecnico${NC}    — Senha: ${GREEN}Lider#2026${NC}"
+echo -e "  • ${YELLOW}Agente Comercial:${NC} ${BLUE}agente.comercial${NC} — Senha: ${GREEN}Agente#2026${NC}"
+echo -e "\nPara criar outro administrador: ${YELLOW}.venv/bin/flask create-admin${NC}"
 echo -e "\n${RED}Produção:${NC} use FLASK_DEBUG=0 e um servidor WSGI (gunicorn/waitress)."
 echo -e "${BLUE}===================================================================${NC}"
 '''

@@ -365,7 +365,7 @@
         <div class="col-md-4">
           <div class="input-group input-group-sm">
             <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-search"></i></span>
-            <input type="text" name="busca" class="form-control border-start-0 bg-light" placeholder="Buscar por empresa, decisor, rua..." value="{{ busca }}">
+            <input type="text" id="filtroRapidoLeads" name="busca" class="form-control border-start-0 bg-light" placeholder="Buscar por empresa, decisor, rua..." value="{{ busca }}">
           </div>
         </div>
         <div class="col-md-3">
@@ -399,11 +399,12 @@
       </form>
     </div>
 
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
+    <div class="table-responsive p-3">
+      <table id="tabelaLeads" class="table table-hover align-middle mb-0 w-100">
         <thead class="dn-table-header">
           <tr>
-            <th class="ps-3">Lead / Empresa</th>
+            <th style="width: 1%;" class="text-center">Detalhes</th>
+            <th class="ps-2">Lead / Empresa</th>
             <th>Localização (MS)</th>
             <th>Plano Recomendado</th>
             <th>Operadora Atual</th>
@@ -416,8 +417,13 @@
         <tbody>
           {% if leads %}
             {% for l in leads %}
-            <tr>
-              <td class="ps-3">
+            <tr id="lead-tr-{{ l.id }}">
+              <td class="text-center">
+                <button type="button" class="btn btn-outline-primary btn-sm btn-details shadow-sm" title="Expandir dossiê e script anti-ban">
+                  <i class="bi bi-chevron-down me-1"></i>Detalhes
+                </button>
+              </td>
+              <td class="ps-2">
                 <div class="fw-bold" style="color: var(--dn-blue-deep);">{{ l.empresa }}</div>
                 <small class="text-muted">{{ l.nome }} {% if l.cargo %}&bull; <span class="text-secondary">{{ l.cargo }}</span>{% endif %}</small>
               </td>
@@ -433,7 +439,7 @@
                 <span class="badge bg-secondary bg-opacity-10 text-dark border" style="font-size: 0.75rem;">{{ l.operadora_atual }}</span>
               </td>
               <td>
-                <span class="badge {% if l.lead_score >= 90 %}bg-success{% elif l.lead_score >= 80 %}bg-primary{% else %}bg-warning text-dark{% endif %} px-2 py-1">
+                <span class="badge {% if l.lead_score >= 90 %}bg-danger text-white{% elif l.lead_score >= 80 %}bg-primary text-white{% else %}bg-warning text-dark{% endif %} px-2 py-1">
                   {{ l.lead_score }} pts
                 </span>
               </td>
@@ -460,12 +466,159 @@
                     <i class="bi bi-eye-fill me-1"></i> Dossiê
                   </a>
                 </div>
+
+                <!-- TEMPLATE EMBUTIDO DA LINHA ANINHADA ESTILO RESULTADO_TABLE.JS -->
+                <div class="d-none row-details-content">
+                  <div class="dt-child-row-container">
+                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom flex-wrap gap-2">
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge bg-warning text-dark fw-bold text-uppercase px-2 py-1" style="font-size: 0.72rem;">
+                          <i class="bi bi-broadcast-pin me-1"></i> Radar Telecom
+                        </span>
+                        <strong class="text-dark fs-6">{{ l.empresa }}</strong>
+                        <span class="badge bg-light text-secondary border">{{ l.bairro }} &bull; Campo Grande MS</span>
+                        <span class="badge bg-primary-subtle text-primary fw-semibold">Score: {{ l.lead_score }} pts</span>
+                      </div>
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        {% if l.telefone and l.whatsapp_url != '#' %}
+                        <a href="{{ l.whatsapp_url }}" target="_blank" class="btn btn-sm btn-success shadow-sm">
+                          <i class="bi bi-whatsapp me-1"></i> Abordar no WhatsApp
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('leads.detail', lead_id=l.id) }}" class="btn btn-sm btn-dn-blue">
+                          <i class="bi bi-eye-fill me-1"></i> Dossiê 360°
+                        </a>
+                        <form action="{{ url_for('leads.converter_cliente', lead_id=l.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Deseja converter o lead {{ l.empresa }} em Cliente com pedido de ativação?');">
+                          <button type="submit" class="btn btn-sm btn-primary-custom shadow-sm">
+                            <i class="bi bi-check-circle-fill me-1"></i> Converter em Cliente
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+
+                    <!-- ACORDEÃO DE DETALHES ANINHADOS ESTILO RESULTADO_TABLE.JS -->
+                    <div class="accordion" id="accordionLead-{{ l.id }}">
+
+                      <!-- BLOCO 1: INTELIGÊNCIA TERRITORIAL & DADOS TÉCNICOS -->
+                      <div class="card border-0 shadow-sm mb-2 rounded-3 overflow-hidden">
+                        <div class="card-header collapsible-header py-2 px-3 bg-white" data-bs-toggle="collapse" data-bs-target="#collapseGeo-{{ l.id }}" style="cursor: pointer;">
+                          <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                              <i class="bi bi-geo-alt-fill text-danger"></i>
+                              <span class="fw-bold small text-dark">Inteligência Territorial & Viabilidade no Poste</span>
+                            </div>
+                            <span class="badge bg-success-subtle text-success small"><i class="bi bi-check-circle-fill me-1"></i>CTO Ativa no Quarteirão</span>
+                          </div>
+                        </div>
+                        <div id="collapseGeo-{{ l.id }}" class="collapse show" data-bs-parent="#accordionLead-{{ l.id }}">
+                          <div class="card-body p-0">
+                            <div class="table-responsive">
+                              <table class="table table-sm table-bordered mb-0 bg-white nested-table" style="font-size: 0.82rem;">
+                                <tbody>
+                                  <tr>
+                                    <td class="bg-light text-muted fw-semibold" style="width: 22%;">Endereço Completo:</td>
+                                    <td><strong>{{ l.logradouro or 'Área Central' }}, {{ l.numero or 'S/N' }}</strong> - Bairro: <strong>{{ l.bairro }}</strong>, {{ l.cidade }}/{{ l.estado }} {% if l.cep %}(CEP: {{ l.cep }}){% endif %}</td>
+                                    <td class="bg-light text-muted fw-semibold" style="width: 20%;">Decisor / Contato:</td>
+                                    <td><strong>{{ l.nome }}</strong> {% if l.cargo %}&bull; <span class="text-secondary">{{ l.cargo }}</span>{% endif %}</td>
+                                  </tr>
+                                  <tr>
+                                    <td class="bg-light text-muted fw-semibold">Operadora Atual:</td>
+                                    <td><span class="badge bg-danger-subtle text-danger fw-bold">{{ l.operadora_atual }}</span></td>
+                                    <td class="bg-light text-muted fw-semibold">Nicho Comercial:</td>
+                                    <td><strong class="text-primary">{{ l.niche or 'Geral' }}</strong></td>
+                                  </tr>
+                                  <tr>
+                                    <td class="bg-light text-muted fw-semibold">Dor Principal Mapeada:</td>
+                                    <td colspan="3" class="text-danger-emphasis fw-medium">
+                                      {{ l.dor_principal or 'Instabilidade no link atual, oscilação no Wi-Fi e atendimento telefônico robotizado sem suporte presencial em Campo Grande.' }}
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- BLOCO 2: SCRIPT DE ABORDAGEM BLINDADA WHATSAPP (ANTI-BAN) -->
+                      <div class="card border-0 shadow-sm mb-2 rounded-3 overflow-hidden">
+                        <div class="card-header collapsible-header py-2 px-3 bg-white" data-bs-toggle="collapse" data-bs-target="#collapseWpp-{{ l.id }}" style="cursor: pointer;">
+                          <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                              <i class="bi bi-shield-check text-warning"></i>
+                              <span class="fw-bold small text-dark">Blindagem Anti-Ban & Mensagem de Primeiro Contato</span>
+                            </div>
+                            <span class="badge {{ l.optin_badge_class }}">{{ l.optin_label }}</span>
+                          </div>
+                        </div>
+                        <div id="collapseWpp-{{ l.id }}" class="collapse show" data-bs-parent="#accordionLead-{{ l.id }}">
+                          <div class="card-body p-3 bg-white">
+                            <div class="p-3 rounded-3 mb-2" style="background: #f0fdf4; border: 1px solid #bbf7d0; font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; color: #166534; white-space: pre-wrap;">{{ l.icebreaker_optin or 'Mensagem de abordagem personalizada ainda não configurada para este lead.' }}</div>
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-1">
+                              <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i> Abordagem conversacional sem envio de links externos, evitando bloqueios na API do WhatsApp.
+                              </small>
+                              <div class="d-flex gap-2">
+                                {% if l.icebreaker_optin %}
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-copiar-script" data-script="{{ l.icebreaker_optin|e }}">
+                                  <i class="bi bi-clipboard me-1"></i> Copiar Mensagem
+                                </button>
+                                {% endif %}
+                                {% if l.telefone and l.whatsapp_url != '#' %}
+                                <a href="{{ l.whatsapp_url }}" target="_blank" class="btn btn-sm btn-success">
+                                  <i class="bi bi-whatsapp me-1"></i> Disparar via WhatsApp Web
+                                </a>
+                                {% endif %}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- BLOCO 3: OFERTA RECOMENDADA DIGITALNET -->
+                      <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+                        <div class="card-header collapsible-header py-2 px-3 bg-white" data-bs-toggle="collapse" data-bs-target="#collapseOferta-{{ l.id }}" style="cursor: pointer;">
+                          <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                              <i class="bi bi-router-fill text-primary"></i>
+                              <span class="fw-bold small text-dark">Oferta Recomendada DigitalNet</span>
+                            </div>
+                            <span class="fw-bold text-success small">R$ {{ "%.2f"|format(l.valor_mensal_sugerido)|replace('.', ',') }}/mês</span>
+                          </div>
+                        </div>
+                        <div id="collapseOferta-{{ l.id }}" class="collapse" data-bs-parent="#accordionLead-{{ l.id }}">
+                          <div class="card-body p-0">
+                            <div class="table-responsive">
+                              <table class="table table-sm table-bordered mb-0 bg-white nested-table" style="font-size: 0.82rem;">
+                                <tbody>
+                                  <tr>
+                                    <td class="bg-light text-muted fw-semibold" style="width: 22%;">Plano Sugerido:</td>
+                                    <td><strong class="text-primary">{{ l.plano_sugerido }}</strong></td>
+                                    <td class="bg-light text-muted fw-semibold" style="width: 20%;">Equipamento Incluso:</td>
+                                    <td><span class="badge bg-warning text-dark fw-bold">Roteador Wi-Fi 6 em Comodato</span></td>
+                                  </tr>
+                                  <tr>
+                                    <td class="bg-light text-muted fw-semibold">Valor Mensal:</td>
+                                    <td class="text-success fw-bold">R$ {{ "%.2f"|format(l.valor_mensal_sugerido)|replace('.', ',') }}</td>
+                                    <td class="bg-light text-muted fw-semibold">Diferencial Técnico:</td>
+                                    <td>50% de Taxa de Upload garantida + Suporte presencial 24h em Campo Grande</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
               </td>
             </tr>
             {% endfor %}
           {% else %}
             <tr>
-              <td colspan="8" class="text-center py-5 text-muted">
+              <td colspan="9" class="text-center py-5 text-muted">
                 <i class="bi bi-radar fs-1 d-block mb-3 text-secondary"></i>
                 <p class="mb-2 fw-semibold text-dark">Nenhum lead encontrado para os filtros selecionados.</p>
                 <small>Clique em <strong>"Nova Prospecção Geo"</strong> acima para mapear clientes em Campo Grande!</small>
@@ -1290,6 +1443,83 @@
   // Inicializa quando a página carregar
   document.addEventListener('DOMContentLoaded', function() {
     initMap();
+  });
+
+
+  // =========================================================================
+  // DATATABLES RESPONSIVE E LINHAS ANINHADAS (ESTILO RESULTADO_TABLE.JS)
+  // =========================================================================
+  $(document).ready(function() {
+    if (!$.fn.dataTable.isDataTable('#tabelaLeads')) {
+      const tableLeads = $('#tabelaLeads').DataTable({
+        responsive: true,
+        autoWidth: false,
+        language: {
+          decimal: ",",
+          thousands: ".",
+          search: "<i class='bi bi-search me-1'></i> Filtrar Leads:",
+          searchPlaceholder: "Empresa, contato, bairro...",
+          lengthMenu: "Exibir _MENU_ por página",
+          info: "Exibindo _START_ a _END_ de _TOTAL_ leads",
+          infoEmpty: "Nenhum lead disponível",
+          infoFiltered: "(filtrado de _MAX_ no total)",
+          zeroRecords: "Nenhum lead encontrado com os filtros aplicados",
+          paginate: {
+            first: '<i class="bi bi-chevron-double-left"></i>',
+            previous: '<i class="bi bi-chevron-left"></i>',
+            next: '<i class="bi bi-chevron-right"></i>',
+            last: '<i class="bi bi-chevron-double-right"></i>'
+          }
+        },
+        order: [[5, 'desc']], // Ordena por Score decrescente
+        columnDefs: [
+          { targets: 0, orderable: false, searchable: false, className: 'text-center' },
+          { targets: -1, orderable: false, searchable: false, className: 'text-end' }
+        ],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]]
+      });
+
+      // Clique no botão de detalhes para expandir/recolher a linha aninhada
+      $('#tabelaLeads tbody').on('click', 'button.btn-details', function () {
+        var tr = $(this).closest('tr');
+        if (tr.hasClass('child')) {
+          tr = tr.prev();
+        }
+        var row = tableLeads.row(tr);
+
+        if (row.child.isShown()) {
+          row.child.hide();
+          tr.removeClass('shown');
+          $(this).removeClass('btn-success text-white').addClass('btn-outline-primary');
+          $(this).html('<i class="bi bi-chevron-down me-1"></i>Detalhes');
+        } else {
+          var contentHtml = tr.find('.row-details-content').html();
+          row.child(contentHtml).show();
+          tr.addClass('shown');
+          $(this).removeClass('btn-outline-primary').addClass('btn-success text-white');
+          $(this).html('<i class="bi bi-chevron-up me-1"></i>Fechar');
+        }
+      });
+
+      // Sincroniza busca rápida superior com o DataTable
+      $('#filtroRapidoLeads').on('keyup', function () {
+        tableLeads.search(this.value).draw();
+      });
+
+      // Copiar script WhatsApp com feedback dinâmico
+      $(document).on('click', '.btn-copiar-script', function () {
+        var btn = $(this);
+        var scriptText = btn.attr('data-script');
+        if (navigator.clipboard && scriptText) {
+          navigator.clipboard.writeText(scriptText).then(function () {
+            var originalHtml = btn.html();
+            btn.html('<i class="bi bi-check-lg me-1 text-success"></i>Copiado!');
+            setTimeout(function () { btn.html(originalHtml); }, 2000);
+          });
+        }
+      });
+    }
   });
 </script>
 {% endblock %}

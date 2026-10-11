@@ -131,6 +131,7 @@
                 <a href="{{ url_for('pedidos.editar', id=pedido.id) }}" class="btn btn-outline-primary" title="Editar Pedido" data-bs-toggle="tooltip">
                   <i class="bi bi-pencil"></i>
                 </a>
+                {% if current_user.is_lider_tecnico %}
                 <button type="button" class="btn btn-outline-danger"
                         data-bs-toggle="modal"
                         data-bs-target="#deleteConfirmModal"
@@ -139,6 +140,7 @@
                         data-type="o pedido">
                   <i class="bi bi-trash"></i>
                 </button>
+                {% endif %}
               </div>
             </td>
           </tr>

@@ -109,6 +109,11 @@
           </div>
 
           <div class="d-flex align-items-center gap-2">
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <a href="{{ url_for('admin.planos') }}" target="_blank" class="btn btn-outline-success btn-sm px-2" title="Abrir catálogo oficial de planos em nova aba">
+              <i class="bi bi-router-fill me-1"></i> Catálogo de Planos
+            </a>
+            {% endif %}
             <span id="itemCountBadge" class="badge bg-light text-primary border border-primary-subtle px-3 py-2 fs-6 fw-semibold">
               <i class="bi bi-list-check me-1"></i>
               <span id="itemCountNum">{{ itens|length if itens else 1 }}</span> / 10 itens

@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - Administração DigitalNet{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb small mb-1">
+      <li class="breadcrumb-item"><span class="text-muted">Administração</span></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('admin.planos') }}" class="text-decoration-none">Planos de Banda Larga</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ titulo }}</li>
+    </ol>
+  </nav>
+  <div class="d-flex align-items-center justify-content-between">
+    <div>
+      <h2 class="fw-bold mb-0 text-dark">{{ titulo }}</h2>
+      <p class="text-muted small mb-0">Configure os parâmetros técnicos, financeiros e benefícios do plano de fibra</p>
+    </div>
+    <a href="{{ url_for('admin.planos') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Voltar à Lista
+    </a>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+
+      <!-- CARD 1: IDENTIFICAÇÃO DO PLANO -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-tag-fill text-primary"></i> Identificação e Público-Alvo
+        </h5>
+
+        <div class="row g-3">
+          <div class="col-md-7">
+            <label for="nome" class="form-label fw-semibold">{{ form.nome.label.text }}</label>
+            {{ form.nome(class="form-control" + (" is-invalid" if form.nome.errors else ""), placeholder="Ex: Fibra 700 Standard ou DigiCorp Elite") }}
+            {% for error in form.nome.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+            <small class="text-muted">Nome comercial oficial divulgado nos canais de venda.</small>
+          </div>
+
+          <div class="col-md-5">
+            <label for="tipo" class="form-label fw-semibold">{{ form.tipo.label.text }}</label>
+            {{ form.tipo(class="form-select" + (" is-invalid" if form.tipo.errors else ""), id="selectTipoPlano") }}
+            {% for error in form.tipo.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+            <small class="text-muted">Segmento: Residencial (PF) ou Corporativo (PJ).</small>
+          </div>
+
+          <div class="col-12">
+            <label for="descricao" class="form-label fw-semibold">{{ form.descricao.label.text }}</label>
+            {{ form.descricao(class="form-control" + (" is-invalid" if form.descricao.errors else ""), rows=2, placeholder="Ex: Casal ou home office, streaming em HD (PF) ou Escritório / Loja comercial (PJ)") }}
+            {% for error in form.descricao.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-check form-switch p-3 bg-light rounded-3 border">
+              {{ form.destaque(class="form-check-input ms-0 me-3", id="destaque", role="switch") }}
+              <label class="form-check-label fw-semibold text-dark" for="destaque">
+                Destacar no Catálogo (Selo "Mais Popular" / "Recomendado")
+              </label>
+              <small class="text-muted d-block ms-5">Exibe selo de destaque visual nas tabelas e no portal de vendas.</small>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-check form-switch p-3 bg-light rounded-3 border">
+              {{ form.ativo(class="form-check-input ms-0 me-3", id="ativo", role="switch") }}
+              <label class="form-check-label fw-semibold text-dark" for="ativo">
+                Plano Ativo no Catálogo de Vendas
+              </label>
+              <small class="text-muted d-block ms-5">Planos inativos deixam de aparecer em prospecções e novas contratações.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: VELOCIDADES E VALORES -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-speedometer2 text-success"></i> Velocidade da Fibra e Mensalidades
+        </h5>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="velocidade_download" class="form-label fw-semibold">{{ form.velocidade_download.label.text }}</label>
+            <div class="input-group">
+              {{ form.velocidade_download(class="form-control" + (" is-invalid" if form.velocidade_download.errors else ""), placeholder="Ex: 600, 700 ou 900") }}
+              <span class="input-group-text bg-light">Mbps (Mega)</span>
+              {% for error in form.velocidade_download.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <small class="text-muted">Velocidade nominal de download.</small>
+          </div>
+
+          <div class="col-md-6">
+            <label for="velocidade_upload" class="form-label fw-semibold">{{ form.velocidade_upload.label.text }}</label>
+            <div class="input-group">
+              {{ form.velocidade_upload(class="form-control" + (" is-invalid" if form.velocidade_upload.errors else ""), placeholder="Ex: 300, 350 ou 450") }}
+              <span class="input-group-text bg-light">Mbps (Mega)</span>
+              {% for error in form.velocidade_upload.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <small class="text-muted">Velocidade de subida (geralmente metade do download na DigitalNet).</small>
+          </div>
+
+          <div class="col-md-4">
+            <label for="valor_mensal" class="form-label fw-semibold">{{ form.valor_mensal.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light">R$</span>
+              {{ form.valor_mensal(class="form-control" + (" is-invalid" if form.valor_mensal.errors else ""), placeholder="129.90") }}
+              <span class="input-group-text bg-light">/mês</span>
+              {% for error in form.valor_mensal.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <small class="text-muted">Preço com desconto de pontualidade.</small>
+          </div>
+
+          <div class="col-md-4">
+            <label for="valor_cheio" class="form-label fw-semibold">{{ form.valor_cheio.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light">R$</span>
+              {{ form.valor_cheio(class="form-control" + (" is-invalid" if form.valor_cheio.errors else ""), placeholder="139.90") }}
+              <span class="input-group-text bg-light">/mês</span>
+              {% for error in form.valor_cheio.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <small class="text-muted">Valor de tabela sem pontualidade.</small>
+          </div>
+
+          <div class="col-md-4">
+            <label for="fidelidade_meses" class="form-label fw-semibold">{{ form.fidelidade_meses.label.text }}</label>
+            <div class="input-group">
+              {{ form.fidelidade_meses(class="form-control" + (" is-invalid" if form.fidelidade_meses.errors else ""), id="inputFidelidadeMeses", placeholder="12 ou 24") }}
+              <span class="input-group-text bg-light">Meses</span>
+              {% for error in form.fidelidade_meses.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <small class="text-muted">Padrão DigitalNet: 12 meses (PF) e 24 meses (PJ).</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: EQUIPAMENTOS E BENEFÍCIOS -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-gift-fill text-warning"></i> Equipamentos e Benefícios Inclusos
+        </h5>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="roteador_wifi" class="form-label fw-semibold">{{ form.roteador_wifi.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="bi bi-router"></i></span>
+              {{ form.roteador_wifi(class="form-control" + (" is-invalid" if form.roteador_wifi.errors else ""), placeholder="Ex: Roteador Wi-Fi 6 em comodato + instalação inclusa") }}
+              {% for error in form.roteador_wifi.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="aplicativos_inclusos" class="form-label fw-semibold">{{ form.aplicativos_inclusos.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="bi bi-tv"></i></span>
+              {{ form.aplicativos_inclusos(class="form-control" + (" is-invalid" if form.aplicativos_inclusos.errors else ""), placeholder="Ex: 1 app da Grade Top (HBO Max, Disney+) + Skeelo") }}
+              {% for error in form.aplicativos_inclusos.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="col-12">
+            <label for="beneficios" class="form-label fw-semibold">{{ form.beneficios.label.text }}</label>
+            {{ form.beneficios(class="form-control" + (" is-invalid" if form.beneficios.errors else ""), rows=3, placeholder="Descreva os diferenciais: troca mensal de streaming, pontos DigiMesh, Skeelo livros e audiolivros, etc.") }}
+            {% for error in form.beneficios.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 4: RECURSOS CORPORATIVOS (PJ) -->
+      <div class="card-custom p-4 mb-4 bg-white border border-primary-subtle" id="cardRecursosPJ">
+        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+          <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-building-gear text-info"></i> Recursos Corporativos & Telefonia (Exclusivo PJ)
+          </h5>
+          <span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700;">Combos DigiCorp</span>
+        </div>
+
+        <p class="small text-muted mb-3">
+          Estes campos são aplicáveis para os planos empresariais contratados com CNPJ (DigiCorp Profissional, Elite e Premium).
+        </p>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="sla_horas" class="form-label fw-semibold">{{ form.sla_horas.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="bi bi-clock-history"></i></span>
+              {{ form.sla_horas(class="form-control" + (" is-invalid" if form.sla_horas.errors else ""), placeholder="Ex: 12 ou 24") }}
+              <span class="input-group-text bg-light">Horas</span>
+              {% for error in form.sla_horas.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <small class="text-muted">Prazo máximo de resposta técnica estabelecido em contrato corporativo.</small>
+          </div>
+
+          <div class="col-md-6">
+            <label for="linhas_simultaneas" class="form-label fw-semibold">{{ form.linhas_simultaneas.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="bi bi-telephone"></i></span>
+              {{ form.linhas_simultaneas(class="form-control" + (" is-invalid" if form.linhas_simultaneas.errors else ""), placeholder="Ex: 2 ou 4") }}
+              <span class="input-group-text bg-light">Linhas</span>
+              {% for error in form.linhas_simultaneas.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <small class="text-muted">Quantidade de chamadas de voz simultâneas (Tronco SIP ou Linha Digital).</small>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-check form-switch p-3 bg-light rounded-3 border">
+              {{ form.pabx_virtual(class="form-check-input ms-0 me-3", id="pabx_virtual", role="switch") }}
+              <label class="form-check-label fw-semibold text-dark" for="pabx_virtual">
+                PABX Virtual em Nuvem (até 5 ramais + URA)
+              </label>
+              <small class="text-muted d-block ms-5">Configuração em PC/celular sem cabeamento e menu de voz interativo.</small>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-check form-switch p-3 bg-light rounded-3 border">
+              {{ form.ip_fixo(class="form-check-input ms-0 me-3", id="ip_fixo", role="switch") }}
+              <label class="form-check-label fw-semibold text-dark" for="ip_fixo">
+                Endereço IP Fixo Válido Incluso
+              </label>
+              <small class="text-muted d-block ms-5">Indispensável para servidores locais, VPNs, câmeras e ERPs.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 5: OBSERVAÇÕES INTERNAS -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-card-text text-secondary"></i> Observações Internas
+        </h5>
+        <div>
+          {{ form.observacoes(class="form-control" + (" is-invalid" if form.observacoes.errors else ""), rows=2, placeholder="Anotações internas da equipe técnica ou comercial sobre este plano...") }}
+          {% for error in form.observacoes.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- BOTÕES DE SUBMISSÃO -->
+      <div class="d-flex justify-content-end gap-2 mb-5">
+        <a href="{{ url_for('admin.planos') }}" class="btn btn-outline-secondary px-4">
+          Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary-custom px-4 shadow-sm">
+          <i class="bi bi-check2-circle me-1"></i> {{ acao }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const selectTipo = document.getElementById('selectTipoPlano');
+    const inputFidelidade = document.getElementById('inputFidelidadeMeses');
+    const cardPJ = document.getElementById('cardRecursosPJ');
+
+    function atualizarVisibilidadeTipo() {
+      if (!selectTipo) return;
+      const isPJ = selectTipo.value === 'PJ';
+      if (cardPJ) {
+        if (isPJ) {
+          cardPJ.classList.add('border-primary');
+          cardPJ.style.opacity = '1';
+        } else {
+          cardPJ.classList.remove('border-primary');
+          cardPJ.style.opacity = '0.75';
+        }
+      }
+    }
+
+    if (selectTipo) {
+      selectTipo.addEventListener('change', function() {
+        atualizarVisibilidadeTipo();
+        // Ajusta fidelidade sugerida se o usuário não tiver alterado
+        if (inputFidelidade) {
+          if (selectTipo.value === 'PJ' && inputFidelidade.value === '12') {
+            inputFidelidade.value = '24';
+          } else if (selectTipo.value === 'PF' && inputFidelidade.value === '24') {
+            inputFidelidade.value = '12';
+          }
+        }
+      });
+      atualizarVisibilidadeTipo();
+    }
+  });
+</script>
+{% endblock %}

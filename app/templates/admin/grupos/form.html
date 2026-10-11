@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - Administração DigitalNet{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb small mb-1">
+      <li class="breadcrumb-item"><span class="text-muted">Administração</span></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('admin.grupos') }}" class="text-decoration-none">Grupos de Acesso</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ titulo }}</li>
+    </ol>
+  </nav>
+  <div class="d-flex align-items-center justify-content-between">
+    <div>
+      <h2 class="fw-bold mb-0 text-dark">{{ titulo }}</h2>
+      <p class="text-muted small mb-0">Configure as permissões coletivas e atribua usuários a este grupo</p>
+    </div>
+    <a href="{{ url_for('admin.grupos') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Voltar aos Grupos
+    </a>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+
+      <!-- CARD 1: DADOS DO GRUPO -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-shield-check text-primary"></i> Definição do Grupo
+        </h5>
+
+        <div class="row g-3">
+          <div class="col-md-7">
+            <label for="nome" class="form-label">{{ form.nome.label.text }}</label>
+            {{ form.nome(class="form-control" + (" is-invalid" if form.nome.errors else ""), placeholder="Ex: Comercial Telecom MS, Suporte N2, etc.") }}
+            {% for error in form.nome.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-5">
+            <label for="papel" class="form-label fw-bold">{{ form.papel.label.text }}</label>
+            {{ form.papel(class="form-select" + (" is-invalid" if form.papel.errors else "")) }}
+            {% for error in form.papel.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+            <small class="text-muted" style="font-size: 0.72rem;">Papel herdado pelos membros deste grupo</small>
+          </div>
+
+          <div class="col-md-12">
+            <label for="descricao" class="form-label">{{ form.descricao.label.text }}</label>
+            {{ form.descricao(class="form-control" + (" is-invalid" if form.descricao.errors else ""), rows=2, placeholder="Descreva os objetivos deste grupo e escopo de atuação...") }}
+            {% for error in form.descricao.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: MEMBROS DO GRUPO -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-people-fill text-info"></i> Membros Integrantes
+        </h5>
+
+        <div class="mb-3">
+          <p class="text-muted small mb-3">Marque os usuários que devem fazer parte deste grupo de acesso:</p>
+
+          {% if usuarios %}
+            <div class="row g-2" style="max-height: 320px; overflow-y: auto;">
+              {% for u in usuarios %}
+                <div class="col-md-6">
+                  <div class="form-check p-2 border rounded bg-light d-flex align-items-center gap-2">
+                    <input class="form-check-input ms-1" type="checkbox" name="membros" value="{{ u.id }}" id="membro_{{ u.id }}"
+                           {% if form.membros.data and u.id in form.membros.data %}checked{% endif %}>
+                    <label class="form-check-label w-100" for="membro_{{ u.id }}">
+                      <strong class="d-block text-dark">{{ u.nome }}</strong>
+                      <span class="text-muted small d-block">@{{ u.username }} &bull; Perfil: {{ u.perfil_nome }}</span>
+                    </label>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="alert alert-secondary small mb-0">Nenhum usuário ativo disponível para vinculação.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- SUBMIT BAR -->
+      <div class="d-flex align-items-center justify-content-end gap-2 mb-5">
+        <a href="{{ url_for('admin.grupos') }}" class="btn btn-light-custom px-4">Cancelar</a>
+        <button type="submit" class="btn btn-primary-custom px-4">
+          <i class="bi bi-check-lg"></i> {{ acao }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Grupos de Acesso - Administração DigitalNet{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-3 border-bottom gap-3">
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb small mb-1">
+        <li class="breadcrumb-item"><span class="text-muted">Administração</span></li>
+        <li class="breadcrumb-item active" aria-current="page">Grupos de Acesso</li>
+      </ol>
+    </nav>
+    <h2 class="fw-bold mb-1 text-dark">Grupos de Acesso & Atribuição de Papéis</h2>
+    <p class="text-muted mb-0 small">Organize equipes em grupos de trabalho e distribua papéis e permissões coletivamente</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('admin.usuarios') }}" class="btn btn-outline-secondary shadow-sm">
+      <i class="bi bi-people me-1"></i> Gerenciar Usuários
+    </a>
+    <a href="{{ url_for('admin.planos') }}" class="btn btn-outline-success shadow-sm">
+      <i class="bi bi-router-fill me-1"></i> Planos de Banda Larga
+    </a>
+    <a href="{{ url_for('admin.grupo_novo') }}" class="btn btn-primary-custom shadow-sm">
+      <i class="bi bi-plus-circle-fill me-1"></i> Novo Grupo
+    </a>
+  </div>
+</div>
+
+<!-- NAVEGAÇÃO ENTRE MÓDULOS DE ADMINISTRAÇÃO -->
+<ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3">
+  <li class="nav-item">
+    <a class="nav-link text-secondary" href="{{ url_for('admin.usuarios') }}">
+      <i class="bi bi-people-gear me-1"></i> Usuários
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active bg-info text-dark fw-bold" href="{{ url_for('admin.grupos') }}">
+      <i class="bi bi-shield-lock me-1"></i> Grupos de Acesso
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-secondary" href="{{ url_for('admin.planos') }}">
+      <i class="bi bi-router-fill me-1 text-success"></i> Planos de Banda Larga
+    </a>
+  </li>
+</ul>
+
+<!-- INFO ALERT -->
+<div class="alert alert-light border shadow-sm p-3 mb-4 d-flex align-items-start gap-3">
+  <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+    <i class="bi bi-info-circle-fill fs-5"></i>
+  </div>
+  <div>
+    <h6 class="fw-bold mb-1 text-dark">Como funcionam os Grupos de Acesso</h6>
+    <p class="small text-muted mb-0">
+      Cada grupo possui um <strong>papel associado</strong> (Administrador, Líder Técnico ou Agente). 
+      Ao vincular usuários a um grupo, eles herdam automaticamente as permissões correspondentes daquele papel, facilitando a gestão por departamentos.
+    </p>
+  </div>
+</div>
+
+<!-- GROUPS TABLE -->
+<div class="card-custom bg-white">
+  <div class="card-header bg-white border-bottom p-3 d-flex align-items-center justify-content-between">
+    <span class="text-muted small">
+      Exibindo <strong>{{ total_grupos }}</strong> grupo(s) de acesso configurado(s)
+    </span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table-custom mb-0">
+      <thead>
+        <tr>
+          <th>Grupo de Acesso</th>
+          <th>Papel / Perfil Atribuído</th>
+          <th>Descrição</th>
+          <th>Membros Vinculados</th>
+          <th>Data Criação</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in grupos %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-3 bg-light text-primary fw-bold d-flex align-items-center justify-content-center p-2" style="width: 40px; height: 40px;">
+                  <i class="bi bi-shield-lock fs-5"></i>
+                </div>
+                <div>
+                  <span class="fw-bold text-dark d-block">{{ g.nome }}</span>
+                  <small class="text-muted">ID: #{{ g.id }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if g.papel == 'administrador' %}
+                <span class="badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 700;">
+                  <i class="bi bi-shield-fill-check me-1"></i> Administrador
+                </span>
+              {% elif g.papel == 'lider_tecnico' %}
+                <span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 700;">
+                  <i class="bi bi-person-badge-fill me-1"></i> Líder Técnico
+                </span>
+              {% else %}
+                <span class="badge" style="background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700;">
+                  <i class="bi bi-headset me-1"></i> Agente
+                </span>
+              {% endif %}
+            </td>
+            <td>
+              {% if g.descricao %}
+                <span class="small text-secondary">{{ g.descricao }}</span>
+              {% else %}
+                <span class="text-muted small fst-italic">Sem descrição</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-1 flex-wrap">
+                <span class="badge bg-primary-subtle text-primary border-0 px-2 py-1 me-1">
+                  {{ g.usuarios | length }} membro(s)
+                </span>
+                {% for u in g.usuarios[:4] %}
+                  <span class="badge bg-light text-dark border small" title="{{ u.email }}">
+                    {{ u.nome.split()[0] }}
+                  </span>
+                {% endfor %}
+                {% if g.usuarios | length > 4 %}
+                  <span class="badge bg-secondary-subtle text-secondary small">+{{ (g.usuarios | length) - 4 }}</span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <small class="text-muted">{{ g.created_at.strftime('%d/%m/%Y') }}</small>
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="{{ url_for('admin.grupo_editar', id=g.id) }}" class="btn btn-outline-primary" title="Editar Grupo" data-bs-toggle="tooltip">
+                  <i class="bi bi-pencil"></i>
+                </a>
+
+                <button type="button" class="btn btn-outline-danger"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteConfirmModal"
+                        data-action="{{ url_for('admin.grupo_excluir', id=g.id) }}"
+                        data-name="{{ g.nome }}"
+                        data-type="o grupo de acesso">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="text-center py-5 text-muted">
+              <i class="bi bi-shield-x fs-1 d-block mb-2 text-secondary"></i>
+              Nenhum grupo de acesso cadastrado.
+              <div class="mt-3">
+                <a href="{{ url_for('admin.grupo_novo') }}" class="btn btn-sm btn-primary">Cadastrar Primeiro Grupo</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

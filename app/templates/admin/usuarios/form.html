@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - Administração DigitalNet{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb small mb-1">
+      <li class="breadcrumb-item"><span class="text-muted">Administração</span></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('admin.usuarios') }}" class="text-decoration-none">Usuários</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ titulo }}</li>
+    </ol>
+  </nav>
+  <div class="d-flex align-items-center justify-content-between">
+    <div>
+      <h2 class="fw-bold mb-0 text-dark">{{ titulo }}</h2>
+      <p class="text-muted small mb-0">Defina credenciais de acesso, perfil de autorização e atribuição de grupos</p>
+    </div>
+    <a href="{{ url_for('admin.usuarios') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Voltar à Lista
+    </a>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+
+      <!-- CARD 1: DADOS BÁSICOS -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-person-circle text-primary"></i> Informações do Usuário
+        </h5>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="nome" class="form-label">{{ form.nome.label.text }}</label>
+            {{ form.nome(class="form-control" + (" is-invalid" if form.nome.errors else ""), placeholder="Ex: Roberto Carlos Silva") }}
+            {% for error in form.nome.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label for="username" class="form-label">{{ form.username.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light text-muted">@</span>
+              {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), placeholder="roberto.silva") }}
+              {% for error in form.username.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <small class="text-muted" style="font-size: 0.75rem;">Utilizado para autenticação no sistema</small>
+          </div>
+
+          <div class="col-md-8">
+            <label for="email" class="form-label">{{ form.email.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
+              {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="usuario@digitalnetms.com.br") }}
+              {% for error in form.email.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check form-switch mb-2">
+              {{ form.ativo(class="form-check-input", id="ativo", role="switch") }}
+              <label class="form-check-label fw-semibold" for="ativo">Conta Ativa</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: PERFIL DE ACESSO & PAPÉIS -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-shield-lock-fill text-warning"></i> Perfil e Autorização
+        </h5>
+
+        <div class="row g-3">
+          <div class="col-md-12">
+            <label for="perfil" class="form-label fw-bold">{{ form.perfil.label.text }}</label>
+            {{ form.perfil(class="form-select" + (" is-invalid" if form.perfil.errors else "")) }}
+            {% for error in form.perfil.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+
+            <!-- Guia de perfis -->
+            <div class="row g-2 mt-2">
+              <div class="col-md-4">
+                <div class="p-2 border rounded bg-light small">
+                  <div class="fw-bold text-warning-emphasis"><i class="bi bi-shield-fill-check me-1"></i> Administrador</div>
+                  <div class="text-muted" style="font-size: 0.75rem;">Acesso total: painel admin, gestão de usuários, grupos, configurações e exclusões.</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="p-2 border rounded bg-light small">
+                  <div class="fw-bold text-primary"><i class="bi bi-person-badge-fill me-1"></i> Líder Técnico</div>
+                  <div class="text-muted" style="font-size: 0.75rem;">Operação e liderança: clientes, pedidos, radar de leads e exclusões autorizadas.</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="p-2 border rounded bg-light small">
+                  <div class="fw-bold text-success"><i class="bi bi-headset me-1"></i> Agente</div>
+                  <div class="text-muted" style="font-size: 0.75rem;">Operação diária: radar de leads, cadastro de clientes/pedidos e prospecção. Sem exclusões.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-12 mt-4">
+            <label class="form-label fw-bold d-block">{{ form.grupos.label.text }}</label>
+            <p class="text-muted small mb-2">Selecione os grupos de acesso aos quais este usuário pertencerá:</p>
+            {% if grupos %}
+              <div class="row g-2">
+                {% for g in grupos %}
+                  <div class="col-md-6">
+                    <div class="form-check p-2 border rounded bg-light d-flex align-items-center gap-2">
+                      <input class="form-check-input ms-1" type="checkbox" name="grupos" value="{{ g.id }}" id="grupo_{{ g.id }}"
+                             {% if form.grupos.data and g.id in form.grupos.data %}checked{% endif %}>
+                      <label class="form-check-label w-100" for="grupo_{{ g.id }}">
+                        <strong class="d-block text-dark">{{ g.nome }}</strong>
+                        <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.7rem;">Papel: {{ g.papel_nome }}</span>
+                        {% if g.descricao %}
+                          <small class="text-muted d-block" style="font-size: 0.72rem;">{{ g.descricao }}</small>
+                        {% endif %}
+                      </label>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="alert alert-info small mb-0">
+                <i class="bi bi-info-circle me-1"></i> Nenhum grupo de acesso cadastrado ainda. 
+                <a href="{{ url_for('admin.grupo_novo') }}" class="alert-link">Criar primeiro grupo</a>.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: SEGURANÇA E SENHA -->
+      <div class="card-custom p-4 mb-4 bg-white">
+        <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-key-fill text-danger"></i> Credenciais de Autenticação
+        </h5>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="password" class="form-label">{{ form.password.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light text-muted"><i class="bi bi-lock"></i></span>
+              {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder="******") }}
+              {% for error in form.password.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            {% if usuario %}
+              <small class="text-muted" style="font-size: 0.75rem;">Deixe em branco para não alterar a senha atual</small>
+            {% else %}
+              <small class="text-muted" style="font-size: 0.75rem;">Mínimo de 6 caracteres</small>
+            {% endif %}
+          </div>
+
+          <div class="col-md-6">
+            <label for="confirm_password" class="form-label">{{ form.confirm_password.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light text-muted"><i class="bi bi-lock-fill"></i></span>
+              {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else ""), placeholder="******") }}
+              {% for error in form.confirm_password.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBMIT BAR -->
+      <div class="d-flex align-items-center justify-content-end gap-2 mb-5">
+        <a href="{{ url_for('admin.usuarios') }}" class="btn btn-light-custom px-4">Cancelar</a>
+        <button type="submit" class="btn btn-primary-custom px-4">
+          <i class="bi bi-check-lg"></i> {{ acao }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

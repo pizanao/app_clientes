@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}Planos de Banda Larga - Administração DigitalNet{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 border-bottom gap-3">
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb small mb-1">
+        <li class="breadcrumb-item"><span class="text-muted">Administração</span></li>
+        <li class="breadcrumb-item active" aria-current="page">Planos de Banda Larga</li>
+      </ol>
+    </nav>
+    <h2 class="fw-bold mb-1 text-dark">Catálogo de Planos de Banda Larga</h2>
+    <p class="text-muted mb-0 small">
+      Gerencie os planos residenciais (Pessoa Física) e corporativos (Pessoa Jurídica) oferecidos pela DigitalNet MS
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('admin.usuarios') }}" class="btn btn-outline-secondary shadow-sm">
+      <i class="bi bi-people me-1"></i> Usuários
+    </a>
+    <a href="{{ url_for('admin.grupos') }}" class="btn btn-outline-secondary shadow-sm">
+      <i class="bi bi-shield-lock me-1"></i> Grupos
+    </a>
+    <form action="{{ url_for('admin.planos_sincronizar_padrao') }}" method="POST" class="d-inline"
+          onsubmit="return confirm('Deseja restaurar/sincronizar todos os 9 planos padrão oficiais da DigitalNet (PF e PJ)?');">
+      {% if csrf_token is defined and csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endif %}
+      <button type="submit" class="btn btn-outline-primary shadow-sm" title="Restaura os planos padrão oficiais dos sites PF e PJ">
+        <i class="bi bi-arrow-repeat me-1"></i> Sincronizar Planos Oficiais
+      </button>
+    </form>
+    <a href="{{ url_for('admin.plano_novo') }}" class="btn btn-primary-custom shadow-sm">
+      <i class="bi bi-plus-circle-fill me-1"></i> Novo Plano
+    </a>
+  </div>
+</div>
+
+<!-- NAVEGAÇÃO ENTRE MÓDULOS DE ADMINISTRAÇÃO -->
+<ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3">
+  <li class="nav-item">
+    <a class="nav-link text-secondary" href="{{ url_for('admin.usuarios') }}">
+      <i class="bi bi-people-gear me-1"></i> Usuários
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-secondary" href="{{ url_for('admin.grupos') }}">
+      <i class="bi bi-shield-lock me-1"></i> Grupos de Acesso
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active bg-success text-white fw-bold" href="{{ url_for('admin.planos') }}">
+      <i class="bi bi-router-fill me-1"></i> Planos de Banda Larga
+    </a>
+  </li>
+</ul>
+
+<!-- STATS CARDS -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-custom p-3 bg-white d-flex align-items-center gap-3">
+      <div class="rounded-3 p-3 text-white" style="background: #0f2d57;">
+        <i class="bi bi-router-fill fs-3"></i>
+      </div>
+      <div>
+        <span class="text-muted small text-uppercase fw-semibold d-block">Total de Planos</span>
+        <h3 class="fw-bold mb-0 text-dark">{{ total_planos }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-custom p-3 bg-white d-flex align-items-center gap-3">
+      <div class="rounded-3 p-3 text-white" style="background: #0284c7;">
+        <i class="bi bi-house-door-fill fs-3"></i>
+      </div>
+      <div>
+        <span class="text-muted small text-uppercase fw-semibold d-block">Residencial (PF)</span>
+        <h3 class="fw-bold mb-0 text-dark">{{ total_pf }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-custom p-3 bg-white d-flex align-items-center gap-3">
+      <div class="rounded-3 p-3 text-dark" style="background: #fbbf24;">
+        <i class="bi bi-building-fill-check fs-3"></i>
+      </div>
+      <div>
+        <span class="text-muted small text-uppercase fw-semibold d-block">Corporativo (PJ)</span>
+        <h3 class="fw-bold mb-0 text-dark">{{ total_pj }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-custom p-3 bg-white d-flex align-items-center gap-3">
+      <div class="rounded-3 p-3 text-white" style="background: #10b981;">
+        <i class="bi bi-check-circle-fill fs-3"></i>
+      </div>
+      <div>
+        <span class="text-muted small text-uppercase fw-semibold d-block">Planos Ativos</span>
+        <h3 class="fw-bold mb-0 text-dark">{{ total_ativos }}</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTICE & OFFICIAL LINKS BANNER -->
+<div class="alert alert-light border shadow-sm p-3 mb-4 d-flex align-items-start gap-3">
+  <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+    <i class="bi bi-globe2 fs-5"></i>
+  </div>
+  <div class="flex-grow-1">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <h6 class="fw-bold mb-1 text-dark">Portais Oficiais da DigitalNet Telecomunicações (Campo Grande - MS)</h6>
+      <div class="d-flex gap-2">
+        <a href="https://digitalnetms.com.br/clientepf/" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-info">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Portal Residencial (PF)
+        </a>
+        <a href="https://digitalnetms.com.br/clientepj/" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-warning text-dark">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Portal Corporativo (PJ)
+        </a>
+      </div>
+    </div>
+    <p class="small text-muted mb-0">
+      Os planos abaixo compõem as ofertas oficiais de <strong>Internet Fibra Residencial</strong> (600 a 900 Mega com Wi-Fi 6, Skeelo e streaming) e <strong>Combos DigiCorp Empresariais</strong> (500 a 900 Mega com Tronco SIP, telefonia ilimitada, PABX Virtual, IP fixo e SLA garantido).
+    </p>
+  </div>
+</div>
+
+<!-- FILTER TOOLBAR -->
+<div class="card-custom bg-white p-3 mb-4">
+  <form method="GET" action="{{ url_for('admin.planos') }}" class="row g-2 align-items-center">
+    <div class="col-md-5 col-lg-4">
+      <div class="input-group input-group-sm">
+        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" name="q" value="{{ search }}" class="form-control border-start-0" placeholder="Buscar por plano, benefício ou app...">
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-3 col-lg-3">
+      <select name="tipo" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="todos" {% if tipo_filter == 'todos' %}selected{% endif %}>Todos os Públicos (PF & PJ)</option>
+        <option value="{{ tipo_pf }}" {% if tipo_filter == tipo_pf %}selected{% endif %}>Pessoa Física (Residencial)</option>
+        <option value="{{ tipo_pj }}" {% if tipo_filter == tipo_pj %}selected{% endif %}>Pessoa Jurídica (Corporativo)</option>
+      </select>
+    </div>
+    <div class="col-sm-6 col-md-2 col-lg-2">
+      <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="todos" {% if status_filter == 'todos' %}selected{% endif %}>Todos os Status</option>
+        <option value="ativo" {% if status_filter == 'ativo' %}selected{% endif %}>Somente Ativos</option>
+        <option value="inativo" {% if status_filter == 'inativo' %}selected{% endif %}>Somente Inativos</option>
+      </select>
+    </div>
+    <div class="col-auto ms-auto d-flex gap-2">
+      <button type="submit" class="btn btn-sm btn-primary-custom">
+        <i class="bi bi-funnel-fill me-1"></i> Filtrar
+      </button>
+      {% if search or tipo_filter != 'todos' or status_filter != 'todos' %}
+        <a href="{{ url_for('admin.planos') }}" class="btn btn-sm btn-outline-secondary" title="Limpar Filtros">
+          <i class="bi bi-x-circle"></i>
+        </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- PLANOS TABLE -->
+<div class="card-custom bg-white">
+  <div class="card-header bg-white border-bottom p-3 d-flex align-items-center justify-content-between">
+    <span class="text-muted small">
+      Exibindo <strong>{{ total_encontrados }}</strong> plano(s) de banda larga
+    </span>
+    <span class="small text-muted">
+      <i class="bi bi-info-circle me-1"></i> Valores com desconto de pontualidade e tabelas cheias
+    </span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table-custom mb-0">
+      <thead>
+        <tr>
+          <th>Público</th>
+          <th>Plano / Perfil</th>
+          <th>Velocidade</th>
+          <th>Mensalidade</th>
+          <th>Equipamentos & Recursos</th>
+          <th>Fidelidade</th>
+          <th>Status</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in planos %}
+          <tr class="{% if not p.ativo %}opacity-75 bg-light{% endif %}">
+            <td>
+              {% if p.is_pf %}
+                <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 0.72rem; padding: 4px 8px;">
+                  <i class="bi bi-person-fill me-1"></i> Residencial (PF)
+                </span>
+              {% else %}
+                <span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700; font-size: 0.72rem; padding: 4px 8px;">
+                  <i class="bi bi-building-fill me-1"></i> Corporativo (PJ)
+                </span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-dark fs-6">{{ p.nome }}</span>
+                    {% if p.destaque %}
+                      <span class="badge bg-danger rounded-pill" style="font-size: 0.65rem;">
+                        <i class="bi bi-star-fill me-1"></i> Destaque
+                      </span>
+                    {% endif %}
+                  </div>
+                  {% if p.descricao %}
+                    <small class="text-muted d-block" style="font-size: 0.78rem;">{{ p.descricao }}</small>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td>
+              <div>
+                <strong class="text-primary d-block" style="font-size: 0.95rem;">{{ p.velocidade_download }} Mega</strong>
+                <small class="text-muted" style="font-size: 0.75rem;">
+                  <i class="bi bi-arrow-up-short text-success"></i> {{ p.velocidade_upload }} Mbps Upload
+                </small>
+              </div>
+            </td>
+            <td>
+              <div>
+                <strong class="text-success fs-6 d-block">{{ p.valor_mensal_formatado }}/mês</strong>
+                {% if p.valor_cheio %}
+                  <small class="text-muted text-decoration-line-through" style="font-size: 0.75rem;">
+                    Cheio: {{ p.valor_cheio_formatado }}
+                  </small>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <div class="small">
+                {% if p.roteador_wifi %}
+                  <div class="text-dark"><i class="bi bi-router text-primary me-1"></i>{{ p.roteador_wifi }}</div>
+                {% endif %}
+                {% if p.is_pj %}
+                  <div class="d-flex flex-wrap gap-1 mt-1">
+                    {% if p.sla_horas %}
+                      <span class="badge bg-light text-dark border" style="font-size: 0.68rem;">
+                        <i class="bi bi-clock-history text-danger me-1"></i>SLA: {{ p.sla_horas }}h
+                      </span>
+                    {% endif %}
+                    {% if p.linhas_simultaneas %}
+                      <span class="badge bg-light text-dark border" style="font-size: 0.68rem;">
+                        <i class="bi bi-telephone-inbound text-primary me-1"></i>{{ p.linhas_simultaneas }} linhas
+                      </span>
+                    {% endif %}
+                    {% if p.pabx_virtual %}
+                      <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.68rem;">
+                        <i class="bi bi-cpu me-1"></i>PABX Virtual (5 ramais)
+                      </span>
+                    {% endif %}
+                    {% if p.ip_fixo %}
+                      <span class="badge bg-success-subtle text-success border" style="font-size: 0.68rem;">
+                        <i class="bi bi-globe me-1"></i>IP Fixo
+                      </span>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  {% if p.aplicativos_inclusos %}
+                    <div class="text-muted mt-1" style="font-size: 0.75rem;">
+                      <i class="bi bi-film text-warning me-1"></i>{{ p.aplicativos_inclusos }}
+                    </div>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border">
+                {{ p.fidelidade_meses }} meses
+              </span>
+            </td>
+            <td>
+              {% if p.ativo %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                  <i class="bi bi-check-circle me-1"></i> Ativo
+                </span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
+                  <i class="bi bi-x-circle me-1"></i> Inativo
+                </span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="{{ url_for('admin.plano_editar', id=p.id) }}" class="btn btn-outline-primary" title="Editar Plano">
+                  <i class="bi bi-pencil-square"></i>
+                </a>
+
+                <!-- Alternar Status -->
+                <form action="{{ url_for('admin.plano_toggle_status', id=p.id) }}" method="POST" class="d-inline">
+                  {% if csrf_token is defined and csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endif %}
+                  <button type="submit" class="btn btn-outline-secondary" title="{% if p.ativo %}Desativar Plano{% else %}Ativar Plano{% endif %}">
+                    <i class="bi {% if p.ativo %}bi-toggle-on text-success{% else %}bi-toggle-off text-muted{% endif %}"></i>
+                  </button>
+                </form>
+
+                <!-- Excluir Plano -->
+                <form action="{{ url_for('admin.plano_excluir', id=p.id) }}" method="POST" class="d-inline"
+                      onsubmit="return confirm('Deseja realmente excluir o plano &quot;{{ p.nome }}&quot;?');">
+                  {% if csrf_token is defined and csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endif %}
+                  <button type="submit" class="btn btn-outline-danger" title="Excluir Plano">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8" class="text-center py-5 text-muted">
+              <div class="py-4">
+                <i class="bi bi-router fs-1 d-block mb-2 text-secondary"></i>
+                <h5 class="fw-bold text-dark">Nenhum plano encontrado</h5>
+                <p class="small text-muted mb-3">Tente ajustar os termos de busca ou clique abaixo para cadastrar um novo plano.</p>
+                <div class="d-flex justify-content-center gap-2">
+                  <a href="{{ url_for('admin.plano_novo') }}" class="btn btn-sm btn-primary-custom">
+                    <i class="bi bi-plus-circle-fill me-1"></i> Cadastrar Plano
+                  </a>
+                  <a href="{{ url_for('admin.usuarios') }}" class="btn btn-outline-secondary shadow-sm">
+      <i class="bi bi-people me-1"></i> Usuários
+    </a>
+    <a href="{{ url_for('admin.grupos') }}" class="btn btn-outline-secondary shadow-sm">
+      <i class="bi bi-shield-lock me-1"></i> Grupos
+    </a>
+    <form action="{{ url_for('admin.planos_sincronizar_padrao') }}" method="POST" class="d-inline">
+                    {% if csrf_token is defined and csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endif %}
+                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                      <i class="bi bi-arrow-repeat me-1"></i> Carregar Planos Oficiais DigitalNet
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

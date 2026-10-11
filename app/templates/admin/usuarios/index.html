@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Administração de Usuários - DigitalNet{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-3 border-bottom gap-3">
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb small mb-1">
+        <li class="breadcrumb-item"><span class="text-muted">Administração</span></li>
+        <li class="breadcrumb-item active" aria-current="page">Usuários</li>
+      </ol>
+    </nav>
+    <h2 class="fw-bold mb-1 text-dark">Painel de Usuários do Sistema</h2>
+    <p class="text-muted mb-0 small">Controle de acesso, gerenciamento de credenciais, perfis e atribuição de grupos</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('admin.grupos') }}" class="btn btn-outline-secondary shadow-sm">
+      <i class="bi bi-shield-lock me-1"></i> Grupos de Acesso
+    </a>
+    <a href="{{ url_for('admin.planos') }}" class="btn btn-outline-success shadow-sm">
+      <i class="bi bi-router-fill me-1"></i> Planos de Banda Larga
+    </a>
+    <a href="{{ url_for('admin.usuario_novo') }}" class="btn btn-primary-custom shadow-sm">
+      <i class="bi bi-person-plus-fill me-1"></i> Novo Usuário
+    </a>
+  </div>
+</div>
+
+<!-- NAVEGAÇÃO ENTRE MÓDULOS DE ADMINISTRAÇÃO -->
+<ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3">
+  <li class="nav-item">
+    <a class="nav-link active bg-warning text-dark fw-bold" href="{{ url_for('admin.usuarios') }}">
+      <i class="bi bi-people-gear me-1"></i> Usuários
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-secondary" href="{{ url_for('admin.grupos') }}">
+      <i class="bi bi-shield-lock me-1"></i> Grupos de Acesso
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-secondary" href="{{ url_for('admin.planos') }}">
+      <i class="bi bi-router-fill me-1 text-success"></i> Planos de Banda Larga
+    </a>
+  </li>
+</ul>
+
+<!-- STATS CARDS -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-custom p-3 bg-white d-flex align-items-center gap-3">
+      <div class="rounded-3 p-3 text-white" style="background: #1e293b;">
+        <i class="bi bi-people-fill fs-3"></i>
+      </div>
+      <div>
+        <span class="text-muted small text-uppercase fw-semibold d-block">Total Usuários</span>
+        <h3 class="fw-bold mb-0 text-dark">{{ total_usuarios }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-custom p-3 bg-white d-flex align-items-center gap-3">
+      <div class="rounded-3 p-3 text-dark" style="background: #fbbf24;">
+        <i class="bi bi-shield-fill-check fs-3"></i>
+      </div>
+      <div>
+        <span class="text-muted small text-uppercase fw-semibold d-block">Administradores</span>
+        <h3 class="fw-bold mb-0 text-dark">{{ total_admins }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-custom p-3 bg-white d-flex align-items-center gap-3">
+      <div class="rounded-3 p-3 text-white" style="background: #0284c7;">
+        <i class="bi bi-person-badge-fill fs-3"></i>
+      </div>
+      <div>
+        <span class="text-muted small text-uppercase fw-semibold d-block">Líderes Técnicos</span>
+        <h3 class="fw-bold mb-0 text-dark">{{ total_lideres }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card-custom p-3 bg-white d-flex align-items-center gap-3">
+      <div class="rounded-3 p-3 text-white" style="background: #10b981;">
+        <i class="bi bi-headset fs-3"></i>
+      </div>
+      <div>
+        <span class="text-muted small text-uppercase fw-semibold d-block">Agentes</span>
+        <h3 class="fw-bold mb-0 text-dark">{{ total_agentes }}</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SEARCH & FILTER BAR -->
+<div class="card-custom p-3 mb-4 bg-white">
+  <form method="GET" action="{{ url_for('admin.usuarios') }}" class="row g-2 align-items-center">
+    <div class="col-md-4 col-lg-5">
+      <div class="input-group">
+        <span class="input-group-text bg-light text-muted border-end-0">
+          <i class="bi bi-search"></i>
+        </span>
+        <input type="text" name="q" class="form-control border-start-0" placeholder="Buscar por nome, e-mail ou username..." value="{{ search }}">
+        {% if search %}
+          <a href="{{ url_for('admin.usuarios', perfil=perfil_filter, status=status_filter, grupo_id=grupo_filter) }}" class="btn btn-outline-secondary" title="Limpar busca">
+            <i class="bi bi-x-lg"></i>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col-md-3 col-lg-2">
+      <select name="perfil" class="form-select" onchange="this.form.submit()">
+        <option value="todos" {% if perfil_filter == 'todos' %}selected{% endif %}>Perfil: Todos</option>
+        <option value="administrador" {% if perfil_filter == 'administrador' %}selected{% endif %}>Administrador</option>
+        <option value="lider_tecnico" {% if perfil_filter == 'lider_tecnico' %}selected{% endif %}>Líder Técnico</option>
+        <option value="agente" {% if perfil_filter == 'agente' %}selected{% endif %}>Agente</option>
+      </select>
+    </div>
+
+    <div class="col-md-3 col-lg-2">
+      <select name="grupo_id" class="form-select" onchange="this.form.submit()">
+        <option value="">Grupo: Todos</option>
+        {% for g in grupos %}
+          <option value="{{ g.id }}" {% if grupo_filter == g.id %}selected{% endif %}>{{ g.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2 col-lg-2">
+      <select name="status" class="form-select" onchange="this.form.submit()">
+        <option value="todos" {% if status_filter == 'todos' %}selected{% endif %}>Status: Todos</option>
+        <option value="ativo" {% if status_filter == 'ativo' %}selected{% endif %}>Apenas Ativos</option>
+        <option value="inativo" {% if status_filter == 'inativo' %}selected{% endif %}>Apenas Inativos</option>
+      </select>
+    </div>
+
+    <div class="col-md-12 col-lg-1">
+      <button type="submit" class="btn btn-light-custom w-100">
+        <i class="bi bi-funnel"></i> Filtrar
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- USERS TABLE -->
+<div class="card-custom bg-white">
+  <div class="card-header bg-white border-bottom p-3 d-flex align-items-center justify-content-between">
+    <span class="text-muted small">
+      Exibindo <strong>{{ total_encontrados }}</strong> usuário(s) cadastrado(s)
+    </span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table-custom mb-0">
+      <thead>
+        <tr>
+          <th>Usuário / Identificação</th>
+          <th>Login (Username)</th>
+          <th>Perfil de Acesso</th>
+          <th>Grupos Associados</th>
+          <th>Status</th>
+          <th>Data Cadastro</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle text-white fw-bold d-flex align-items-center justify-content-center"
+                     style="width: 38px; height: 38px; font-size: 0.85rem; 
+                     {% if u.perfil == 'administrador' %}background: linear-gradient(135deg, #d97706, #b45309);
+                     {% elif u.perfil == 'lider_tecnico' %}background: linear-gradient(135deg, #0284c7, #0369a1);
+                     {% else %}background: linear-gradient(135deg, #059669, #047857);{% endif %}">
+                  {{ u.nome[:2].upper() }}
+                </div>
+                <div>
+                  <div class="fw-bold text-dark d-flex align-items-center gap-1">
+                    {{ u.nome }}
+                    {% if u.id == current_user.id %}
+                      <span class="badge bg-secondary-subtle text-secondary small px-1 py-0" style="font-size: 0.65rem;">Você</span>
+                    {% endif %}
+                  </div>
+                  <small class="text-muted d-block">{{ u.email }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <code class="bg-light px-2 py-1 rounded text-dark fw-bold">@{{ u.username }}</code>
+            </td>
+            <td>
+              {% if u.perfil == 'administrador' %}
+                <span class="badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 700;">
+                  <i class="bi bi-shield-fill-check me-1"></i> Administrador
+                </span>
+              {% elif u.perfil == 'lider_tecnico' %}
+                <span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 700;">
+                  <i class="bi bi-person-badge-fill me-1"></i> Líder Técnico
+                </span>
+              {% else %}
+                <span class="badge" style="background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700;">
+                  <i class="bi bi-headset me-1"></i> Agente
+                </span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.grupos %}
+                <div class="d-flex flex-wrap gap-1">
+                  {% for g in u.grupos %}
+                    <span class="badge bg-light text-dark border small" title="Papel no grupo: {{ g.papel_nome }}">
+                      <i class="bi bi-people me-1 text-primary"></i>{{ g.nome }}
+                    </span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-muted small fst-italic">Sem grupos</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge-status {{ 'badge-ativo' if u.ativo else 'badge-inativo' }}">
+                {{ 'Ativo' if u.ativo else 'Inativo' }}
+              </span>
+            </td>
+            <td>
+              <small class="text-muted">{{ u.created_at.strftime('%d/%m/%Y') }}</small>
+            </td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="{{ url_for('admin.usuario_editar', id=u.id) }}" class="btn btn-outline-primary" title="Editar Usuário" data-bs-toggle="tooltip">
+                  <i class="bi bi-pencil"></i>
+                </a>
+
+                {% if u.id != current_user.id %}
+                  <!-- Toggle Ativo/Inativo -->
+                  <form method="POST" action="{{ url_for('admin.usuario_toggle_status', id=u.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-outline-secondary" title="{{ 'Desativar' if u.ativo else 'Ativar' }} Usuário" data-bs-toggle="tooltip">
+                      <i class="bi {{ 'bi-pause-circle' if u.ativo else 'bi-play-circle text-success' }}"></i>
+                    </button>
+                  </form>
+
+                  <!-- Excluir -->
+                  <button type="button" class="btn btn-outline-danger"
+                          data-bs-toggle="modal"
+                          data-bs-target="#deleteConfirmModal"
+                          data-action="{{ url_for('admin.usuario_excluir', id=u.id) }}"
+                          data-name="{{ u.nome }} (@{{ u.username }})"
+                          data-type="o usuário">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bi bi-person-x fs-1 d-block mb-2 text-secondary"></i>
+              Nenhum usuário encontrado com os filtros selecionados.
+              <div class="mt-3">
+                <a href="{{ url_for('admin.usuario_novo') }}" class="btn btn-sm btn-primary">Cadastrar Novo Usuário</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

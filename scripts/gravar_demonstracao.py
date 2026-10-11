@@ -174,16 +174,18 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
 
         context = browser.new_context(
             record_video_dir=str(temp_video_dir),
+            color_scheme="dark",
             record_video_size={"width": 1920, "height": 1080},
             viewport={"width": 1920, "height": 1080},
             locale="pt-BR",
-            timezone_id="America/Campo_Grande"
+            timezone_id="America/Campo_Grande",
         )
 
         page = context.new_page()
 
         # Aceita caixas de diálogo / confirmação automaticamente (ex: confirmação de conversão)
         page.on("dialog", lambda dialog: dialog.accept())
+
 
         # ----------------------------------------------------------------------
         # PASSO 1: LOGIN NO SISTEMA

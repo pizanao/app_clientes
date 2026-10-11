@@ -6,6 +6,7 @@ from app.extensions import db
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido, ItemPedido
 from app.forms.pedido_forms import PedidoForm
+from app.utils.auth_decorators import lider_required
 
 pedidos_bp = Blueprint('pedidos', __name__, url_prefix='/pedidos')
 
@@ -377,6 +378,7 @@ def editar(id):
 
 @pedidos_bp.route('/<int:id>/excluir', methods=['POST'])
 @login_required
+@lider_required
 def excluir(id):
     pedido = db.session.get(Pedido, id)
     if not pedido:
@@ -389,4 +391,3 @@ def excluir(id):
 
     flash(f'Pedido #{num} excluído com sucesso.', 'info')
     return redirect(url_for('pedidos.index'))
-

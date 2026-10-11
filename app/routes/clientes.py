@@ -5,6 +5,7 @@ from app.extensions import db
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido
 from app.forms.cliente_forms import ClienteForm
+from app.utils.auth_decorators import lider_required
 
 clientes_bp = Blueprint('clientes', __name__, url_prefix='/clientes')
 
@@ -128,6 +129,7 @@ def editar(id):
 
 @clientes_bp.route('/<int:id>/excluir', methods=['POST'])
 @login_required
+@lider_required
 def excluir(id):
     cliente = db.session.get(Cliente, id)
     if not cliente:

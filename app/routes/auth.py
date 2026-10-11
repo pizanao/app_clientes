@@ -2,7 +2,7 @@ from urllib.parse import urlsplit
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from app.extensions import db
-from app.models.user import User
+from app.models.user import User, PERFIL_AGENTE
 from app.forms.auth_forms import LoginForm, RegisterForm
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -63,7 +63,8 @@ def register():
         user = User(
             nome=form.nome.data.strip(),
             username=form.username.data.strip(),
-            email=form.email.data.strip().lower()
+            email=form.email.data.strip().lower(),
+            perfil=PERFIL_AGENTE
         )
         user.set_password(form.password.data)
         

@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from sqlalchemy import or_
+from sqlalchemy.orm import selectinload
 from app.extensions import db
 from app.models.user import User, Grupo, PERFIL_ADMIN, PERFIL_LIDER, PERFIL_AGENTE, PERFIS
 from app.models.plano import Plano, TIPO_PF, TIPO_PJ, TIPOS_PLANO
@@ -23,7 +24,7 @@ def usuarios():
     status_filter = request.args.get('status', 'todos')
     grupo_filter = request.args.get('grupo_id', type=int)
 
-    query = User.query
+    query = User.query.options(selectinload(User.grupos))
 
     if search:
         search_term = f"%{search}%"
@@ -215,7 +216,7 @@ def usuario_excluir(id):
 @login_required
 @admin_required
 def grupos():
-    grupos_lista = Grupo.query.order_by(Grupo.nome.asc()).all()
+    grupos_lista = Grupo.query.options(selectinload(Grupo.usuarios)).order_by(Grupo.nome.asc()).all()
     total_grupos = len(grupos_lista)
     return render_template(
         'admin/grupos/index.html',

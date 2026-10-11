@@ -5,6 +5,7 @@ from sqlalchemy import or_
 from app.extensions import db
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido, ItemPedido
+from app.models.plano import Plano
 from app.forms.pedido_forms import PedidoForm
 from app.utils.auth_decorators import lider_required
 
@@ -179,6 +180,7 @@ def novo():
         flash('É necessário cadastrar ao menos um cliente ativo antes de criar um pedido.', 'warning')
         return redirect(url_for('clientes.novo'))
 
+    planos = Plano.query.filter_by(ativo=True).order_by(Plano.tipo.asc(), Plano.velocidade_download.asc()).all()
     form = PedidoForm()
     form.cliente_id.choices = [(c.id, f"{c.nome} ({c.documento or c.email})") for c in clientes]
 
@@ -190,7 +192,7 @@ def novo():
         form.numero_pedido.data = gerar_numero_pedido()
         form.data_pedido.data = datetime.now()
         initial_itens = [{'id': '', 'descricao': '', 'quantidade': 1, 'valor_unitario': '', 'valor_total': 0.0}]
-        return render_template('pedidos/form.html', form=form, itens=initial_itens, titulo='Novo Pedido', acao='Cadastrar')
+        return render_template('pedidos/form.html', form=form, itens=initial_itens, titulo='Novo Pedido', acao='Cadastrar', planos=planos)
 
     if request.method == 'POST':
         itens_data, itens_erros, valor_total_itens = processar_itens_post(request.form)
@@ -205,7 +207,8 @@ def novo():
                 form=form,
                 itens=itens_data or [{'id': '', 'descricao': '', 'quantidade': 1, 'valor_unitario': '', 'valor_total': 0.0}],
                 titulo='Novo Pedido',
-                acao='Cadastrar'
+                acao='Cadastrar',
+                planos=planos
             )
 
         if itens_erros:
@@ -216,7 +219,8 @@ def novo():
                 form=form,
                 itens=itens_data or [{'id': '', 'descricao': '', 'quantidade': 1, 'valor_unitario': '', 'valor_total': 0.0}],
                 titulo='Novo Pedido',
-                acao='Cadastrar'
+                acao='Cadastrar',
+                planos=planos
             )
 
         if form.validate_on_submit():
@@ -259,7 +263,8 @@ def novo():
         form=form,
         itens=itens_data if 'itens_data' in locals() else [{'id': '', 'descricao': '', 'quantidade': 1, 'valor_unitario': '', 'valor_total': 0.0}],
         titulo='Novo Pedido',
-        acao='Cadastrar'
+        acao='Cadastrar',
+        planos=planos
     )
 
 
@@ -283,6 +288,7 @@ def editar(id):
         return redirect(url_for('pedidos.index'))
 
     clientes = Cliente.query.order_by(Cliente.nome.asc()).all()
+    planos = Plano.query.filter_by(ativo=True).order_by(Plano.tipo.asc(), Plano.velocidade_download.asc()).all()
     form = PedidoForm(obj=pedido)
     form.cliente_id.choices = [(c.id, f"{c.nome} ({c.documento or c.email})") for c in clientes]
 
@@ -305,7 +311,7 @@ def editar(id):
                 'valor_unitario': pedido.valor_total,
                 'valor_total': pedido.valor_total
             }]
-        return render_template('pedidos/form.html', form=form, pedido=pedido, itens=itens_data, titulo='Editar Pedido', acao='Salvar Alterações')
+        return render_template('pedidos/form.html', form=form, pedido=pedido, itens=itens_data, titulo='Editar Pedido', acao='Salvar Alterações', planos=planos)
 
     if request.method == 'POST':
         itens_data, itens_erros, valor_total_itens = processar_itens_post(request.form)
@@ -322,7 +328,8 @@ def editar(id):
                     pedido=pedido,
                     itens=itens_data,
                     titulo='Editar Pedido',
-                    acao='Salvar Alterações'
+                    acao='Salvar Alterações',
+                    planos=planos
                 )
 
         if itens_erros:
@@ -334,7 +341,8 @@ def editar(id):
                 pedido=pedido,
                 itens=itens_data,
                 titulo='Editar Pedido',
-                acao='Salvar Alterações'
+                acao='Salvar Alterações',
+                planos=planos
             )
 
         if form.validate_on_submit():
@@ -372,7 +380,8 @@ def editar(id):
         pedido=pedido,
         itens=itens_data if 'itens_data' in locals() else [],
         titulo='Editar Pedido',
-        acao='Salvar Alterações'
+        acao='Salvar Alterações',
+        planos=planos
     )
 
 

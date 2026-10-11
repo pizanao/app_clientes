@@ -49,7 +49,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    perfil = db.Column(db.String(50), default=PERFIL_ADMIN, nullable=False)
+    perfil = db.Column(db.String(50), default=PERFIL_AGENTE, nullable=False)
     ativo = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
@@ -64,6 +64,18 @@ class User(UserMixin, db.Model):
     @property
     def perfil_nome(self) -> str:
         return PERFIS.get(self.perfil, self.perfil.capitalize())
+
+    @property
+    def papel_efetivo(self) -> str:
+        if self.is_admin:
+            return PERFIL_ADMIN
+        if self.is_lider_tecnico:
+            return PERFIL_LIDER
+        return PERFIL_AGENTE
+
+    @property
+    def papel_efetivo_nome(self) -> str:
+        return PERFIS.get(self.papel_efetivo, self.papel_efetivo.capitalize())
 
     @property
     def is_admin(self) -> bool:

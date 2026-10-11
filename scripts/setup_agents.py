@@ -366,7 +366,7 @@ As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos com
 
 | Comando | Descrição |
 | :--- | :--- |
-| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de testes unitários (41 testes automatizados). |
+| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de testes unitários (53 testes automatizados). |
 | `python scripts/carregar_geojson_sqlite.py --execute` | Carrega as camadas GeoJSON no SQLite com índices espaciais R*Tree. |
 | `python scripts/restaurar_rfb.py` | Restaura a base de 177.614 empresas da RFB a partir do dump compactado ou URL pública. |
 | `python scripts/enriquecer_clientes_rfb.py --limit 150` | Enriquece a tabela `clientes` com empresas reais da RFB. |
@@ -545,12 +545,13 @@ Ao concluir a instalação, o `setup.sh` exibe um resumo final destacado com os 
 | `python scripts/analisar_geojson_postgis.py --execute` | Importa os GeoJSONs para PostgreSQL + PostGIS (opcional). |
 | `python scripts/gerar_setup.py` | Regenera o instalador autônomo `setup.sh`. |
 | `python scripts/setup_agents.py` | Regenera `AGENTS.md`, `README.md` e instala as SKILLs. |
+| `python scripts/gravar_demonstracao.py` | Grava vídeo automatizado de demonstração completa com Playwright. |
 
 ---
 
 ## Suíte de Testes
 
-O projeto possui **41 testes unitários** cobrindo autenticação, controle de acesso RBAC, administração de usuários e grupos, CRUDs de clientes e pedidos, totalização automática de itens, integridade de senhas do seed, rotas do radar de leads, geojson layers e prevenção de leads duplicados:
+O projeto possui **53 testes unitários** cobrindo autenticação, controle de acesso RBAC, administração de usuários e grupos, catálogo e CRUD de planos de banda larga (PF/PJ), CRUDs de clientes e pedidos, totalização automática de itens, integridade de senhas do seed, rotas do radar de leads, geojson layers e prevenção de leads duplicados:
 
 ```bash
 .venv/bin/python -m unittest discover -s tests -v

@@ -124,12 +124,22 @@
           </div>
         </div>
 
+        {% if planos %}
+        <datalist id="planosCatalog">
+          {% for p in planos %}
+            <option value="{{ p.nome }}" data-preco="{{ '%.2f'|format(p.valor_mensal) }}">
+              {{ p.tipo }}: {{ p.velocidade_formatada }} — R$ {{ '%.2f'|format(p.valor_mensal) }}
+            </option>
+          {% endfor %}
+        </datalist>
+        {% endif %}
+
         <div class="table-responsive">
           <table class="table align-middle mb-0" id="itensTable">
             <thead class="table-light text-secondary small text-uppercase">
               <tr>
                 <th style="width: 50px;" class="text-center">#</th>
-                <th>Descrição do Item *</th>
+                <th>Descrição do Item * <small class="text-muted fw-normal">(sugestões dos planos oficiais)</small></th>
                 <th style="width: 140px;">Quantidade *</th>
                 <th style="width: 170px;">Valor Unitário (R$) *</th>
                 <th style="width: 180px;">Valor Total do Item (R$)</th>
@@ -147,7 +157,8 @@
                     <input type="text"
                            name="itens-{{ loop.index0 }}-descricao"
                            class="form-control item-descricao"
-                           placeholder="Ex: Consultoria técnica, Monitor 27'', etc."
+                           list="planosCatalog"
+                           placeholder="Ex: Fibra 700 + DigiMesh ou digite o item..."
                            value="{{ item.descricao }}"
                            required>
                   </td>
@@ -197,7 +208,8 @@
                     <input type="text"
                            name="itens-0-descricao"
                            class="form-control item-descricao"
-                           placeholder="Ex: Consultoria técnica, Monitor 27'', etc."
+                           list="planosCatalog"
+                           placeholder="Ex: Fibra 700 + DigiMesh ou digite o item..."
                            required>
                   </td>
                   <td>
@@ -303,7 +315,8 @@
       <input type="text"
              name="itens-__INDEX__-descricao"
              class="form-control item-descricao"
-             placeholder="Ex: Consultoria técnica, Monitor 27'', etc."
+             list="planosCatalog"
+             placeholder="Ex: Fibra 700 + DigiMesh ou digite o item..."
              required>
     </td>
     <td>
@@ -491,17 +504,34 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Event Delegation para inputs e remoção de itens
-  tableBody.addEventListener('input', function (e) {
+  function handleItemChange(e) {
     if (e.target.classList.contains('item-qtd') || e.target.classList.contains('item-unit')) {
       recalculateAll();
     }
-  });
+    // Auto-preenchimento do valor unitário quando selecionado um plano do catálogo oficial
+    if (e.target.classList.contains('item-descricao')) {
+      const val = e.target.value.trim();
+      const datalist = document.getElementById('planosCatalog');
+      if (datalist && val) {
+        const option = Array.from(datalist.options).find(function (opt) {
+          return opt.value.toLowerCase() === val.toLowerCase();
+        });
+        if (option && option.dataset.preco) {
+          const row = e.target.closest('.item-row');
+          if (row) {
+            const unitInput = row.querySelector('.item-unit');
+            if (unitInput) {
+              unitInput.value = option.dataset.preco;
+              recalculateAll();
+            }
+          }
+        }
+      }
+    }
+  }
 
-  tableBody.addEventListener('change', function (e) {
-    if (e.target.classList.contains('item-qtd') || e.target.classList.contains('item-unit')) {
-      recalculateAll();
-    }
-  });
+  tableBody.addEventListener('input', handleItemChange);
+  tableBody.addEventListener('change', handleItemChange);
 
   tableBody.addEventListener('click', function (e) {
     const btn = e.target.closest('.btn-remove-item');

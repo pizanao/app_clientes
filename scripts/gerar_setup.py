@@ -161,7 +161,7 @@ DATABASE_URL=sqlite:///app_clientes.db
 # Chave de API da AIsa (api.aisa.one)
 AISA_API_KEY=${AISA_KEY_CONFIG}
 AISA_MODEL=${AISA_MODEL_CONFIG}
-SEED_ADMIN_PASSWORD="SenhaSeed*2026"
+SEED_ADMIN_PASSWORD="${SEED_ADMIN_PASSWORD}"
 
 # Chave de API / Access Token do Mapbox
 MAPBOX_API_KEY=${MAPBOX_KEY_CONFIG}

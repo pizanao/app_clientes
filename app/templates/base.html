@@ -106,7 +106,7 @@
 
         <div class="sidebar-footer">
             <div class="user-badge">
-                <div class="user-avatar" style="{% if current_user.is_authenticated and current_user.perfil == 'administrador' %}background: linear-gradient(135deg, #d97706, #b45309);{% elif current_user.is_authenticated and current_user.perfil == 'lider_tecnico' %}background: linear-gradient(135deg, #0284c7, #0369a1);{% endif %}">
+                <div class="user-avatar" style="{% if current_user.is_authenticated and current_user.is_admin %}background: linear-gradient(135deg, #d97706, #b45309);{% elif current_user.is_authenticated and current_user.is_lider_tecnico %}background: linear-gradient(135deg, #0284c7, #0369a1);{% endif %}">
                     {{ current_user.nome[:2].upper() if current_user.is_authenticated else 'U' }}
                 </div>
                 <div class="text-truncate" style="flex: 1;">
@@ -115,11 +115,11 @@
                     </div>
                     {% if current_user.is_authenticated %}
                       <div class="d-flex align-items-center gap-1 mt-1">
-                        {% if current_user.perfil == 'administrador' %}
+                        {% if current_user.is_admin %}
                           <span class="badge" style="background: #fbbf24; color: #0f172a; font-weight: 800; font-size: 0.65rem; padding: 2px 6px;">
                             Administrador
                           </span>
-                        {% elif current_user.perfil == 'lider_tecnico' %}
+                        {% elif current_user.is_lider_tecnico %}
                           <span class="badge" style="background: #38bdf8; color: #0f172a; font-weight: 700; font-size: 0.65rem; padding: 2px 6px;">
                             Líder Técnico
                           </span>

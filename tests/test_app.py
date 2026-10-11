@@ -4,7 +4,7 @@ from unittest import mock
 from app import create_app
 from app.config import Config, DEV_SECRET_KEY
 from app.extensions import db
-from app.models.user import User
+from app.models.user import User, PERFIL_ADMIN, PERFIL_AGENTE
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido
 from app.routes.auth import is_safe_redirect_url
@@ -24,8 +24,8 @@ class AppTestCase(unittest.TestCase):
         self.app_context.push()
         db.create_all()
 
-        # Create a test user
-        user = User(nome='Tester Admin', username='tester', email='tester@test.com')
+        # Create a test admin user
+        user = User(nome='Tester Admin', username='tester', email='tester@test.com', perfil=PERFIL_ADMIN)
         user.set_password('password123')
         db.session.add(user)
         db.session.commit()
@@ -74,6 +74,12 @@ class AppTestCase(unittest.TestCase):
         res_login = self.login(username='novousuario', password='secretpassword')
         self.assertEqual(res_login.status_code, 200)
         self.assertIn(b'Painel de Controle', res_login.data)
+
+        # Validação de segurança RBAC: novos usuários registrados devem ser agentes e não admin
+        novo_user = User.query.filter_by(username='novousuario').first()
+        self.assertIsNotNone(novo_user)
+        self.assertEqual(novo_user.perfil, PERFIL_AGENTE)
+        self.assertFalse(novo_user.is_admin)
 
     # --- CLIENTES CRUD TESTS ---
     def test_cliente_crud(self):

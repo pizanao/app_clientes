@@ -1,50 +1,41 @@
-# DigitalLeads
+# DigitalNet MS - Radar de Leads, Gestão Comercial & Controle de Acesso (RBAC)
 
-Sistema integrado de CRM, Gestão de Pedidos e Prospecção B2B Geo-localizada para a DigitalNet Telecomunicações (Campo Grande-MS), enriquecido com inteligência territorial de camadas GeoJSON (SISGRAN / PLANURB) e a base de 177.614 empresas ativas da Receita Federal do Brasil (RFB).
+Sistema integrado de **Gestão Comercial, Controle de Acesso por Perfis & Grupos, Prospecção Geo-Localizada e Expansão de Infraestrutura Óptica B2B** para a operadora **DigitalNet MS** em Campo Grande - MS.
 
-
-<div align="center" >
-<p align="center">  
-  <a href="#">
-    <img src="https://skillicons.dev/icons?i=py,flask,js,html,bootstrap,jquery,bash,md,sqlite&perline=9" style="height: 32px"/>
-  </a>  
-</p>
-</div>
+Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Controle de Acesso RBAC**, **Inteligência Artificial (AIsa e Gemini)**, dados geográficos oficiais do **SISGRAN / PLANURB**, mais de **21.000 feições urbanas** (bairros, imóveis e loteamentos) com indexação espacial **R*Tree** no SQLite e uma base de **177.614 empresas da Receita Federal do Brasil**.
 
 ---
 
-## Funcionalidades Principais 
+## Sumário
 
-### 1. Radar de Leads & Expansão de Rede Óptica
-- Mapa interativo com círculos térmicos de cobertura e nós de fibra óptica (CTO) em bairros de Campo Grande (Chácara Cachoeira, Centro, Santa Fé, Carandá Bosque, etc.).
-- Carregamento sob demanda de camadas GeoJSON oficiais do município: Bairros, Macrozonas Urbanas e Parcelamentos do Plano Diretor da Lei de Uso do Solo de Campo Grande.
-- Prospecção de empresas vizinhas a nós de rede em 1 clique, com busca na base da Receita Federal por proximidade de CEP.
-- Carregamento de empresas ativas diretamente no raio de cobertura do nó através de gaveta lateral (Offcanvas) com visualização em cards e mapa.
-
-### 2. Dossiê 360° do Lead & Qualificação com IA
-- Cálculo automático de viabilidade técnica no poste e Lead Score (0 a 100).
-- Tutor de Quebra de Objeções (SDR Telecom) para contornar objeções de preço, fidelidade contratual com Vivo/Claro e receio técnico.
-- Dossiê comercial completo com perfil do decisor, dores de rede da concorrência e argumento de vendas.
-- Integração com a API AIsa de Leads, Google Gemini AI, banco de dados abertos da RFB e gerador sintético de alta diversidade.
-
-### 3. Central WhatsApp & Abordagem Consultiva
-- Script personalizado gerado sob demanda contendo gancho territorial, comparativo de plano e pedido explícito de opt-in.
-- Botão de disparo direto via WhatsApp Web (`https://wa.me/...`).
-
-### 4. Gestão Completa de Clientes e Pedidos
-- CRUD de Clientes com preenchimento automático de CEP via ViaCEP e máscaras de CNPJ/Telefone.
-- CRUD de Pedidos de 1 a 10 itens com totalização automática em tempo real e comprovante de impressão comercial.
-- Dashboard executivo com métricas de faturamento, ticket médio e clientes ativos.
-
-### 5. Catálogo e Gestão de Planos de Banda Larga (PF & PJ)
-- **Painel Administrativo (/admin/planos):** Interface completa para cadastrar, editar, ativar/desativar e excluir planos de internet fibra oferecidos pela operadora.
-- **Planos Residenciais (Pessoa Física):** Baseados no catálogo oficial (https://digitalnetms.com.br/clientepf/), cobrindo de 600 a 900 Mega com roteadores Wi-Fi 6, pontos DigiMesh, Skeelo e aplicativos de streaming (Grade Standard e Grade Top).
-- **Planos Corporativos (Pessoa Jurídica):** Baseados nos Combos DigiCorp (https://digitalnetms.com.br/clientepj/), cobrindo 500 a 900 Mega com telefonia digital ilimitada, Tronco SIP (2 a 4 linhas simultâneas), PABX Virtual em nuvem (até 5 ramais + URA personalizada), IP fixo válido e SLA garantido em contrato (12h a 24h).
-- **Sincronização em 1-Clique:** Botão para restaurar e sincronizar os 9 planos oficiais diretamente da base padrão.
+- [Visão Geral e Diferenciais](#visao-geral-e-diferenciais)
+- [Arquitetura do Sistema](#arquitetura-do-sistema)
+- [Controle de Acesso e Perfis (RBAC)](#controle-de-acesso-e-perfis-rbac)
+- [Funcionalidades Principais](#funcionalidades-principais)
+- [Instalação Rápida com setup.sh](#instalacao-rapida-com-setupsh)
+- [Motores de Prospecção e Inteligência Artificial](#motores-de-prospeccao-e-inteligencia-artificial)
+- [Dados Geoespaciais e SISGRAN](#dados-geoespaciais-e-sisgran)
+- [Base de 177k Empresas da Receita Federal](#base-de-177k-empresas-da-receita-federal)
+- [Scripts e Ferramentas CLI](#scripts-e-ferramentas-cli)
+- [Suíte de Testes](#suite-de-testes)
+- [Agentes de IA e SKILLs](#agentes-de-ia-e-skills)
 
 ---
 
+## Visão Geral e Diferenciais
 
+- **Controle de Acesso por Perfis (RBAC):** Hierarquia de permissões estruturada para **Administrador**, **Líder Técnico** e **Agente**, além de grupos de trabalho customizáveis.
+- **Painel Administrativo Completo:** Gestão centralizada de usuários (`/admin/usuarios`) com criação, edição de perfis, ativação/desativação e grupos de acesso (`/admin/grupos`).
+- **Viabilidade Óptica Hiperlocal:** O sistema calcula clusters de clientes conectados por bairro de Campo Grande, permitindo prospectar empresas exatamente onde a fibra óptica da DigitalNet já está nos postes (AS61588).
+- **Interatividade nos Nós Ópticos (Offcanvas):** Ao clicar em um nó de fibra no mapa, abre uma gaveta lateral listando as empresas reais daquele raio, com scores, WhatsApp anti-ban em 1-clique e navegação focada no mapa.
+- **Interface Imersiva (Menu Recolhível & Mapa Fullscreen):** Barra lateral retrátil com persistência em `localStorage` e badges identificadores do perfil do operador.
+- **Roteiro WhatsApp Anti-Ban com Opt-in:** Reduz o risco de bloqueio de número para quase zero com um método consultivo em 3 passos, oferecendo Wi-Fi 6 em comodato e pontos DigiMesh sem custos de aluguel.
+- **Cascata Multi-Provedor de Prospecção:** Integração com a API AIsa (`asi1-mini`), Google Gemini AI, banco de dados abertos da RFB e gerador sintético de alta diversidade.
+- **Banco Espacial Dual (SQLite R*Tree & PostGIS):** Análise e ingestão automática de 21.042 feições urbanas com bounding boxes e centróides tanto em SQLite puro quanto em PostgreSQL + PostGIS.
+- **Conversão em 1-Clique:** Transforma um lead prospectado em Cliente e gera automaticamente o Pedido com planos reais da operadora.
+- **Deploy Autônomo Blindado (POC em 30s):** `setup.sh` auto-contido para demonstrações de POC, configurando todo o ambiente em menos de 30 segundos.
+
+---
 
 ## Arquitetura do Sistema
 
@@ -93,6 +84,35 @@ flowchart TD
 | **Líder Técnico** | Supervisão técnica e comercial, gestão de clientes, pedidos, conversão e exclusão autorizada de cadastros. | Não | Sim |
 | **Agente** | Operação comercial, prospecção geo-localizada, disparo consultivo WhatsApp, cadastro de clientes e pedidos. | Não | Não |
 
+---
+
+## Funcionalidades Principais
+
+### 1. Painel de Administração de Usuários & Grupos (`/admin/`)
+- Listagem completa com filtros por perfil, status ativo/inativo e grupo de trabalho.
+- Cadastro de novos operadores com atribuição imediata de perfil e grupos associados.
+- Edição cadastral, redefinição segura de senha e proteção estrita contra auto-exclusão ou exclusão do último administrador ativo.
+- Criação e gerenciamento de grupos de acesso com papel herdado.
+
+### 2. Radar de Prospecção Geo-Localizada (`/leads/`)
+- Mapa interativo com nós ópticos (clientes ativos) e oportunidades de leads com scores de conversão.
+- Filtros por bairro oficial do SISGRAN (*Chácara Cachoeira, Centro, Santa Fé, Jardim dos Estados, etc.*).
+- Dossiê comercial completo com perfil do decisor, dores de rede da concorrência e argumento de vendas.
+
+### 3. Central WhatsApp & Abordagem Consultiva
+- Script personalizado gerado sob demanda contendo gancho territorial, comparativo de plano e pedido explícito de opt-in.
+- Botão de disparo direto via WhatsApp Web (`https://wa.me/...`).
+
+### 4. Gestão Completa de Clientes e Pedidos
+- CRUD de Clientes com preenchimento automático de CEP via ViaCEP e máscaras de CNPJ/Telefone.
+- CRUD de Pedidos de 1 a 10 itens com totalização automática em tempo real e comprovante de impressão comercial.
+- Dashboard executivo com métricas de faturamento, ticket médio e clientes ativos.
+
+### 5. Tabelas Interativas com DataTables Responsive e Linhas Aninhadas
+- **DataTables 2 & Extensão Responsive:** As tabelas de Clientes (/clientes/) e Leads (/leads/) adaptam-se com fluidez a qualquer resolução de tela (desktop, tablet e mobile).
+- **Linhas Aninhadas (Child Rows com Subtabelas):** O botão interativo Detalhes expande painéis avançados sob demanda:
+  - *Tabela de Clientes:* Dossiê cadastral, endereço completo, total gasto acumulado e subtabela aninhada com o histórico de pedidos conectados e atalhos rápidos de WhatsApp.
+  - *Tabela de Leads:* Acordeão técnico com inteligência territorial de Campo Grande (CTO no quarteirão), script anti-ban para WhatsApp com botão de cópia de 1 clique, e pacote recomendado DigitalNet com botão de conversão imediata em cliente.
 
 ---
 
@@ -132,6 +152,7 @@ Ao concluir a instalação, o `setup.sh` exibe um resumo final destacado com os 
 | `python scripts/analisar_geojson_postgis.py --execute` | Importa os GeoJSONs para PostgreSQL + PostGIS (opcional). |
 | `python scripts/gerar_setup.py` | Regenera o instalador autônomo `setup.sh`. |
 | `python scripts/setup_agents.py` | Regenera `AGENTS.md`, `README.md` e instala as SKILLs. |
+| `python scripts/gravar_demonstracao.py` | Grava vídeo automatizado de demonstração completa com Playwright. |
 
 ---
 

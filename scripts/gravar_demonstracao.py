@@ -145,7 +145,16 @@ def converter_para_mp4(webm_path: Path) -> Path:
 
 
 def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
-    from playwright.sync_api import sync_playwright
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("\n" + "=" * 75)
+        print("[ERRO] A biblioteca Playwright não está instalada no ambiente virtual.")
+        print("Para utilizar o gravador automatizado de demonstração, instale com:")
+        print("    pip install playwright")
+        print("    playwright install chromium")
+        print("=" * 75 + "\n")
+        sys.exit(1)
 
     VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
     temp_video_dir = VIDEOS_DIR / 'raw'

@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido, ItemPedido
 from app.models.lead import Lead
+from app.models.plano import Plano
 from app.services.prospector import TelecomProspectorService
 
 
@@ -24,6 +25,9 @@ class LeadsTestCase(unittest.TestCase):
         self.app_context = self.app.app_context()
         self.app_context.push()
         db.create_all()
+
+        # Seed initial plans
+        Plano.seed_planos_iniciais()
 
         # Create a test user
         user = User(nome='Vendedor Telecom', username='vendedor', email='vendedor@digitalnet.local')
@@ -163,6 +167,79 @@ class LeadsTestCase(unittest.TestCase):
         self.assertEqual(pedido.valor_total, 139.90)
         self.assertEqual(len(pedido.itens), 1)
         self.assertIn('Fibra 700 + DigiMesh', pedido.itens[0].descricao)
+        # Verifica vínculo automático ao modelo Plano
+        self.assertIsNotNone(pedido.plano_id)
+        self.assertEqual(pedido.plano.nome, 'Fibra 700 + DigiMesh')
+
+    def test_convert_lead_with_explicit_plano_and_web_route(self):
+        plano_dedicado = Plano.query.filter_by(nome='DigiCorp Elite').first()
+        self.assertIsNotNone(plano_dedicado)
+
+        lead = Lead(
+            nome='Dr. Carlos Silveira',
+            empresa='Hospital Regional Especialidades',
+            cargo='Superintendente de TI',
+            telefone='(67) 99777-6655',
+            email='ti@hospitalregional.med.br',
+            logradouro='Avenida Afonso Pena',
+            numero='1800',
+            bairro='Centro',
+            cidade='Campo Grande',
+            estado='MS',
+            cep='79002-070',
+            plano_sugerido='Plano Desconhecido Inicial',
+            valor_mensal_sugerido=plano_dedicado.valor_mensal,
+            status='novo',
+            optin_status='pendente'
+        )
+        db.session.add(lead)
+        db.session.commit()
+
+        # 1. Conversão direta no serviço com plano explícito
+        cliente = TelecomProspectorService.convert_lead_to_client(lead, plano=plano_dedicado)
+        self.assertIsNotNone(cliente.id)
+        pedido = Pedido.query.filter_by(cliente_id=cliente.id).first()
+        self.assertIsNotNone(pedido)
+        self.assertEqual(pedido.plano_id, plano_dedicado.id)
+        self.assertEqual(pedido.plano.nome, 'DigiCorp Elite')
+        self.assertIn(pedido, plano_dedicado.pedidos)
+        self.assertEqual(pedido.valor_total, plano_dedicado.valor_mensal)
+        self.assertIn('DigiCorp Elite', pedido.itens[0].descricao)
+
+        # 2. Conversão via rota HTTP POST com plano_id selecionado pelo vendedor
+        self.login()
+        lead2 = Lead(
+            nome='Luciana Prado',
+            empresa='Escola Construtiva',
+            telefone='(67) 99123-4567',
+            bairro='Santa Fé',
+            cidade='Campo Grande',
+            estado='MS',
+            status='optin_aceito',
+            optin_status='aceito'
+        )
+        db.session.add(lead2)
+        db.session.commit()
+
+        plano_fibra_900 = Plano.query.filter_by(nome='Fibra 900 Advanced').first()
+        self.assertIsNotNone(plano_fibra_900)
+
+        res_conv = self.client.post(f'/leads/{lead2.id}/converter', data={
+            'plano_id': str(plano_fibra_900.id),
+            'valor_mensal_sugerido': '149.90'
+        }, follow_redirects=False)
+
+        # Deve redirecionar para a página do cliente criado
+        self.assertEqual(res_conv.status_code, 302)
+        self.assertIn('/clientes/', res_conv.headers['Location'])
+
+        lead2_atualizado = db.session.get(Lead, lead2.id)
+        self.assertEqual(lead2_atualizado.status, 'convertido')
+        pedido2 = Pedido.query.filter_by(cliente_id=lead2_atualizado.cliente_convertido_id).first()
+        self.assertIsNotNone(pedido2)
+        self.assertEqual(pedido2.plano_id, plano_fibra_900.id)
+        self.assertEqual(pedido2.plano.nome, 'Fibra 900 Advanced')
+        self.assertEqual(pedido2.valor_total, 149.90)
 
     def test_leads_web_routes(self):
         self.login()
@@ -211,7 +288,7 @@ class LeadsTestCase(unittest.TestCase):
             'optin_status': 'aceito'
         }, follow_redirects=True)
         self.assertEqual(res_status.status_code, 200)
-        updated_lead = Lead.query.get(lead.id)
+        updated_lead = db.session.get(Lead, lead.id)
         self.assertEqual(updated_lead.optin_status, 'aceito')
 
     def test_leads_api_endpoints(self):

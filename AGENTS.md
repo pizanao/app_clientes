@@ -22,7 +22,8 @@ A aplicação é uma plataforma completa de **Gestão Comercial, Controle de Ace
 - **`usuarios` (`app/models/user.py`):** Usuários do sistema, perfil de acesso (`administrador`, `lider_tecnico`, `agente`), status de ativação, hash seguro com `werkzeug.security`.
 - **`grupos` e `usuario_grupos` (`app/models/user.py`):** Grupos de acesso configuráveis com atribuição de papel (`papel`), descrição e relacionamento many-to-many com usuários para herança coletiva de permissões.
 - **`clientes` (`app/models/cliente.py`):** Clientes corporativos e residenciais ativos com endereço, CEP e coordenadas.
-- **`pedidos` e `itens_pedido` (`app/models/pedido.py`):** Pedidos comerciais vinculados a clientes, de 1 a 10 itens com totalização automática em centavos (`REAL`).
+- **`pedidos` e `itens_pedido` (`app/models/pedido.py`):** Pedidos comerciais vinculados a clientes e planos oficiais (`plano_id`), de 1 a 10 itens com totalização automática em centavos (`REAL`).
+- **`planos` (`app/models/plano.py`):** Catálogo oficial de planos residenciais (PF) e corporativos (PJ) da DigitalNet MS, com velocidade, mensalidade, fidelidade e comodato Wi-Fi 6, com relacionamento bidirecional com pedidos (`plano.pedidos`).
 - **`leads` (`app/models/lead.py`):** Oportunidades comerciais de prospecção geo-localizada, com pontuação (`lead_score`), operadora atual (Vivo Fibra / Claro), dor operacional mapeada, roteiro WhatsApp anti-ban, dossiê comercial e vínculo de conversão (`cliente_convertido_id`).
 
 ### 2.2 Base de Inteligência da Receita Federal (RFB)
@@ -85,7 +86,7 @@ As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos com
 
 | Comando | Descrição |
 | :--- | :--- |
-| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de testes unitários (53 testes automatizados). |
+| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de testes unitários (55 testes automatizados). |
 | `python scripts/carregar_geojson_sqlite.py --execute` | Carrega as camadas GeoJSON no SQLite com índices espaciais R*Tree. |
 | `python scripts/restaurar_rfb.py` | Restaura a base de 177.614 empresas da RFB a partir do dump compactado ou URL pública. |
 | `python scripts/enriquecer_clientes_rfb.py --limit 150` | Enriquece a tabela `clientes` com empresas reais da RFB. |

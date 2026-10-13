@@ -488,9 +488,16 @@
                         <a href="{{ url_for('leads.detail', lead_id=l.id) }}" class="btn btn-sm btn-dn-blue">
                           <i class="bi bi-eye-fill me-1"></i> Dossiê 360°
                         </a>
-                        <form action="{{ url_for('leads.converter_cliente', lead_id=l.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Deseja converter o lead {{ l.empresa }} em Cliente com pedido de ativação?');">
-                          <button type="submit" class="btn btn-sm btn-primary-custom shadow-sm">
-                            <i class="bi bi-check-circle-fill me-1"></i> Converter em Cliente
+                        <form action="{{ url_for('leads.converter_cliente', lead_id=l.id) }}" method="POST" class="d-flex align-items-center gap-1 flex-wrap">
+                          <select name="plano_id" class="form-select form-select-sm bg-white border shadow-sm" style="max-width: 250px;" title="Selecione o plano oficial para este cliente">
+                            {% for p in planos %}
+                            <option value="{{ p.id }}" {% if p.nome == l.plano_sugerido or (l.plano_sugerido and p.nome.lower() in l.plano_sugerido.lower()) %}selected{% endif %}>
+                              [{{ p.tipo }}] {{ p.nome }} ({{ p.velocidade_download }}M) - R$ {{ "%.2f"|format(p.valor_mensal)|replace('.', ',') }}
+                            </option>
+                            {% endfor %}
+                          </select>
+                          <button type="submit" class="btn btn-sm btn-primary-custom shadow-sm text-nowrap" onclick="return confirm('Deseja converter o lead {{ l.empresa }} em Cliente com o plano selecionado?');">
+                            <i class="bi bi-check-circle-fill me-1"></i> Converter & Ativar
                           </button>
                         </form>
                       </div>

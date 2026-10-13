@@ -33,7 +33,7 @@
         </h5>
 
         <div class="row g-3">
-          <div class="col-md-6 col-lg-5">
+          <div class="col-md-6 col-lg-4">
             <label for="cliente_id" class="form-label">{{ form.cliente_id.label.text }}</label>
             {{ form.cliente_id(class="form-select" + (" is-invalid" if form.cliente_id.errors else "")) }}
             {% for error in form.cliente_id.errors %}
@@ -44,7 +44,25 @@
             </small>
           </div>
 
-          <div class="col-md-3 col-lg-3">
+          <div class="col-md-6 col-lg-5">
+            <label for="plano_id" class="form-label d-flex align-items-center justify-content-between">
+              <span><i class="bi bi-router-fill text-primary me-1"></i>{{ form.plano_id.label.text }}</span>
+              {% if current_user.is_authenticated and current_user.is_admin %}
+              <a href="{{ url_for('admin.planos') }}" target="_blank" class="small text-decoration-none">
+                <i class="bi bi-box-arrow-up-right me-1"></i>Catálogo
+              </a>
+              {% endif %}
+            </label>
+            {{ form.plano_id(class="form-select" + (" is-invalid" if form.plano_id.errors else ""), id="selectPlanoPedido") }}
+            {% for error in form.plano_id.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+            <small class="text-muted" style="font-size: 0.75rem;">
+              Vincule ao plano oficial para pré-preencher descrição e valor.
+            </small>
+          </div>
+
+          <div class="col-md-4 col-lg-3">
             <label for="numero_pedido" class="form-label">{{ form.numero_pedido.label.text }}</label>
             {{ form.numero_pedido(class="form-control" + (" is-invalid" if form.numero_pedido.errors else ""), placeholder="PED-2026-0001") }}
             {% for error in form.numero_pedido.errors %}
@@ -532,6 +550,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
   tableBody.addEventListener('input', handleItemChange);
   tableBody.addEventListener('change', handleItemChange);
+
+  // Sincronização automática do plano selecionado com o primeiro item
+  const selectPlanoPedido = document.getElementById('selectPlanoPedido');
+  if (selectPlanoPedido) {
+    selectPlanoPedido.addEventListener('change', function () {
+      const selectedText = selectPlanoPedido.options[selectPlanoPedido.selectedIndex]?.text || '';
+      const planoId = parseInt(selectPlanoPedido.value) || 0;
+      if (planoId > 0) {
+        const datalist = document.getElementById('planosCatalog');
+        if (datalist) {
+          const matchOpt = Array.from(datalist.options).find(function (opt) {
+            return selectedText.includes(opt.value);
+          });
+          if (matchOpt) {
+            const firstRow = tableBody.querySelector('.item-row');
+            if (firstRow) {
+              const descInput = firstRow.querySelector('.item-descricao');
+              const unitInput = firstRow.querySelector('.item-unit');
+              if (descInput && (!descInput.value.trim() || descInput.value.startsWith('Mensalidade') || descInput.value === 'Item do Pedido')) {
+                descInput.value = 'Mensalidade ' + matchOpt.value;
+                if (unitInput && matchOpt.dataset.preco) {
+                  unitInput.value = matchOpt.dataset.preco;
+                }
+                recalculateAll();
+              }
+            }
+          }
+        }
+      }
+    });
+  }
 
   tableBody.addEventListener('click', function (e) {
     const btn = e.target.closest('.btn-remove-item');

@@ -183,6 +183,7 @@ def novo():
     planos = Plano.query.filter_by(ativo=True).order_by(Plano.tipo.asc(), Plano.velocidade_download.asc()).all()
     form = PedidoForm()
     form.cliente_id.choices = [(c.id, f"{c.nome} ({c.documento or c.email})") for c in clientes]
+    form.plano_id.choices = [(0, 'Nenhum / Plano Personalizado')] + [(p.id, f"{p.nome} ({p.tipo}) - R$ {p.valor_mensal:.2f}/mês") for p in planos]
 
     # Pre-select client if passed via URL
     preselected_cliente_id = request.args.get('cliente_id', type=int)
@@ -229,8 +230,10 @@ def novo():
             if not descricao_pedido and itens_data:
                 descricao_pedido = ", ".join(f"{it['quantidade']:g}x {it['descricao']}" for it in itens_data)
 
+            plano_id_val = form.plano_id.data if form.plano_id.data and form.plano_id.data > 0 else None
             pedido = Pedido(
                 cliente_id=form.cliente_id.data,
+                plano_id=plano_id_val,
                 numero_pedido=form.numero_pedido.data.strip().upper(),
                 data_pedido=form.data_pedido.data,
                 status=form.status.data,
@@ -291,8 +294,10 @@ def editar(id):
     planos = Plano.query.filter_by(ativo=True).order_by(Plano.tipo.asc(), Plano.velocidade_download.asc()).all()
     form = PedidoForm(obj=pedido)
     form.cliente_id.choices = [(c.id, f"{c.nome} ({c.documento or c.email})") for c in clientes]
+    form.plano_id.choices = [(0, 'Nenhum / Plano Personalizado')] + [(p.id, f"{p.nome} ({p.tipo}) - R$ {p.valor_mensal:.2f}/mês") for p in planos]
 
     if request.method == 'GET':
+        form.plano_id.data = pedido.plano_id or 0
         itens_data = [
             {
                 'id': item.id,
@@ -347,6 +352,7 @@ def editar(id):
 
         if form.validate_on_submit():
             pedido.cliente_id = form.cliente_id.data
+            pedido.plano_id = form.plano_id.data if form.plano_id.data and form.plano_id.data > 0 else None
             pedido.numero_pedido = num_novo
             pedido.data_pedido = form.data_pedido.data
             pedido.status = form.status.data

@@ -4,6 +4,8 @@ from app.config import Config
 from app.extensions import db
 from app.models.user import User, Grupo, PERFIL_ADMIN, PERFIL_LIDER, PERFIL_AGENTE
 from app.models.plano import Plano, TIPO_PF, TIPO_PJ
+from app.models.cliente import Cliente
+from app.models.pedido import Pedido
 
 
 class TestConfig(Config):
@@ -317,6 +319,47 @@ class PlanosAdminTestCase(unittest.TestCase):
         res_grupos = self.client.get('/admin/grupos')
         self.assertEqual(res_grupos.status_code, 200)
         self.assertIn(b'/admin/planos', res_grupos.data)
+
+    def test_relacionamento_plano_pedido(self):
+        """Testa o relacionamento bidirecional entre Plano e Pedido."""
+        plano = Plano(
+            nome='Fibra 500 Teste',
+            tipo=TIPO_PF,
+            velocidade_download=500,
+            velocidade_upload=250,
+            valor_mensal=99.90,
+            ativo=True
+        )
+        db.session.add(plano)
+
+        cliente = Cliente(
+            nome='Empresa Teste Pedido',
+            email='teste@pedido.com',
+            bairro='Centro',
+            cidade='Campo Grande',
+            estado='MS',
+            ativo=True
+        )
+        db.session.add(cliente)
+        db.session.flush()
+
+        pedido = Pedido(
+            cliente_id=cliente.id,
+            plano_id=plano.id,
+            numero_pedido='PED-TESTE-001',
+            valor_total=99.90,
+            status='processando'
+        )
+        db.session.add(pedido)
+        db.session.commit()
+
+        # Verifica relacionamento direto
+        self.assertEqual(pedido.plano_id, plano.id)
+        self.assertEqual(pedido.plano.nome, 'Fibra 500 Teste')
+        self.assertEqual(pedido.plano_nome, 'Fibra 500 Teste')
+
+        # Verifica relacionamento reverso (backref)
+        self.assertIn(pedido, plano.pedidos)
 
 
 if __name__ == '__main__':

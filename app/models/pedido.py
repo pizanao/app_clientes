@@ -37,6 +37,10 @@ class Pedido(db.Model):
     descricao = db.Column(db.Text, nullable=True)
     observacoes = db.Column(db.Text, nullable=True)
 
+    # Relacionamento N:1 com Plano Oficial da DigitalNet MS
+    plano_id = db.Column(db.Integer, db.ForeignKey('planos.id', ondelete='SET NULL'), nullable=True, index=True)
+    plano = db.relationship('Plano', backref=db.backref('pedidos', lazy='select'))
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -80,6 +84,12 @@ class Pedido(db.Model):
     @property
     def total_itens(self) -> int:
         return len(self.itens)
+
+    @property
+    def plano_nome(self) -> str:
+        if self.plano:
+            return self.plano.nome
+        return ""
 
     @property
     def resumo_itens(self) -> str:

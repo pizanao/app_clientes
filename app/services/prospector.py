@@ -12,6 +12,7 @@ from app.extensions import db
 from app.models.cliente import Cliente
 from app.models.lead import Lead
 from app.models.pedido import Pedido, ItemPedido
+from app.models.plano import Plano
 
 logger = logging.getLogger(__name__)
 
@@ -1143,15 +1144,28 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
         return salvos
 
     @classmethod
-    def convert_lead_to_client(cls, lead: Lead) -> Cliente:
+    def convert_lead_to_client(cls, lead: Lead, plano: Optional[Plano] = None) -> Cliente:
         """
         Converte o lead em Cliente efetivo e cria automaticamente o Pedido
-        da assinatura da DigitalNet MS com itens totalizados.
+        da assinatura da DigitalNet MS vinculado ao Plano oficial e com itens totalizados.
         """
         if lead.cliente_convertido_id:
-            cliente_existente = Cliente.query.get(lead.cliente_convertido_id)
+            cliente_existente = db.session.get(Cliente, lead.cliente_convertido_id)
             if cliente_existente:
                 return cliente_existente
+
+        # Se não foi fornecido plano explicitamente, tenta localizar pelo nome sugerido do lead
+        if not plano and lead.plano_sugerido:
+            plano = Plano.query.filter(Plano.nome == lead.plano_sugerido.strip()).first()
+            if not plano:
+                plano_nome_clean = lead.plano_sugerido.split('(')[0].strip()
+                plano = Plano.query.filter(Plano.nome.ilike(f"%{plano_nome_clean}%")).first()
+
+        # Se encontrou ou recebeu um plano correspondente, atualiza o lead
+        if plano:
+            lead.plano_sugerido = plano.nome
+            if not lead.valor_mensal_sugerido or lead.valor_mensal_sugerido <= 0:
+                lead.valor_mensal_sugerido = plano.valor_mensal
 
         # 1. Cria o Cliente
         novo_cliente = Cliente(
@@ -1184,14 +1198,24 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             seq = 1
         num_pedido = f"{prefixo}-{seq:04d}"
 
-        valor = float(lead.valor_mensal_sugerido or 139.90)
+        valor = float(lead.valor_mensal_sugerido or (plano.valor_mensal if plano else 139.90))
+        plano_id_val = plano.id if plano else None
+
+        if plano:
+            desc_pedido = f"Assinatura Mensal {plano.nome} ({plano.velocidade_formatada}) - {plano.roteador_wifi or 'Instalação Inclusa com Wi-Fi 6'}"
+            desc_item = f"Mensalidade {plano.nome} ({plano.velocidade_formatada})"
+        else:
+            desc_pedido = f"Assinatura Mensal {lead.plano_sugerido} - Instalação Inclusa com Roteador Wi-Fi 6"
+            desc_item = f"Mensalidade {lead.plano_sugerido} (Instalação + Wi-Fi 6 em comodato)"
+
         pedido = Pedido(
             numero_pedido=num_pedido,
             cliente_id=novo_cliente.id,
+            plano_id=plano_id_val,
             status='processando',
             metodo_pagamento='pix',
             valor_total=valor,
-            descricao=f"Assinatura Mensal {lead.plano_sugerido} - Instalação Inclusa com Roteador Wi-Fi 6",
+            descricao=desc_pedido,
             observacoes="Ativação inicial de fibra óptica DigitalNet MS."
         )
         db.session.add(pedido)
@@ -1200,7 +1224,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
         # 3. Item do Pedido
         item = ItemPedido(
             pedido_id=pedido.id,
-            descricao=f"Mensalidade {lead.plano_sugerido} (Instalação + Wi-Fi 6 em comodato)",
+            descricao=desc_item,
             quantidade=1.0,
             valor_unitario=valor,
             valor_total=valor

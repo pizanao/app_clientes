@@ -123,6 +123,20 @@
             <span class="text-muted small d-block">Forma de Pagamento:</span>
             <strong class="text-dark">{{ pedido.metodo_pagamento_label }}</strong>
           </div>
+          {% if pedido.plano %}
+          <div class="mb-2 p-2 rounded-2 border bg-light">
+            <span class="text-muted small d-block">Plano DigitalNet Vinculado:</span>
+            <div class="d-flex align-items-center gap-2 mt-1">
+              <span class="badge bg-primary text-white fs-6">
+                <i class="bi bi-router-fill me-1"></i>{{ pedido.plano.nome }}
+              </span>
+              <span class="badge bg-info text-white">{{ pedido.plano.tipo }}</span>
+            </div>
+            <div class="small text-muted mt-1">
+              {{ pedido.plano.velocidade_formatada }} &bull; {{ pedido.plano.roteador_wifi or 'Instalação com Wi-Fi 6' }}
+            </div>
+          </div>
+          {% endif %}
           <div class="mt-3 p-3 bg-light rounded-3">
             <span class="text-muted small d-block">Valor Total do Pedido:</span>
             <span class="fs-3 fw-bold text-success">{{ pedido.valor_total | currency }}</span>

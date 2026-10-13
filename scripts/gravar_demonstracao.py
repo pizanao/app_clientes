@@ -121,18 +121,59 @@ def localizar_ffmpeg() -> str | None:
     return None
 
 
-def converter_para_mp4(webm_path: Path) -> Path:
-    """Converte o arquivo WebM para MP4 usando FFmpeg se disponível."""
+def obter_duracao_audio(caminho: Path) -> float:
+    """Retorna a duração em segundos de um arquivo de áudio via ffprobe."""
+    try:
+        res = subprocess.run(
+            [
+                'ffprobe', '-v', 'error',
+                '-show_entries', 'format=duration',
+                '-of', 'default=noprint_wrappers=1:nokey=1',
+                str(caminho)
+            ],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return float(res.stdout.strip())
+    except Exception:
+        return 0.0
+
+
+def converter_para_mp4(webm_path: Path, audio_path: Path | None = None) -> Path:
+    """Converte o arquivo WebM para MP4 usando FFmpeg e embute a trilha de áudio se disponível."""
     ffmpeg_cmd = localizar_ffmpeg()
     if not ffmpeg_cmd:
         print("[!] FFmpeg não encontrado no PATH. O vídeo em formato WebM foi preservado.")
         return webm_path
 
     mp4_path = webm_path.with_suffix('.mp4')
+
+    if audio_path is None:
+        audio_padrao = VIDEOS_DIR / 'naracao_demonstracao.wav'
+        if audio_padrao.exists():
+            audio_path = audio_padrao
+
     print(f"[*] Convertendo {webm_path.name} para MP4 usando FFmpeg ({ffmpeg_cmd})...")
+    cmd = [ffmpeg_cmd, '-y', '-i', str(webm_path)]
+    if audio_path and audio_path.exists():
+        print(f"[*] Embutindo trilha de áudio narrada: {audio_path.name}...")
+        cmd.extend([
+            '-i', str(audio_path),
+            '-c:v', 'libx264',
+            '-pix_fmt', 'yuv420p',
+            '-crf', '22',
+            '-c:a', 'aac',
+            '-b:a', '192k',
+            '-shortest'
+        ])
+    else:
+        cmd.extend(['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '22'])
+
+    cmd.append(str(mp4_path))
     try:
         subprocess.run(
-            [ffmpeg_cmd, '-y', '-i', str(webm_path), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '22', str(mp4_path)],
+            cmd,
             check=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
@@ -144,7 +185,45 @@ def converter_para_mp4(webm_path: Path) -> Path:
         return webm_path
 
 
-def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
+def converter_para_whatsapp(mp4_origem: Path) -> Path | None:
+    """Gera uma versão compactada do MP4 otimizada para envio e reprodução direta no WhatsApp."""
+    ffmpeg_cmd = localizar_ffmpeg()
+    if not ffmpeg_cmd or not mp4_origem.exists() or mp4_origem.suffix != '.mp4':
+        return None
+
+    saida_whatsapp = mp4_origem.parent / f"{mp4_origem.stem}_whatsapp.mp4"
+    saida_recente_whatsapp = mp4_origem.parent / "demonstracao_digitalnet_whatsapp.mp4"
+
+    print(f"[*] Gerando versão otimizada para WhatsApp (<16MB, 720p, +faststart)...")
+    cmd = [
+        ffmpeg_cmd, '-y', '-i', str(mp4_origem),
+        '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2',
+        '-c:v', 'libx264', '-profile:v', 'high', '-level', '4.0', '-pix_fmt', 'yuv420p', '-crf', '24', '-preset', 'slow',
+        '-c:a', 'aac', '-b:a', '96k', '-ar', '44100', '-ac', '1',
+        '-movflags', '+faststart',
+        str(saida_whatsapp)
+    ]
+    try:
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        shutil.copy(str(saida_whatsapp), str(saida_recente_whatsapp))
+        tamanho_mb = saida_whatsapp.stat().st_size / (1024 * 1024)
+        print(f"[OK] Versão para WhatsApp criada com sucesso: {saida_whatsapp.name} ({tamanho_mb:.2f} MB)")
+        return saida_whatsapp
+    except Exception as e:
+        print(f"[!] Falha ao gerar versão para WhatsApp: {e}")
+        return None
+
+
+
+
+def gravar_fluxo(
+    base_url: str,
+    headed: bool = False,
+    slow_mo: int = 500,
+    audio_path: Path | None = None,
+    sync_audio: bool = True,
+    gerar_whatsapp: bool = True
+):
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
@@ -163,11 +242,21 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
     senha_admin = obter_senha_admin()
     sincronizar_credenciais_admin(senha_admin)
 
+    # Verifica áudio padrão se não foi informado
+    if audio_path is None:
+        audio_padrao = VIDEOS_DIR / 'naracao_demonstracao.wav'
+        if audio_padrao.exists():
+            audio_path = audio_padrao
+
+    duracao_audio = obter_duracao_audio(audio_path) if audio_path and audio_path.exists() else 0.0
+
     print("=" * 75)
     print("=== GRAVADOR AUTOMATIZADO DE VÍDEO - DIGITALNET PROSPECTOR")
     print(f"=== URL Alvo: {base_url}")
     print(f"=== Credenciais Admin: admin / {senha_admin}")
     print(f"=== Modo Visual: {'Headed (Navegador Visível)' if headed else 'Headless (Segundo Plano)'}")
+    print(f"=== Trilha de Áudio: {audio_path.name if audio_path and audio_path.exists() else 'Nenhuma'}")
+    print(f"=== Sincronização com Áudio: {'Ativa (' + str(round(duracao_audio, 1)) + 's)' if (sync_audio and duracao_audio > 0) else 'Desativada'}")
     print("=" * 75)
 
     with sync_playwright() as p:
@@ -195,10 +284,18 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
         # Aceita caixas de diálogo / confirmação automaticamente (ex: confirmação de conversão)
         page.on("dialog", lambda dialog: dialog.accept())
 
+        tempo_inicio_gravacao = time.time()
+
+        def aguardar_passo(inicio_passo: float, duracao_alvo: float):
+            if sync_audio and duracao_audio > 0:
+                restante = duracao_alvo - (time.time() - inicio_passo)
+                if restante > 0:
+                    page.wait_for_timeout(int(restante * 1000))
 
         # ----------------------------------------------------------------------
-        # PASSO 1: LOGIN NO SISTEMA
+        # PASSO 1: LOGIN NO SISTEMA (Alinhado com Bloco 1 da Narração)
         # ----------------------------------------------------------------------
+        t_passo1 = time.time()
         print("\n[1/8] Executando Login como Administrador...")
         page.goto(f"{base_url}/auth/login", wait_until="networkidle")
         page.wait_for_timeout(1000)
@@ -211,32 +308,40 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(1500)
         print(f"    -> Autenticado com sucesso! Página atual: {page.url}")
+        aguardar_passo(t_passo1, 22.0)
 
         # ----------------------------------------------------------------------
-        # PASSO 2: DASHBOARD EXECUTIVO
+        # PASSO 2: DASHBOARD EXECUTIVO (Alinhado com Bloco 2 da Narração)
         # ----------------------------------------------------------------------
+        t_passo2 = time.time()
         print("[2/8] Apresentando Dashboard Executivo e Indicadores...")
         page.mouse.wheel(0, 450)
-        page.wait_for_timeout(1500)
-        page.mouse.wheel(0, -450)
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(2500)
+        page.mouse.wheel(0, 300)
+        page.wait_for_timeout(2500)
+        page.mouse.wheel(0, -750)
+        page.wait_for_timeout(2000)
+        aguardar_passo(t_passo2, 27.0)
 
         # ----------------------------------------------------------------------
-        # PASSO 3: RADAR DE LEADS & MAPA DE EXPANSÃO ÓPTICA
+        # PASSO 3: RADAR DE LEADS & MAPA DE EXPANSÃO ÓPTICA (Alinhado com Bloco 3)
         # ----------------------------------------------------------------------
+        t_passo3 = time.time()
         print("[3/8] Acessando Radar de Leads & Mapa de Campo Grande...")
         page.click('a.sidebar-link[href*="/leads"]')
         page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
 
         # Destaca o mapa e as camadas de calor
         print("    -> Interagindo com o Mapa de Cobertura e Clusters de Fibra...")
         page.mouse.wheel(0, 250)
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(2500)
+        aguardar_passo(t_passo3, 23.5)
 
         # ----------------------------------------------------------------------
-        # PASSO 4: PROSPECÇÃO GEO-LOCALIZADA (CLIQUE NO CLIENTE / NÓ E GAVETA)
+        # PASSO 4: PROSPECÇÃO GEO-LOCALIZADA (Alinhado com Bloco 4: Radar & Fibra)
         # ----------------------------------------------------------------------
+        t_passo4 = time.time()
         print("[4/8] Prospecção Geo-Localizada: Selecionando Nó / Cliente de Fibra no Mapa...")
         mapa_loc = page.locator('#mapaCalor')
         if mapa_loc.is_visible():
@@ -249,7 +354,7 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
         try:
             pin_fibra.wait_for(state="visible", timeout=4000)
             pin_fibra.click(force=True, timeout=2500)
-            page.wait_for_timeout(1200)
+            page.wait_for_timeout(1500)
         except Exception as e:
             print(f"    [!] Ativando nó óptico via Leaflet: {e}")
             page.evaluate("""() => {
@@ -260,7 +365,7 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
                     }
                 }
             }""")
-            page.wait_for_timeout(1200)
+            page.wait_for_timeout(1500)
 
         # Clica em 'Carregar Empresas do Nó' no popup do marcador
         print("    -> Clicando no botão 'Carregar Empresas do Nó'...")
@@ -295,9 +400,9 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
         if drawer_body.is_visible():
             drawer_body.hover()
             page.mouse.wheel(0, 350)
-            page.wait_for_timeout(1800)
+            page.wait_for_timeout(2000)
             page.mouse.wheel(0, 350)
-            page.wait_for_timeout(1800)
+            page.wait_for_timeout(2000)
             page.mouse.wheel(0, -700)
             page.wait_for_timeout(1500)
 
@@ -316,10 +421,12 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
             }""")
         page.wait_for_selector('#offcanvasNodoEmpresas', state="hidden", timeout=5000)
         page.wait_for_timeout(1000)
+        aguardar_passo(t_passo4, 25.0)
 
         # ----------------------------------------------------------------------
-        # PASSO 5: TABELA RESPONSIVA & LINHAS ANINHADAS (CHILD ROWS)
+        # PASSO 5 & 6: TABELA, DOSSIÊ 360° & TUTOR DE OBJEÇÕES (Alinhado com Bloco 5)
         # ----------------------------------------------------------------------
+        t_passo5 = time.time()
         print("[5/8] Demonstrando Tabela de Leads com Linhas Aninhadas...")
         tabela_loc = page.locator('#tabelaLeads')
         if tabela_loc.is_visible():
@@ -330,13 +437,10 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
         if btn_detalhes.is_visible():
             print("    -> Expandindo Dossiê Rápido e Script Anti-Ban na Linha Aninhada...")
             btn_detalhes.click()
-            page.wait_for_timeout(2000)
+            page.wait_for_timeout(2500)
             page.mouse.wheel(0, 300)
-            page.wait_for_timeout(1500)
+            page.wait_for_timeout(1800)
 
-        # ----------------------------------------------------------------------
-        # PASSO 6: ACESSO AO DOSSIÊ 360° DO LEAD & QUEBRA DE OBJEÇÕES
-        # ----------------------------------------------------------------------
         print("[6/8] Acessando Dossiê Comercial 360° e Tutor de Objeções...")
         btn_dossie = page.locator('a[href*="/leads/"][title*="Dossiê"]').first
         if not btn_dossie.is_visible():
@@ -344,33 +448,35 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
 
         btn_dossie.click()
         page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(2500)
 
         print("    -> Simulando abordagem WhatsApp e Tutor de Objeções...")
         page.mouse.wheel(0, 350)
-        page.wait_for_timeout(1200)
+        page.wait_for_timeout(1500)
 
         btn_obj_preco = page.locator('a:has-text("Preço / Custo")')
         if btn_obj_preco.is_visible():
             btn_obj_preco.click()
-            page.wait_for_timeout(1200)
+            page.wait_for_timeout(1500)
 
         btn_obj_fid = page.locator('a:has-text("Fidelidade Concorrente")')
         if btn_obj_fid.is_visible():
             btn_obj_fid.click()
-            page.wait_for_timeout(1200)
+            page.wait_for_timeout(1500)
 
-        # Marca como Opt-in Aceito
+        aguardar_passo(t_passo5, 23.0)
+
+        # ----------------------------------------------------------------------
+        # PASSO 7: CONVERSÃO DO LEAD EM CLIENTE & GERAÇÃO DO PEDIDO (Alinhado com Bloco 6)
+        # ----------------------------------------------------------------------
+        t_passo7 = time.time()
+        print("[7/8] Demonstrando WhatsApp, Conversão em Cliente e Pedido de Banda Larga...")
         btn_optin_aceito = page.locator('button:has-text("Opt-in Aceito!")')
         if btn_optin_aceito.is_visible():
             btn_optin_aceito.click()
             page.wait_for_load_state("networkidle")
             page.wait_for_timeout(1500)
 
-        # ----------------------------------------------------------------------
-        # PASSO 7: CONVERSÃO DO LEAD EM CLIENTE & GERAÇÃO DO PEDIDO DE BANDA LARGA
-        # ----------------------------------------------------------------------
-        print("[7/8] Convertendo Lead em Cliente e Gerando Pedido de Banda Larga...")
         page.mouse.wheel(0, 450)
         page.wait_for_timeout(1500)
 
@@ -394,10 +500,13 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
                 page.mouse.wheel(0, 250)
                 page.wait_for_timeout(1800)
 
+        aguardar_passo(t_passo7, 22.0)
+
         # ----------------------------------------------------------------------
-        # PASSO 8: CONTROLE DE ACESSO POR PERFIS (RBAC) & ADMINISTRAÇÃO
+        # PASSO 8: CONTROLE DE ACESSO POR PERFIS (RBAC) & ADMINISTRAÇÃO (Alinhado com Bloco 7)
         # ----------------------------------------------------------------------
-        print("[8/8] Demonstrando Controle de Acesso por Perfis (RBAC) e Grupos...")
+        t_passo8 = time.time()
+        print("[8/9] Demonstrando Controle de Acesso por Perfis (RBAC), Grupos e Planos...")
         page.click('a.sidebar-link[href*="/admin/usuarios"]')
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(2000)
@@ -413,12 +522,33 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
         page.wait_for_timeout(2000)
         page.mouse.wheel(0, 250)
         page.wait_for_timeout(1800)
+        aguardar_passo(t_passo8, 20.5)
 
-        # Retorna ao Dashboard com visão executiva completa
-        print("    -> Retornando ao Dashboard para conclusão da gravação...")
+        # ----------------------------------------------------------------------
+        # PASSO 9: CONCLUSÃO, EVOLUÇÃO COM PROVA 02 E AGRADECIMENTO (Alinhado com Bloco 8)
+        # ----------------------------------------------------------------------
+        t_passo9 = time.time()
+        print("[9/9] Retornando ao Dashboard: Apresentando Proposta de Evolução (Prova 02) e Agradecimento...")
         page.click('a.sidebar-link[href*="/dashboard"]')
         page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(2500)
+        page.wait_for_timeout(3000)
+
+        # Rola suavemente pelo dashboard executivo durante a explanação da Prova 02
+        page.mouse.wheel(0, 350)
+        page.wait_for_timeout(4000)
+        page.mouse.wheel(0, 350)
+        page.wait_for_timeout(4000)
+        page.mouse.wheel(0, -700)
+        page.wait_for_timeout(3000)
+        aguardar_passo(t_passo9, 44.0)
+
+        # Garante que toda a duração da narração seja coberta antes de finalizar o vídeo
+        if sync_audio and duracao_audio > 0:
+            total_decorrido = time.time() - tempo_inicio_gravacao
+            if total_decorrido < duracao_audio:
+                sobra = duracao_audio - total_decorrido + 1.0
+                print(f"    -> Aguardando fechamento da narração ({sobra:.1f}s restantes)...")
+                page.wait_for_timeout(int(sobra * 1000))
 
         # Finaliza e salva o vídeo
         context.close()
@@ -441,10 +571,12 @@ def gravar_fluxo(base_url: str, headed: bool = False, slow_mo: int = 500):
         print(f"  • Atalho Fixo:  {video_recente_webm}")
         print(f"  • Tamanho:      {video_final_webm.stat().st_size / (1024 * 1024):.2f} MB")
 
-        # Conversão opcional para MP4
-        video_mp4 = converter_para_mp4(video_final_webm)
+        # Conversão opcional para MP4 embutindo a trilha de áudio
+        video_mp4 = converter_para_mp4(video_final_webm, audio_path)
         if video_mp4 != video_final_webm:
             shutil.copy(str(video_mp4), str(VIDEOS_DIR / "demonstracao_digitalnet_recente.mp4"))
+            if gerar_whatsapp:
+                converter_para_whatsapp(video_mp4)
         print("=" * 75)
         return video_final_webm
 
@@ -459,12 +591,32 @@ def main():
     parser.add_argument('--port', type=int, default=5055, help='Porta HTTP da aplicação (default: 5055)')
     parser.add_argument('--headed', action='store_true', help='Executa com o navegador visível')
     parser.add_argument('--slow-mo', type=int, default=600, help='Delay em ms entre ações (default: 600)')
+    parser.add_argument('--audio', type=str, default=None, help='Caminho para arquivo de áudio de narração a embutir (default: videos/naracao_demonstracao.wav)')
+    parser.add_argument('--no-audio', action='store_true', help='Não embute trilha de áudio no vídeo')
+    parser.add_argument('--no-sync', action='store_true', help='Não sincroniza o tempo dos passos com a duração do áudio')
+    parser.add_argument('--no-whatsapp', action='store_true', help='Não gera a versão compactada para WhatsApp')
     args = parser.parse_args()
+
+    audio_path = None
+    if not args.no_audio:
+        if args.audio:
+            audio_path = Path(args.audio)
+        else:
+            default_audio = VIDEOS_DIR / 'naracao_demonstracao.wav'
+            if default_audio.exists():
+                audio_path = default_audio
 
     base_url = f"http://127.0.0.1:{args.port}"
     processo_servidor = verificar_ou_iniciar_servidor(base_url, args.port)
     try:
-        gravar_fluxo(base_url=base_url, headed=args.headed, slow_mo=args.slow_mo)
+        gravar_fluxo(
+            base_url=base_url,
+            headed=args.headed,
+            slow_mo=args.slow_mo,
+            audio_path=audio_path,
+            sync_audio=not args.no_sync,
+            gerar_whatsapp=not args.no_whatsapp
+        )
     finally:
         if processo_servidor:
             print("[*] Encerrando servidor temporário...")

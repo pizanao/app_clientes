@@ -31,6 +31,9 @@ class PedidoForm(FlaskForm):
     cliente_id = SelectField('Cliente *', coerce=int, validators=[
         DataRequired(message='Selecione um cliente.')
     ])
+    plano_id = SelectField('Plano de Internet / Assinatura', coerce=int, validators=[
+        Optional()
+    ])
     numero_pedido = StringField('Número do Pedido *', validators=[
         DataRequired(message='O número do pedido é obrigatório.'),
         Length(max=30)

@@ -77,6 +77,15 @@ A aplicação foi projetada como uma plataforma integrada para a operadora **Dig
 - Script de gravação automatizada em vídeo com Playwright ([`scripts/gravar_demonstracao.py`](scripts/gravar_demonstracao.py)).
 - Regeneração e checagem contínua da integridade do instalador autônomo [`setup.sh`](setup.sh).
 
+### Fase 9: Relação Plano-Pedido & Seleção Dinâmica na Validação de Leads
+- Chave estrangeira `plano_id` no modelo [`Pedido`](app/models/pedido.py) com `db.ForeignKey('planos.id', ondelete='SET NULL')` e relacionamento bidirecional `plano` / `plano.pedidos`.
+- Migração Alembic `d4e5f6a7b8c9_add_plano_id_to_pedidos.py` com `batch_alter_table` para compatibilidade total com SQLite.
+- Seleção de plano na conversão de leads:
+  - Na página de detalhes do Lead ([`leads/detail.html`](app/templates/leads/detail.html)): seletor estilizado de planos ativos com preview dinâmico de velocidade, comodato de Wi-Fi 6, valor acordado e vínculo direto ao pedido gerado.
+  - Na visualização expandida (child rows) da tabela de leads ([`leads/index.html`](app/templates/leads/index.html)): dropdown com conversão e ativação em 1-clique.
+  - No cadastro e edição de pedidos ([`pedidos/form.html`](app/templates/pedidos/form.html)): seleção de plano oficial com preenchimento reativo do primeiro item.
+  - No comprovante e detalhes do pedido ([`pedidos/detail.html`](app/templates/pedidos/detail.html)): badge de identificação do plano, velocidade e comodato.
+
 ---
 
 ## 3. Decisões Arquiteturais e Lições Aprendidas
@@ -108,7 +117,7 @@ app_clientes.db (SQLite)
 │   ├── grupos (id, nome, descricao, papel, created_at)
 │   ├── usuario_grupos (usuario_id, grupo_id) [associativa N:N]
 │   ├── clientes (id, nome, email, telefone, documento, cep, logradouro, numero, bairro, cidade, estado, ativo, observacoes, created_at)
-│   ├── pedidos (id, numero_pedido, cliente_id, data_pedido, status, metodo_pagamento, valor_total, descricao, observacoes, created_at)
+│   ├── pedidos (id, numero_pedido, cliente_id, plano_id, data_pedido, status, metodo_pagamento, valor_total, descricao, observacoes, created_at)
 │   ├── itens_pedido (id, pedido_id, descricao, quantidade, valor_unitario, valor_total, created_at)
 │   ├── leads (id, nome, empresa, cargo, telefone, email, documento, niche, cep, logradouro, numero, bairro, cidade, estado, operadora_atual, plano_sugerido, valor_mensal_sugerido, lead_score, dor_principal, icebreaker_optin, dossie_comercial, status, optin_status, cliente_convertido_id, created_at)
 │   └── planos (id, nome, tipo, velocidade_download, velocidade_upload, valor_mensal, valor_cheio, fidelidade_meses, roteador_wifi, beneficios, aplicativos_inclusos, sla_horas, linhas_simultaneas, pabx_virtual, ip_fixo, ativo, destaque, descricao, created_at)
@@ -135,11 +144,11 @@ app_clientes.db (SQLite)
 | `python scripts/enriquecer_clientes_rfb.py --limit 150` | Vincula empresas comerciais reais da RFB como clientes de teste ativos. |
 | `python scripts/gerar_perfis_sisgran.py` | Gera o dicionário de bairros em `app/data/perfis_sisgran.py`. |
 | `python scripts/gravar_demonstracao.py` | Grava vídeo automatizado Full HD (1080p) do fluxo completo com Playwright e FFmpeg. |
-| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de 53 testes automatizados de validação. |
+| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de 55 testes automatizados de validação. |
 
 ---
 
-## 6. Cobertura da Suíte de Testes (53 testes)
+## 6. Cobertura da Suíte de Testes (55 testes)
 
 1. **`tests/test_app.py` (18 testes):**
    - Autenticação: login com sucesso, logout, senha inválida, proteção contra open redirect.
@@ -147,11 +156,12 @@ app_clientes.db (SQLite)
    - CRUD de clientes com formatação documental brasileira.
    - CRUD de pedidos com totalização de itens e limites de 1 a 10 itens.
    - Isolamento de chaves secretas de produção e integridade de senhas aleatórias de seed.
-2. **`tests/test_leads.py` (8 testes):**
+2. **`tests/test_leads.py` (9 testes):**
    - Endpoints da API REST de leads e camadas GeoJSON.
    - Mocks de provedores de IA (AIsa e Gemini) com failover para o motor local.
    - Deduplicação estrita de empresas prospectadas no mesmo bairro.
-   - Conversão em 1-clique de lead para cliente com pedido de ativação.
+   - Conversão em 1-clique de lead para cliente com pedido de ativação e vínculo com Plano oficial.
+   - Conversão com plano explícito e via rota web com validação de `plano_id`.
 3. **`tests/test_rbac_admin.py` (15 testes):**
    - Acesso restrito a rotas `/admin/` para administradores.
    - Bloqueio de Agentes e Líderes Técnicos com retorno HTTP 403.
@@ -159,11 +169,12 @@ app_clientes.db (SQLite)
    - Herança de papéis operacionais atribuídos por grupo.
    - Proteção de integridade: bloqueio de autoexclusão e autodesativação do admin conectado, e trava do último admin ativo.
    - Permissão de exclusão de clientes/pedidos exclusiva para Líder Técnico e Administrador.
-4. **`tests/test_planos_admin.py` (12 testes):**
+4. **`tests/test_planos_admin.py` (13 testes):**
    - Acesso administrativo ao catálogo de planos.
    - Criação e validação de planos residenciais (PF) e corporativos (PJ).
    - Bloqueio de nomes duplicados e alternância de status ativo/inativo.
    - Seeding dos 9 planos oficiais da DigitalNet MS.
+   - Relacionamento bidirecional `Plano <-> Pedido` e propriedade `plano.pedidos`.
    - Navegação integrada entre as abas de Usuários, Grupos e Planos no painel.
 
 ---

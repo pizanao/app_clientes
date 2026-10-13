@@ -4,9 +4,19 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.lead import Lead
 from app.models.cliente import Cliente
+from app.models.plano import Plano
 from app.services.prospector import TelecomProspectorService, PLANOS_DIGITALNET
 
 leads_bp = Blueprint('leads', __name__, url_prefix='/leads')
+
+
+def obter_planos_ativos():
+    """Retorna os planos oficiais ativos do banco. Se a base estiver vazia, roda o seed inicial."""
+    planos = Plano.query.filter_by(ativo=True).order_by(Plano.tipo.asc(), Plano.velocidade_download.asc()).all()
+    if not planos:
+        Plano.seed_planos_iniciais()
+        planos = Plano.query.filter_by(ativo=True).order_by(Plano.tipo.asc(), Plano.velocidade_download.asc()).all()
+    return planos
 
 
 # -----------------------------------------------------------------------------
@@ -95,7 +105,7 @@ def index():
         'leads/index.html',
         leads=leads,
         clusters=clusters,
-        planos=PLANOS_DIGITALNET,
+        planos=obter_planos_ativos(),
         total_leads=total_leads,
         total_novos=total_novos,
         total_optin_solicitado=total_optin_solicitado,
@@ -157,12 +167,13 @@ def detail(lead_id: int):
     obj_key = request.args.get('obj', 'fidelidade')
     tutor_obj = TelecomProspectorService.get_objection_tutor(obj_key, lead)
 
+    planos_ativos = obter_planos_ativos()
     return render_template(
         'leads/detail.html',
         lead=lead,
         tutor_obj=tutor_obj,
         obj_key=obj_key,
-        planos=PLANOS_DIGITALNET
+        planos=planos_ativos
     )
 
 
@@ -190,21 +201,36 @@ def atualizar_status(lead_id: int):
 @leads_bp.route('/<int:lead_id>/converter', methods=['POST'])
 @login_required
 def converter_cliente(lead_id: int):
-    """Converte o lead em cliente e cria o pedido da assinatura DigitalNet."""
+    """Converte o lead em cliente e cria o pedido da assinatura DigitalNet vinculado ao Plano."""
     lead = Lead.query.get_or_404(lead_id)
 
+    plano_id = request.form.get('plano_id', type=int)
     plano_escolhido = request.form.get('plano_sugerido')
     valor_escolhido = request.form.get('valor_mensal_sugerido')
 
-    if plano_escolhido:
+    plano_obj = None
+    if plano_id and plano_id > 0:
+        plano_obj = db.session.get(Plano, plano_id)
+    elif plano_escolhido:
+        plano_obj = Plano.query.filter(Plano.nome == plano_escolhido.strip()).first()
+        if not plano_obj:
+            plano_clean = plano_escolhido.split('(')[0].strip()
+            plano_obj = Plano.query.filter(Plano.nome.ilike(f"%{plano_clean}%")).first()
+
+    if plano_obj:
+        lead.plano_sugerido = plano_obj.nome
+        if not valor_escolhido:
+            lead.valor_mensal_sugerido = plano_obj.valor_mensal
+    elif plano_escolhido:
         lead.plano_sugerido = plano_escolhido
+
     if valor_escolhido:
         try:
             lead.valor_mensal_sugerido = float(valor_escolhido)
         except ValueError:
             pass
 
-    cliente = TelecomProspectorService.convert_lead_to_client(lead)
+    cliente = TelecomProspectorService.convert_lead_to_client(lead, plano=plano_obj)
     flash(f"Parabéns! Lead convertido em Cliente '{cliente.nome}' com Pedido de Ativação gerado!", 'success')
     return redirect(url_for('clientes.detalhe', id=cliente.id))
 

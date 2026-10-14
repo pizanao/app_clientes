@@ -572,18 +572,24 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
     ) -> List[Dict[str, Any]]:
         """
         Busca leads comerciais reais da base de dados abertos da Receita Federal (RFB)
-        armazenados na tabela leeds_campo_grande, filtrando pela região geográfica do bairro
-        e garantindo que não sejam empresas já prospectadas ou clientes existentes.
+        armazenados na tabela leeds_campo_grande (ou view leads_campo_grande), filtrando
+        pela região geográfica do bairro e garantindo que não sejam empresas já prospectadas
+        ou clientes existentes.
         """
+        tabela_rfb = None
         try:
             from sqlalchemy import text
-            has_table = bool(db.session.execute(
-                text("SELECT 1 FROM sqlite_master WHERE type='table' AND name='leeds_campo_grande'")
-            ).scalar())
-            if not has_table:
+            for tbl in ('leeds_campo_grande', 'leads_campo_grande'):
+                has = bool(db.session.execute(
+                    text(f"SELECT 1 FROM sqlite_master WHERE type IN ('table', 'view') AND name='{tbl}'")
+                ).scalar())
+                if has:
+                    tabela_rfb = tbl
+                    break
+            if not tabela_rfb:
                 return []
         except Exception as e:
-            logger.debug(f"Tabela leeds_campo_grande não disponível para consulta: {e}")
+            logger.debug(f"Tabela RFB não disponível para consulta: {e}")
             return []
 
         info_bairro = cls.get_bairro_profile(bairro)
@@ -592,8 +598,9 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
         cep_prefix = info_bairro.get('cep_prefix', '79002')
 
         prefixes = [cep_prefix] if cep_prefix else []
+        bairro_norm = bairro
         try:
-            bairro_norm = resolver_bairro(bairro)
+            bairro_norm = resolver_bairro(bairro) or bairro
             for p, b_name in CEP_PREFIXOS_BAIRROS.items():
                 if b_name.lower() in (bairro.lower(), bairro_norm.lower()):
                     if p not in prefixes:
@@ -607,14 +614,18 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
         prefix_conditions = " OR ".join([f"cep LIKE :p_{i}" for i in range(len(prefixes))])
         params = {f"p_{i}": f"{pref}%" for i, pref in enumerate(prefixes)}
         params['limit_query'] = max(count * 4, 30)
+        params['bairro_busca'] = f"%{bairro.upper()}%"
+        params['bairro_norm_busca'] = f"%{bairro_norm.upper()}%"
+
+        bairro_condition = f"(UPPER(bairro) LIKE :bairro_busca OR UPPER(bairro) LIKE :bairro_norm_busca OR ({prefix_conditions}))"
 
         query = text(f"""
             SELECT 
-                empresa, cnpj, nome, cargo, telefone, email, logradouro, numero, cep, 
+                empresa, cnpj, nome, cargo, telefone, email, logradouro, numero, bairro, complemento, cep, 
                 operadora_atual, plano_sugerido, valor_mensal_sugerido, lead_score, cnae_fiscal
-            FROM leeds_campo_grande
+            FROM {tabela_rfb}
             WHERE situacao_cadastral = 'ATIVA'
-              AND ({prefix_conditions})
+              AND {bairro_condition}
               AND email IS NOT NULL AND email != '' AND email LIKE '%@%.%'
               AND telefone IS NOT NULL AND length(telefone) >= 8
               AND empresa NOT IN (SELECT empresa FROM leads WHERE empresa IS NOT NULL)
@@ -625,8 +636,25 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
         try:
             rows = db.session.execute(query, params).fetchall()
         except Exception as e:
-            logger.warning(f"Erro ao consultar leeds_campo_grande: {e}")
-            return []
+            logger.debug(f"Tentando consulta de compatibilidade sem colunas estendidas: {e}")
+            query_compat = text(f"""
+                SELECT 
+                    empresa, cnpj, nome, cargo, telefone, email, logradouro, numero, cep, 
+                    operadora_atual, plano_sugerido, valor_mensal_sugerido, lead_score, cnae_fiscal
+                FROM {tabela_rfb}
+                WHERE situacao_cadastral = 'ATIVA'
+                  AND ({prefix_conditions})
+                  AND email IS NOT NULL AND email != '' AND email LIKE '%@%.%'
+                  AND telefone IS NOT NULL AND length(telefone) >= 8
+                  AND empresa NOT IN (SELECT empresa FROM leads WHERE empresa IS NOT NULL)
+                ORDER BY lead_score DESC, RANDOM()
+                LIMIT :limit_query
+            """)
+            try:
+                rows = db.session.execute(query_compat, params).fetchall()
+            except Exception as e2:
+                logger.warning(f"Erro ao consultar {tabela_rfb}: {e2}")
+                return []
 
         leads_encontrados = []
         idx = 0
@@ -658,26 +686,79 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             cargo_raw = str(data.get('cargo') or 'Sócio-Administrador').strip()
             cargo_fmt = cargo_raw.capitalize() if cargo_raw.isupper() else cargo_raw
 
-            tel_digits = re.sub(r'\D', '', str(data.get('telefone') or ''))
-            if tel_digits.startswith('067'):
-                tel_digits = tel_digits[3:]
-            elif tel_digits.startswith('67'):
+            # Trata o campo de telefone: faz o split pelo '|', pega o primeiro número da lista e remove +55
+            raw_tel = str(data.get('telefone') or '')
+            primeiro_tel = raw_tel.split('|')[0].strip() if '|' in raw_tel else raw_tel.strip()
+
+            tel_digits = re.sub(r'\D', '', primeiro_tel)
+            if tel_digits.startswith('55') and len(tel_digits) >= 10:
                 tel_digits = tel_digits[2:]
 
-            if len(tel_digits) == 8:
-                tel_fmt = f"(67) 9{tel_digits[:4]}-{tel_digits[4:]}" if tel_digits[0] in ('8', '9') else f"(67) {tel_digits[:4]}-{tel_digits[4:]}"
-            elif len(tel_digits) >= 9:
-                tel_fmt = f"(67) {tel_digits[:5]}-{tel_digits[5:9]}"
+            # Extrai DDD (2 dígitos) e número local
+            if len(tel_digits) in (10, 11):
+                ddd = tel_digits[:2]
+                num = tel_digits[2:]
+            elif len(tel_digits) in (8, 9):
+                ddd = '67'
+                num = tel_digits
+            elif len(tel_digits) > 11:
+                ddd = tel_digits[:2]
+                num = tel_digits[2:11]
+            else:
+                ddd = '67'
+                num = ''
+
+            if len(num) == 9:
+                tel_fmt = f"({ddd}) {num[:5]}-{num[5:]}"
+            elif len(num) == 8:
+                if num[0] in ('8', '9'):
+                    tel_fmt = f"({ddd}) 9{num[:4]}-{num[4:]}"
+                else:
+                    tel_fmt = f"({ddd}) {num[:4]}-{num[4:]}"
             else:
                 tel_fmt = f"(67) 99{random.randint(100, 999)}-{random.randint(1000, 9999)}"
 
-            if amostras:
+            # 1. Logradouro real da RFB formatado em Title Case
+            raw_logr = str(data.get('logradouro') or '').replace("'", "").replace('"', '').strip()
+            if raw_logr and raw_logr != '0' and not raw_logr.isdigit():
+                words = raw_logr.split()
+                lowers = {'de', 'da', 'do', 'dos', 'das', 'e', 'em'}
+                uppers = {'ltda', 'me', 'epp', 's/a', 'sa', 'eireli'}
+                logr_parts = []
+                for i_w, w in enumerate(words):
+                    wl = w.lower()
+                    if wl in uppers:
+                        logr_parts.append(wl.upper())
+                    elif i_w > 0 and wl in lowers:
+                        logr_parts.append(wl)
+                    else:
+                        logr_parts.append(w.capitalize())
+                rua_lead = " ".join(logr_parts)
+            elif amostras:
                 am = amostras[idx % len(amostras)]
                 rua_lead = am.get('logradouro') or ruas[idx % len(ruas)]
-                num_lead = str(data.get('numero') or am.get('numero') or (120 + idx * 35))
             else:
                 rua_lead = ruas[idx % len(ruas)]
-                num_lead = str(data.get('numero') or (120 + idx * 35))
+
+            # 2. Número real do imóvel
+            raw_num = str(data.get('numero') or '').replace("'", "").replace('"', '').strip()
+            if raw_num and raw_num.upper() not in ('0', 'NULL', 'NONE'):
+                num_lead = raw_num
+            elif amostras:
+                am = amostras[idx % len(amostras)]
+                num_lead = str(am.get('numero') or (120 + idx * 35))
+            else:
+                num_lead = str(120 + idx * 35)
+
+            # 3. Complemento do imóvel
+            raw_compl = str(data.get('complemento') or '').replace("'", "").replace('"', '').strip()
+            compl_lead = raw_compl if raw_compl and raw_compl.upper() not in ('0', 'NULL', 'NONE') else None
+
+            # 4. Bairro normalizado
+            raw_bairro = str(data.get('bairro') or '').strip()
+            bairro_lead = normalizar_bairro(raw_bairro) if raw_bairro else normalizar_bairro(bairro)
+            if not bairro_lead or bairro_lead == 'Centro':
+                bairro_lead = normalizar_bairro(bairro) or 'Centro'
 
             cep_digits = re.sub(r'\D', '', str(data.get('cep') or ''))
             if len(cep_digits) == 8:
@@ -716,7 +797,8 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'documento': cnpj_fmt,
                 'logradouro': rua_lead,
                 'numero': num_lead,
-                'bairro': bairro,
+                'complemento': compl_lead,
+                'bairro': bairro_lead,
                 'cidade': cidade,
                 'estado': estado,
                 'cep': cep_fmt,

@@ -472,3 +472,44 @@ class LeadsTestCase(unittest.TestCase):
                 self.assertEqual(leads[0]['cargo'], 'Diretor Técnico')
                 self.assertEqual(leads[0]['lead_score'], 96)
 
+    def test_rfb_telephone_split_and_formatting(self):
+        """Testa o tratamento do campo telefone da base RFB com split por '|' e remoção de prefixo +55."""
+        from scripts.enriquecer_clientes_rfb import format_telefone
+
+        # Casos com múltiplos telefones concatenados por '|' e DDI +55
+        self.assertEqual(format_telefone('+556791453123 | +55'), '(67) 99145-3123')
+        self.assertEqual(format_telefone('+556733051713 | +55'), '(67) 3305-1713')
+        self.assertEqual(format_telefone('+556782222266 | +55000000000000'), '(67) 98222-2266')
+        self.assertEqual(format_telefone('+556799824822 | +55'), '(67) 99982-4822')
+        self.assertEqual(format_telefone('+556692094297 | +55'), '(66) 99209-4297')
+
+        # Casos comuns e fallbacks
+        self.assertEqual(format_telefone(''), '(67) 3300-1000')
+        self.assertEqual(format_telefone(None), '(67) 3300-1000')
+        self.assertEqual(format_telefone('(67) 3384-9000'), '(67) 3384-9000')
+
+        # Validação do padrão E.164 e link wa.me no modelo Lead
+        lead_teste = Lead(
+            nome='Carlos Pereira',
+            empresa='Auto Peças MS',
+            telefone='(67) 99145-3123',
+            bairro='Centro',
+            icebreaker_optin='Olá Carlos, tudo bem?'
+        )
+        self.assertEqual(lead_teste.telefone_numeros, '5567991453123')
+        self.assertEqual(lead_teste.telefone_e164, '+5567991453123')
+        self.assertTrue(lead_teste.whatsapp_url.startswith('https://wa.me/5567991453123?text='))
+
+        # Se o lead tiver telefone bruto com pipe '|'
+        lead_com_pipe = Lead(
+            nome='Ana Paula',
+            empresa='Clínica Sorriso',
+            telefone='+556799824822 | +55',
+            bairro='Centro',
+            icebreaker_optin='Olá Ana'
+        )
+        self.assertEqual(lead_com_pipe.telefone_numeros, '556799824822')
+        self.assertEqual(lead_com_pipe.telefone_e164, '+556799824822')
+        self.assertTrue(lead_com_pipe.whatsapp_url.startswith('https://wa.me/556799824822?text='))
+
+

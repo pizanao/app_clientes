@@ -55,5 +55,28 @@ class Cliente(db.Model):
             partes.append(f"CEP: {self.cep}")
         return " - ".join(partes) if partes else "Endereço não informado"
 
+    @property
+    def telefone_numeros(self) -> str:
+        """Retorna apenas dígitos do telefone no formato internacional E.164 (sem '+') para o wa.me."""
+        if not self.telefone:
+            return ''
+        primeiro = self.telefone.split('|')[0].strip()
+        digits = ''.join(c for c in primeiro if c.isdigit())
+        if len(digits) in (10, 11) and not digits.startswith('55'):
+            digits = '55' + digits
+        return digits
+
+    @property
+    def telefone_e164(self) -> str:
+        """Retorna no padrão E.164 canônico com sinal de '+' (ex: +5567991453123)."""
+        num = self.telefone_numeros
+        return f"+{num}" if num else ''
+
+    @property
+    def whatsapp_url(self) -> str:
+        """Gera URL direta para iniciar conversa com o cliente no WhatsApp."""
+        phone = self.telefone_numeros
+        return f"https://wa.me/{phone}" if phone else '#'
+
     def __repr__(self):
         return f'<Cliente {self.nome}>'

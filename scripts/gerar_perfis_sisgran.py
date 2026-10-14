@@ -519,6 +519,21 @@ from typing import Dict, Any, Tuple, Optional, List
     content.append("}\n\n")
 
     helpers = r'''
+def title_case(text: str) -> str:
+    """Converte texto para Title Case respeitando preposições em minúsculas."""
+    if not text:
+        return ''
+    words = text.strip().split()
+    lowers = {'de', 'da', 'do', 'dos', 'das', 'e', 'em', 'para', 'com'}
+    result = []
+    for i, w in enumerate(words):
+        if i > 0 and w.lower() in lowers:
+            result.append(w.lower())
+        else:
+            result.append(w.capitalize())
+    return ' '.join(result)
+
+
 def normalizar_nome(texto: str) -> str:
     """Remove acentuação, espaços extras e coloca em maiúsculas para busca flexível."""
     if not texto:

@@ -30,8 +30,15 @@ DEFAULT_URL = os.environ.get(
 def verificar_tabela_existente(conn) -> int:
     try:
         cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM leeds_campo_grande")
-        return cur.fetchone()[0]
+        for tbl in ('leeds_campo_grande', 'leads_campo_grande'):
+            try:
+                cur.execute(f"SELECT COUNT(*) FROM {tbl}")
+                res = cur.fetchone()
+                if res and res[0] > 0:
+                    return res[0]
+            except (sqlite3.OperationalError, sqlite3.DatabaseError):
+                continue
+        return 0
     except (sqlite3.OperationalError, sqlite3.DatabaseError):
         return 0
 
@@ -81,6 +88,7 @@ def _restaurar_sql(conn, caminho_gz: Path):
         sql_content = f.read()
 
     cur = conn.cursor()
+    cur.execute("DROP VIEW IF EXISTS leads_campo_grande;")
     cur.execute("DROP TABLE IF EXISTS leeds_campo_grande;")
 
     # Envolve em transação explícita se ainda não possuir
@@ -88,6 +96,7 @@ def _restaurar_sql(conn, caminho_gz: Path):
         sql_content = f"BEGIN TRANSACTION;\n{sql_content}\nCOMMIT;"
 
     cur.executescript(sql_content)
+    cur.execute("CREATE VIEW IF NOT EXISTS leads_campo_grande AS SELECT * FROM leeds_campo_grande;")
 
 
 def _restaurar_csv(conn, caminho_gz: Path):
@@ -96,6 +105,7 @@ def _restaurar_csv(conn, caminho_gz: Path):
         reader = csv.reader(f)
         header = next(reader)
         cur = conn.cursor()
+        cur.execute("DROP VIEW IF EXISTS leads_campo_grande;")
         cur.execute("DROP TABLE IF EXISTS leeds_campo_grande;")
         cols_def = ", ".join([f'"{c}" TEXT' for c in header])
         cur.execute(f"CREATE TABLE leeds_campo_grande ({cols_def});")
@@ -103,6 +113,7 @@ def _restaurar_csv(conn, caminho_gz: Path):
         sql = f"INSERT INTO leeds_campo_grande VALUES ({placeholders})"
         conn.execute("BEGIN TRANSACTION;")
         cur.executemany(sql, reader)
+        cur.execute("CREATE VIEW IF NOT EXISTS leads_campo_grande AS SELECT * FROM leeds_campo_grande;")
 
 
 def restaurar_dump(caminho_gz: Path, db_path: Path, force: bool = False):

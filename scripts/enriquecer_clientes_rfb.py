@@ -52,25 +52,43 @@ def format_cnpj(cnpj_raw: str) -> str:
 
 
 def format_telefone(tel_raw: str) -> str:
-    """Formata telefone com DDD 67."""
-    digits = re.sub(r'\D', '', str(tel_raw or ''))
+    """
+    Formata telefone brasileiro (padrão DDD 67).
+    Realiza o split por '|' quando existirem múltiplos números concatenados na RFB,
+    pegando sempre o primeiro número da lista e removendo prefixo DDI +55.
+    """
+    if not tel_raw:
+        return '(67) 3300-1000'
+    primeiro = str(tel_raw).split('|')[0].strip()
+    digits = re.sub(r'\D', '', primeiro)
     if not digits:
         return '(67) 3300-1000'
-    if digits.startswith('67'):
-        digits = digits[2:]
-    if digits.startswith('067'):
-        digits = digits[3:]
 
-    if len(digits) == 9:
-        return f"(67) {digits[:5]}-{digits[5:]}"
-    elif len(digits) == 8:
-        if digits[0] in ('8', '9'):
-            return f"(67) 9{digits[:4]}-{digits[4:]}"
+    # Remove DDI 55 do Brasil se presente
+    if digits.startswith('55') and len(digits) >= 10:
+        digits = digits[2:]
+
+    # Extrai DDD (2 dígitos) e número local
+    if len(digits) in (10, 11):
+        ddd = digits[:2]
+        num = digits[2:]
+    elif len(digits) in (8, 9):
+        ddd = '67'
+        num = digits
+    elif len(digits) > 11:
+        ddd = digits[:2]
+        num = digits[2:11]
+    else:
+        return f"(67) 9{digits.zfill(8)[:4]}-{digits.zfill(8)[4:]}"
+
+    if len(num) == 9:
+        return f"({ddd}) {num[:5]}-{num[5:]}"
+    elif len(num) == 8:
+        if num[0] in ('8', '9'):
+            return f"({ddd}) 9{num[:4]}-{num[4:]}"
         else:
-            return f"(67) {digits[:4]}-{digits[4:]}"
-    elif len(digits) > 9:
-        return f"(67) {digits[-9:-4]}-{digits[-4:]}"
-    return f"(67) 9{digits.zfill(8)[:4]}-{digits.zfill(8)[4:]}"
+            return f"({ddd}) {num[:4]}-{num[4:]}"
+    return f"({ddd}) {num}"
 
 
 def format_cep(cep_raw: str) -> str:
@@ -177,13 +195,19 @@ def main():
 
     print(f"📊 Clientes atuais no banco: {len(docs_existentes)}")
 
-    # 2. Busca registros válidos e ativos da RFB em leeds_campo_grande
-    query_rfb = """
+    # 2. Busca registros válidos e ativos da RFB em leeds_campo_grande (ou leads_campo_grande)
+    tabela_rfb = 'leeds_campo_grande'
+    cursor.execute("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name IN ('leeds_campo_grande', 'leads_campo_grande')")
+    found_tbl = cursor.fetchone()
+    if found_tbl:
+        tabela_rfb = found_tbl['name']
+
+    query_rfb = f"""
     SELECT 
-        empresa, cnpj, nome, cargo, telefone, email, logradouro, numero, cep, 
+        empresa, cnpj, nome, cargo, telefone, email, logradouro, numero, bairro, complemento, cep, 
         operadora_atual, plano_sugerido, valor_mensal_sugerido, lead_score, 
         cnae_fiscal, motivo_situacao, municipio_nome, situacao_cadastral
-    FROM leeds_campo_grande
+    FROM {tabela_rfb}
     WHERE situacao_cadastral = 'ATIVA'
       AND email IS NOT NULL AND email != '' AND email LIKE '%@%.%'
       AND telefone IS NOT NULL AND length(telefone) >= 8
@@ -192,7 +216,7 @@ def main():
     """
     cursor.execute(query_rfb)
     rows = cursor.fetchall()
-    print(f"🔍 Candidatos ativos da RFB carregados: {len(rows):,}")
+    print(f"🔍 Candidatos ativos da RFB carregados de '{tabela_rfb}': {len(rows):,}")
 
     clientes_para_inserir = []
     bairros_count: Dict[str, int] = {}
@@ -211,7 +235,11 @@ def main():
             continue
 
         cep_limpo = re.sub(r'\D', '', clean_str(r['cep']))
-        bairro_resolvido = resolver_bairro_por_cep(cep_limpo)
+        # Prioriza o bairro real da RFB se preenchido
+        bairro_rfb = clean_str(r['bairro']) if 'bairro' in r.keys() else ''
+        bairro_resolvido = normalizar_bairro(bairro_rfb) if bairro_rfb else None
+        if not bairro_resolvido:
+            bairro_resolvido = resolver_bairro_por_cep(cep_limpo)
 
         # Controle de distribuição equilibrada por bairro
         qtd_no_bairro = bairros_count.get(bairro_resolvido, 0)
@@ -226,6 +254,9 @@ def main():
         # Logradouro e número reais
         logr_raw = clean_str(r['logradouro'])
         num_raw = clean_str(r['numero']).replace("'", "").replace('"', '').strip()
+        compl_raw = clean_str(r['complemento']) if 'complemento' in r.keys() else ''
+        complemento_final = compl_raw if (compl_raw and compl_raw.upper() not in ('NULL', 'NONE')) else None
+
         if not logr_raw or logr_raw == '0' or logr_raw.isdigit():
             # Atribui rua e número reais cadastrados no SISGRAN/PostGIS para o bairro
             if amostras_b:
@@ -263,7 +294,7 @@ def main():
             format_cep(cep_limpo),
             logradouro_final,
             numero_final,
-            None,  # complemento
+            complemento_final,
             bairro_resolvido,
             'Campo Grande',
             'MS',

@@ -94,17 +94,24 @@ class Lead(db.Model):
 
     @property
     def telefone_numeros(self) -> str:
-        """Retorna apenas dígitos do telefone para montagem do link wa.me."""
+        """Retorna apenas dígitos do telefone no formato internacional E.164 (sem '+') para o wa.me."""
         if not self.telefone:
             return ''
-        digits = ''.join(c for c in self.telefone if c.isdigit())
+        primeiro = self.telefone.split('|')[0].strip()
+        digits = ''.join(c for c in primeiro if c.isdigit())
         if len(digits) in (10, 11) and not digits.startswith('55'):
             digits = '55' + digits
         return digits
 
     @property
+    def telefone_e164(self) -> str:
+        """Retorna no padrão E.164 canônico com sinal de '+' (ex: +5567991453123)."""
+        num = self.telefone_numeros
+        return f"+{num}" if num else ''
+
+    @property
     def whatsapp_url(self) -> str:
-        """Gera URL com a mensagem de opt-in pronta para o WhatsApp Web."""
+        """Gera URL com a mensagem de opt-in pronta para o WhatsApp Web (padrão wa.me)."""
         phone = self.telefone_numeros
         msg = self.icebreaker_optin or ''
         if not phone or not msg:

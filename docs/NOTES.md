@@ -131,6 +131,22 @@ A aplicação foi projetada como uma plataforma integrada para a operadora **Dig
     - Cards de KPIs do topo (`.dn-kpi-card`) com fundo escuro (`#151f32`), rótulos nítidos (`#94a3b8`) e métricas numéricas com cores vibrantes de alto contraste.
     - Tipografia de cabeçalhos e títulos (`h1-h6`, `.dn-header-title`) padronizada em branco puro (`#f8fafc`) no modo escuro, eliminando tons azul-claros de baixo contraste.
 
+### Fase 13: Correção Estrutural da Base RFB (Logradouro Real, Bairro e Complemento)
+- **Correção e Expansão da Tabela `leeds_campo_grande`:**
+  - O campo `logradouro` foi corrigido para tipo `TEXT` e agora contém os nomes reais oficiais das vias cadastrais da RFB em Campo Grande - MS (ex: *Afonso Pena*, *Quatorze de Julho*, *Ceará*), eliminando o valor `0` residual da importação anterior.
+  - Inclusão das colunas `bairro text` e `complemento text` entre `numero` e `cep`, enriquecendo os registros com a localização precisa da empresa e detalhes de sala/bloco/conjunto.
+  - Criação da VIEW `leads_campo_grande` apontando para `leeds_campo_grande`, garantindo compatibilidade total com ambas as grafias em consultas SQL e automações.
+- **Atualização das Rotinas de Prospecção e Enriquecimento:**
+  - `TelecomProspectorService._fetch_rfb_leads` ([`app/services/prospector.py`](app/services/prospector.py)): ajustado para consultar prioritariamente `logradouro`, `numero`, `bairro` e `complemento` reais da RFB com formatação inteligente em Title Case e filtro geo-territorial por nome de bairro e prefixo de CEP, mantendo fallback resiliente de compatibilidade para schemas antigos.
+  - `scripts/enriquecer_clientes_rfb.py`: atualizado para preencher o endereço dos clientes com os dados cadastrais reais da RFB e normalização do bairro para os 74 bairros canônicos do SISGRAN.
+  - `scripts/restaurar_rfb.py`: atualizado para verificar e restaurar tanto `leeds_campo_grande` quanto `leads_campo_grande`, recriando a view de compatibilidade após a importação.
+- **Tratamento de Telefones Concatenados com DDI (+55):**
+  - Implementado split automático por pipe (`|`) em `app/services/prospector.py` e `scripts/enriquecer_clientes_rfb.py` para extrair estritamente o primeiro número de telefone da lista cadastrada na RFB.
+  - Remoção precisa do prefixo internacional `+55` / `55`, preservação do DDD de origem e formatação correta tanto para celulares de 9 dígitos (`(67) 9XXXX-XXXX`) quanto para números fixos/corporativos (`(67) 3XXX-XXXX`).
+  - Cobertura de testes unitários expandida para 59 testes automatizados (`test_rfb_telephone_split_and_formatting`).
+- **Regeneração do Dump de Dados:**
+  - Arquivo `data/leeds_campo_grande.sql.gz` regenerado a partir do banco atualizado com 158.558 empresas comerciais ativas da RFB, transação explícita e view `leads_campo_grande`.
+
 ---
 
 ## 3. Decisões Arquiteturais e Lições Aprendidas

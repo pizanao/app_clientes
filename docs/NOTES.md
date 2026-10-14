@@ -86,6 +86,51 @@ A aplicação foi projetada como uma plataforma integrada para a operadora **Dig
   - No cadastro e edição de pedidos ([`pedidos/form.html`](app/templates/pedidos/form.html)): seleção de plano oficial com preenchimento reativo do primeiro item.
   - No comprovante e detalhes do pedido ([`pedidos/detail.html`](app/templates/pedidos/detail.html)): badge de identificação do plano, velocidade e comodato.
 
+### Fase 10: Novo Dashboard Principal Híbrido de Atendimento & Monitoramento
+- **Arquitetura Visual Integrada:** Substituição do dashboard genérico antigo por um layout híbrido equilibrado 6x6 focado em operação diária e SLA de telecomunicações.
+- **KPIs Executivos no Topo:**
+  - *MRR Estimado (Recorrente):* Total faturado em ordens ativas/pendentes com ticket médio e faturamento consolidado.
+  - *Ordens Técnicas Abertas:* Contagem em tempo real de ordens pendentes e em processamento na fila técnica.
+  - *Taxa de Opt-in WhatsApp Anti-Ban:* Percentual e volume de leads engajados com abordagem autorizada.
+  - *Clientes Ativos na Rede:* Base total instalada e taxa de conversão comercial.
+- **Pipeline Operacional em Pills:** Status de pendentes, em despacho, ativações concluídas, cancelamentos, total de comodatos Wi-Fi 6 em campo e ordens corporativas com SLA ativo.
+- **Bloco Central Híbrido 6x6:**
+  - *Coluna Esquerda (Atendimento & SDR):* Mini-funil de conversão de leads (Novos -> Enviados -> Opt-in -> Proposta -> Convertidos), fila de prioridade com score comercial e link direto para conversa WhatsApp / dossiê, e radar da concorrência mapeada (Vivo Fibra, Claro NET).
+  - *Coluna Direita (Despacho Técnico & Ordens):* Fila operacional com badges de plano contratado, prazo de SLA corporativo, indicador de comodato Wi-Fi 6 e acesso rápido ao comprovante.
+- **Inteligência Territorial e Portfólio (Rodapé):**
+  - *Top Bairros com Maior Ativação:* Distribuição geográfica com barras de progresso proporcionais por bairro de Campo Grande - MS e atalho para o mapa de calor.
+  - *Mix de Planos Contratados:* Segmentação visual entre residencial (PF), corporativo (PJ) e contratos sob medida, reforçando a oferta de Wi-Fi 6 incluso.
+- **Tratamento Resiliente de Dados:** Uso de `selectinload` para relacionamentos e proteção Jinja2 contra campos nulos (`(pedido.descricao or 'Plano Avulso')|truncate(22)`).
+
+### Fase 11: Normalização Canônica dos Bairros SISGRAN & Restrição Territorial a MS
+- **Unificação dos 74 Bairros Oficiais de Campo Grande - MS:**
+  - `PERFIS_CAMPO_GRANDE` e `COORDENADAS_BAIRROS` padronizados para exatamente os 74 bairros canônicos do SISGRAN/PLANURB em formato Title Case oficial (`len == 74`), eliminando duplicatas geradas por caixa alta e variações de grafia (`CHÁCARA CACHOEIRA` vs. `Chácara Cachoeira`, `VILASBOAS` vs. `Vilas Boas`, `COOPHAVILA II` vs. `Coophavila II`, `DR. ALBUQUERQUE` vs. `Dr. Albuquerque`, `LEBLON` vs. `Jardim Leblon`).
+  - Classes inteligentes `PerfisSisgranDict` e `CoordenadasBairrosDict` com suporte a indexação case-insensitive e acentuação flexível via `resolver_bairro()` e `normalizar_bairro()`, prevenindo recursão e garantindo integridade.
+  - Normalização automática aplicada na criação/edição de clientes (`app/routes/clientes.py`), prospecção/salvamento de leads (`app/services/prospector.py`, `app/routes/leads.py`) e scripts de enriquecimento RFB (`scripts/enriquecer_clientes_rfb.py`).
+- **Comando CLI de Higienização de Bairros:**
+  - Criado o comando `flask limpar-e-normalizar-bairros` em `app/cli.py`.
+  - Execução no banco transacional higienizou 190 registros de clientes e 48 registros de leads, eliminando todas as redundâncias no SQLite.
+- **Restrição Territorial Estrita para o Estado de MS:**
+  - Validador `validate_estado` implementado em `ClienteForm` ([`app/forms/cliente_forms.py`](app/forms/cliente_forms.py)), bloqueando cadastros de fora de Mato Grosso do Sul.
+  - Valores padrão do formulário definidos para `cidade='Campo Grande'` e `estado='MS'`.
+  - Atualização do comando `flask seed` em `app/cli.py`, removendo os 4 clientes e pedidos residuais de fora do estado (São Paulo, Curitiba, Salvador) e fixando 100% da semente em Campo Grande - MS com planos oficiais da DigitalNet.
+
+### Fase 12: Sidebar Compacta com Ícones & Alternância de Tema Claro e Escuro (Dark Mode)
+- **Menu Lateral Compacto (Mini-Sidebar):**
+  - Quando a barra lateral é recolhida no desktop (`.sidebar-collapsed`), a largura é reduzida suavemente de 270px para 78px em vez de ocultação total, mantendo os ícones centralizados e visíveis.
+  - Ocultação inteligente de textos de títulos de seção (transformados em microdivisores elegantes de 1px), labels de links, badges e detalhes do rodapé de usuário.
+  - Ativação de tooltips flutuantes nativos do Bootstrap 5.3 ao passar o mouse sobre os ícones no modo compacto, exibindo o destino da navegação.
+  - Preservação da experiência móvel (< 992px) com gaveta lateral expansível completa (*drawer*) e *backdrop* translúcido.
+- **Alternância de Tema Claro / Escuro (Dark Mode Nativo):**
+  - Implementação via `data-bs-theme="dark"` (Color Mode do Bootstrap 5.3) com paleta personalizada de alto contraste (`#0b1120`, `#151f32`, `#24344d`, azul elétrico `#60a5fa` e amarelo fibra `#fbbf24`).
+  - Prevenção de FOUT (*Flash of Unstyled Theme*) através de script inline no `<head>` de [`app/templates/base.html`](app/templates/base.html), [`login.html`](app/templates/auth/login.html) e [`register.html`](app/templates/auth/register.html) que lê imediatamente a preferência persistida no `localStorage`.
+  - Botão de alternância com ícone dinâmico (`bi-sun-fill` / `bi-moon-stars-fill`) na topbar principal e atalho integrado com badge de status no dropdown de perfil do usuário.
+  - Compatibilidade completa de contrastes em cards, modais, formulários, tabelas DataTables, child rows e popups do Leaflet.
+  - Refinamento de contraste e legibilidade no Radar de Prospecção (`/leads/`):
+    - Cards de Clusters de Cobertura Óptica (`.dn-cluster-card`) com fundo escuro elegante (`#151f32`), bordas suaves (`#24344d`), hover destacado e badge de viabilidade perfeitamente legível.
+    - Cards de KPIs do topo (`.dn-kpi-card`) com fundo escuro (`#151f32`), rótulos nítidos (`#94a3b8`) e métricas numéricas com cores vibrantes de alto contraste.
+    - Tipografia de cabeçalhos e títulos (`h1-h6`, `.dn-header-title`) padronizada em branco puro (`#f8fafc`) no modo escuro, eliminando tons azul-claros de baixo contraste.
+
 ---
 
 ## 3. Decisões Arquiteturais e Lições Aprendidas
@@ -144,18 +189,20 @@ app_clientes.db (SQLite)
 | `python scripts/enriquecer_clientes_rfb.py --limit 150` | Vincula empresas comerciais reais da RFB como clientes de teste ativos. |
 | `python scripts/gerar_perfis_sisgran.py` | Gera o dicionário de bairros em `app/data/perfis_sisgran.py`. |
 | `python scripts/gravar_demonstracao.py` | Grava vídeo automatizado Full HD (1080p) do fluxo completo com Playwright e FFmpeg. |
-| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de 55 testes automatizados de validação. |
+| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de 58 testes automatizados de validação. |
 
 ---
 
-## 6. Cobertura da Suíte de Testes (55 testes)
+## 6. Cobertura da Suíte de Testes (58 testes)
 
-1. **`tests/test_app.py` (18 testes):**
+1. **`tests/test_app.py` (21 testes):**
    - Autenticação: login com sucesso, logout, senha inválida, proteção contra open redirect.
    - Autocadastro seguro com atribuição do perfil de Agente.
-   - CRUD de clientes com formatação documental brasileira.
+   - CRUD de clientes com formatação documental brasileira, normalização canônica de bairros em criação e edição, e validação restritiva de estado (`MS`).
    - CRUD de pedidos com totalização de itens e limites de 1 a 10 itens.
    - Isolamento de chaves secretas de produção e integridade de senhas aleatórias de seed.
+   - Validação completa dos novos indicadores operacionais, funil de leads e mix de planos do Dashboard Híbrido (`test_dashboard_indicadores_atendimento_e_monitoramento`).
+   - Validação dos seletores de tema claro/escuro e elementos da sidebar compacta com ícones (`test_sidebar_compacta_e_alternancia_tema`).
 2. **`tests/test_leads.py` (9 testes):**
    - Endpoints da API REST de leads e camadas GeoJSON.
    - Mocks de provedores de IA (AIsa e Gemini) com failover para o motor local.

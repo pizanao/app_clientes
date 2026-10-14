@@ -8,6 +8,7 @@ import urllib.parse
 import urllib.request
 from typing import Dict, List, Any, Optional, Tuple
 from flask import current_app
+from sqlalchemy import func
 from app.extensions import db
 from app.models.cliente import Cliente
 from app.models.lead import Lead
@@ -57,6 +58,7 @@ from app.data.perfis_sisgran import (
     COORDENADAS_BAIRROS,
     CEP_PREFIXOS_BAIRROS,
     resolver_bairro,
+    normalizar_bairro,
     obter_perfil_bairro,
     obter_coordenadas_bairro,
     obter_ruas_bairro,
@@ -83,17 +85,23 @@ class TelecomProspectorService:
         """Localiza o nome oficial do bairro a partir de qualquer variação ou parcelamento."""
         return resolver_bairro(bairro)
 
+    @classmethod
+    def normalizar_bairro(cls, bairro: Optional[str]) -> Optional[str]:
+        """Normaliza e unifica qualquer variação de nome de bairro para o formato canônico oficial."""
+        return normalizar_bairro(bairro)
+
     @staticmethod
     def get_neighborhood_clusters() -> List[Dict[str, Any]]:
         """
         Agrupa clientes existentes por bairro e cidade para identificar
         onde a DigitalNet já possui infraestrutura óptica instalada (CTO/Cabos).
+        Normaliza os bairros para evitar duplicidades entre caixa alta e camelcase.
         """
         clientes = Cliente.query.filter_by(ativo=True).all()
         clusters_map: Dict[str, Dict[str, Any]] = {}
 
         for c in clientes:
-            bairro = (c.bairro or 'Centro').strip()
+            bairro = normalizar_bairro(c.bairro) or 'Centro'
             cidade = (c.cidade or 'Campo Grande').strip()
             estado = (c.estado or 'MS').strip()
             chave = f"{cidade}|{bairro}"
@@ -128,9 +136,12 @@ class TelecomProspectorService:
         resultado = []
         for chave, dado in clusters_map.items():
             bairro = dado['bairro']
-            # Conta leads já cadastrados nessa região
-            total_leads = Lead.query.filter_by(bairro=bairro).count()
-            leads_convertidos = Lead.query.filter_by(bairro=bairro, status='convertido').count()
+            # Conta leads já cadastrados nessa região de forma insensível a maiúsculas/minúsculas
+            total_leads = Lead.query.filter(func.lower(Lead.bairro) == func.lower(bairro)).count()
+            leads_convertidos = Lead.query.filter(
+                func.lower(Lead.bairro) == func.lower(bairro),
+                Lead.status == 'convertido'
+            ).count()
 
             coords = TelecomProspectorService.get_bairro_coordenadas(bairro)
             resultado.append({
@@ -1062,7 +1073,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             if not empresa_nome:
                 continue
 
-            bairro_lead = d.get('bairro') or 'Campo Grande'
+            bairro_lead = normalizar_bairro(d.get('bairro')) or 'Centro'
             doc_raw = re.sub(r'\D', '', str(d.get('documento') or ''))
             tel_raw = re.sub(r'\D', '', str(d.get('telefone') or ''))
 

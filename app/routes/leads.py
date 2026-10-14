@@ -5,6 +5,7 @@ from app.extensions import db
 from app.models.lead import Lead
 from app.models.cliente import Cliente
 from app.models.plano import Plano
+from app.data.perfis_sisgran import normalizar_bairro
 from app.services.prospector import TelecomProspectorService, PLANOS_DIGITALNET
 
 leads_bp = Blueprint('leads', __name__, url_prefix='/leads')
@@ -27,7 +28,8 @@ def obter_planos_ativos():
 @login_required
 def index():
     """Painel de Prospecção Geo-Localizada & Funil de Leads."""
-    bairro_filtro = request.args.get('bairro', '').strip()
+    raw_bairro = request.args.get('bairro', '').strip()
+    bairro_filtro = normalizar_bairro(raw_bairro) if raw_bairro else ''
     status_filtro = request.args.get('status', '').strip()
     busca = request.args.get('busca', '').strip()
 
@@ -124,7 +126,8 @@ def index():
 @login_required
 def prospectar_regiao():
     """Dispara a geração de leads vizinhos baseada na região selecionada."""
-    bairro = request.form.get('bairro', '').strip() or 'Chácara Cachoeira'
+    raw_bairro = request.form.get('bairro', '').strip()
+    bairro = normalizar_bairro(raw_bairro) or 'Chácara Cachoeira'
     cidade = request.form.get('cidade', '').strip() or 'Campo Grande'
     niche = request.form.get('niche', '').strip() or 'Empresas e Clínicas e Comércios'
     count = int(request.form.get('count', 5))
@@ -273,7 +276,7 @@ def api_nodo_empresas(bairro: str = ''):
         else:
             bairro = request.args.get('bairro', '')
 
-    bairro = (bairro or 'Chácara Cachoeira').strip()
+    bairro = normalizar_bairro((bairro or 'Chácara Cachoeira').strip()) or 'Chácara Cachoeira'
     lat = request.args.get('lat', type=float)
     lng = request.args.get('lng', type=float)
     limite = request.args.get('limite', default=8, type=int)
@@ -300,7 +303,7 @@ def api_nodo_empresas(bairro: str = ''):
 def api_prospectar():
     """Endpoint REST para acionar a prospecção via frontend moderno."""
     data = request.get_json() or {}
-    bairro = data.get('bairro', 'Chácara Cachoeira')
+    bairro = normalizar_bairro(data.get('bairro', 'Chácara Cachoeira')) or 'Chácara Cachoeira'
     cidade = data.get('cidade', 'Campo Grande')
     niche = data.get('niche', 'Empresas e Clínicas')
     count = int(data.get('count', 5))

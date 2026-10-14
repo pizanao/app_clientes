@@ -285,6 +285,15 @@ def carregar_dados_imoveis_postgis() -> Dict[str, Dict[str, Any]]:
         return {}
 
 
+CUSTOM_CANONICAL_NAMES = {
+    'COOPHAVILA II': 'Coophavila II',
+    'TV MORENA': 'TV Morena',
+    'VILASBOAS': 'Vilas Boas',
+    'DR. ALBUQUERQUE': 'Dr. Albuquerque',
+    'CENTRO OESTE': 'Centro-Oeste',
+}
+
+
 def build_dataset():
     with open(GEOJSON_DIR / 'bairros.geojson', encoding='utf-8') as f:
         bairros_geo = json.load(f)
@@ -315,10 +324,11 @@ def build_dataset():
         bbox = (min(all_x), min(all_y), max(all_x), max(all_y))
         rings = get_rings(f['geometry'])
 
+        b_display = CUSTOM_CANONICAL_NAMES.get(b_raw, title_case(b_raw))
         bairros.append({
             'raw': b_raw,
             'norm': b_norm,
-            'display': title_case(b_raw),
+            'display': b_display,
             'regiao': reg_urb,
             'macrozona': macro_map.get(b_norm, 'MACROZONA URBANA'),
             'coords': (round(cent_lat, 4), round(cent_lng, 4)),
@@ -371,9 +381,9 @@ def build_dataset():
         else:
             ruas_formatadas = reg_cfg['ruas_padrao']
 
-        # Prefixo de CEP
+        # Prefixo de CEP mapeado para o nome canônico em Title Case
         cep_prefix = CEP_ESPECIFICOS.get(b['raw'], reg_cfg['cep_prefix'])
-        cep_map[cep_prefix] = b['raw']
+        cep_map[cep_prefix] = display_name
 
         # Nichos comerciais
         nichos = reg_cfg['nichos']
@@ -401,6 +411,7 @@ def build_dataset():
 
         perfil_entry = {
             'nome_oficial': b['raw'],
+            'nome_canonico': display_name,
             'regiao_urbana': b['regiao'],
             'macrozona': b['macrozona'],
             'coordenadas': b['coords'],
@@ -418,11 +429,6 @@ def build_dataset():
 
         perfis[display_name] = perfil_entry
         coords[display_name] = b['coords']
-
-        # Chave em maiúsculas oficial para busca direta
-        if b['raw'] != display_name:
-            perfis[b['raw']] = perfil_entry
-            coords[b['raw']] = b['coords']
 
     return perfis, coords, cep_map
 
@@ -450,18 +456,62 @@ from typing import Dict, Any, Tuple, Optional, List
     content = [header]
     content.append(f"TOTAL_BAIRROS_OFICIAIS = 74\n\n")
 
-    content.append("PERFIS_CAMPO_GRANDE: Dict[str, Dict[str, Any]] = {\n")
+    content.append("class PerfisSisgranDict(dict):\n")
+    content.append("    \"\"\"Dicionário inteligente de perfis territoriais: permite acesso por nome canônico ou variação case-insensitive.\"\"\"\n")
+    content.append("    def __getitem__(self, key):\n")
+    content.append("        if dict.__contains__(self, key):\n")
+    content.append("            return super().__getitem__(key)\n")
+    content.append("        res = resolver_bairro(key)\n")
+    content.append("        if res and dict.__contains__(self, res):\n")
+    content.append("            return super().__getitem__(res)\n")
+    content.append("        raise KeyError(key)\n\n")
+    content.append("    def get(self, key, default=None):\n")
+    content.append("        if dict.__contains__(self, key):\n")
+    content.append("            return super().get(key, default)\n")
+    content.append("        res = resolver_bairro(key)\n")
+    content.append("        if res and dict.__contains__(self, res):\n")
+    content.append("            return super().get(res, default)\n")
+    content.append("        return default\n\n")
+    content.append("    def __contains__(self, key):\n")
+    content.append("        if dict.__contains__(self, key):\n")
+    content.append("            return True\n")
+    content.append("        res = resolver_bairro(key)\n")
+    content.append("        return bool(res and dict.__contains__(self, res))\n\n\n")
+
+    content.append("class CoordenadasBairrosDict(dict):\n")
+    content.append("    \"\"\"Dicionário inteligente de coordenadas: permite busca por nome canônico ou variação case-insensitive.\"\"\"\n")
+    content.append("    def __getitem__(self, key):\n")
+    content.append("        if dict.__contains__(self, key):\n")
+    content.append("            return super().__getitem__(key)\n")
+    content.append("        res = resolver_bairro(key)\n")
+    content.append("        if res and dict.__contains__(self, res):\n")
+    content.append("            return super().__getitem__(res)\n")
+    content.append("        raise KeyError(key)\n\n")
+    content.append("    def get(self, key, default=None):\n")
+    content.append("        if dict.__contains__(self, key):\n")
+    content.append("            return super().get(key, default)\n")
+    content.append("        res = resolver_bairro(key)\n")
+    content.append("        if res and dict.__contains__(self, res):\n")
+    content.append("            return super().get(res, default)\n")
+    content.append("        return default\n\n")
+    content.append("    def __contains__(self, key):\n")
+    content.append("        if dict.__contains__(self, key):\n")
+    content.append("            return True\n")
+    content.append("        res = resolver_bairro(key)\n")
+    content.append("        return bool(res and dict.__contains__(self, res))\n\n\n")
+
+    content.append("PERFIS_CAMPO_GRANDE: PerfisSisgranDict = PerfisSisgranDict({\n")
     for k, v in perfis.items():
         content.append(f"    {repr(k)}: {{\n")
         for subk, subv in v.items():
             content.append(f"        {repr(subk)}: {repr(subv)},\n")
         content.append("    },\n")
-    content.append("}\n\n")
+    content.append("})\n\n")
 
-    content.append("COORDENADAS_BAIRROS: Dict[str, Tuple[float, float]] = {\n")
+    content.append("COORDENADAS_BAIRROS: CoordenadasBairrosDict = CoordenadasBairrosDict({\n")
     for k, v in coords.items():
         content.append(f"    {repr(k)}: {repr(v)},\n")
-    content.append("}\n\n")
+    content.append("})\n\n")
 
     content.append("CEP_PREFIXOS_BAIRROS: Dict[str, str] = {\n")
     for k, v in sorted(cep_map.items()):
@@ -477,10 +527,28 @@ def normalizar_nome(texto: str) -> str:
     return ''.join(c for c in n if not unicodedata.combining(c)).upper().strip()
 
 
-# Índice normalizado para resolução rápida
+# Índice normalizado para resolução rápida (norm -> nome_canonico)
 _NORMALIZED_INDEX: Dict[str, str] = {}
 for _chave in PERFIS_CAMPO_GRANDE.keys():
     _NORMALIZED_INDEX[normalizar_nome(_chave)] = _chave
+
+# Mapeamentos de apelidos e variações populares para bairros oficiais
+_ALIASES: Dict[str, str] = {
+    'VILAS BOAS': 'Vilas Boas',
+    'VILASBOAS': 'Vilas Boas',
+    'JARDIM LEBLON': 'Leblon',
+    'LEBLON': 'Leblon',
+    'CENTRO OESTE': 'Centro-Oeste',
+    'CENTRO-OESTE': 'Centro-Oeste',
+    'COOPHAVILA 2': 'Coophavila II',
+    'COOPHAVILA II': 'Coophavila II',
+    'TV MORENA': 'TV Morena',
+    'DR ALBUQUERQUE': 'Dr. Albuquerque',
+    'DR. ALBUQUERQUE': 'Dr. Albuquerque',
+    'CHACARA CACHOEIRA': 'Chácara Cachoeira',
+    'SANTA FE': 'Santa Fé',
+    'JARDIM DOS ESTADOS': 'Jardim dos Estados',
+}
 
 # Índice de parcelamentos/loteamentos apontando para o bairro oficial
 _PARCELAMENTO_TO_BAIRRO: Dict[str, str] = {}
@@ -493,26 +561,31 @@ def resolver_bairro(nome_busca: str) -> Optional[str]:
     """
     Localiza o bairro oficial no cadastro SISGRAN a partir de qualquer variação
     (com/sem acento, maiúsculas/minúsculas, ou nome de parcelamento/vila).
+    Retorna SEMPRE o nome canônico único em formato Title Case (ex: 'Chácara Cachoeira').
     """
     if not nome_busca:
         return None
-    
-    # 1. Correspondência direta
-    if nome_busca in PERFIS_CAMPO_GRANDE:
+
+    # 1. Correspondência direta exata
+    if dict.__contains__(PERFIS_CAMPO_GRANDE, nome_busca):
         return nome_busca
 
     norm = normalizar_nome(nome_busca)
-    
-    # 2. Busca no índice normalizado de bairros
+
+    # 2. Aliases conhecidos
+    if norm in _ALIASES:
+        return _ALIASES[norm]
+
+    # 3. Busca no índice normalizado de bairros
     if norm in _NORMALIZED_INDEX:
         return _NORMALIZED_INDEX[norm]
-        
-    # 3. Busca por correspondência parcial (ex: "Cachoeira" -> "Chácara Cachoeira")
+
+    # 4. Busca por correspondência parcial (ex: "Cachoeira" -> "Chácara Cachoeira")
     for k_norm, k_orig in _NORMALIZED_INDEX.items():
         if norm in k_norm or k_norm in norm:
             return k_orig
 
-    # 4. Busca se o usuário informou o nome de uma vila/loteamento contido no bairro
+    # 5. Busca se o usuário informou o nome de uma vila/loteamento contido no bairro
     if norm in _PARCELAMENTO_TO_BAIRRO:
         return _PARCELAMENTO_TO_BAIRRO[norm]
 
@@ -521,6 +594,20 @@ def resolver_bairro(nome_busca: str) -> Optional[str]:
             return b_orig
 
     return None
+
+
+def normalizar_bairro(nome_bairro: Optional[str]) -> Optional[str]:
+    """
+    Normaliza e unifica qualquer variação de nome de bairro para o formato canônico oficial.
+    Ex: 'CHÁCARA CACHOEIRA' -> 'Chácara Cachoeira', 'VILASBOAS' -> 'Vilas Boas'.
+    """
+    if not nome_bairro:
+        return None
+    s = nome_bairro.strip()
+    resolvido = resolver_bairro(s)
+    if resolvido:
+        return resolvido
+    return title_case(s)
 
 
 def obter_perfil_bairro(nome_bairro: str) -> Dict[str, Any]:

@@ -5,6 +5,7 @@ from app.extensions import db
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido
 from app.forms.cliente_forms import ClienteForm
+from app.data.perfis_sisgran import normalizar_bairro
 from app.utils.auth_decorators import lider_required
 
 clientes_bp = Blueprint('clientes', __name__, url_prefix='/clientes')
@@ -60,7 +61,7 @@ def novo():
             logradouro=form.logradouro.data.strip() if form.logradouro.data else None,
             numero=form.numero.data.strip() if form.numero.data else None,
             complemento=form.complemento.data.strip() if form.complemento.data else None,
-            bairro=form.bairro.data.strip() if form.bairro.data else None,
+            bairro=normalizar_bairro(form.bairro.data) if form.bairro.data else None,
             cidade=form.cidade.data.strip() if form.cidade.data else None,
             estado=form.estado.data if form.estado.data else None,
             ativo=form.ativo.data,
@@ -114,7 +115,7 @@ def editar(id):
         cliente.logradouro = form.logradouro.data.strip() if form.logradouro.data else None
         cliente.numero = form.numero.data.strip() if form.numero.data else None
         cliente.complemento = form.complemento.data.strip() if form.complemento.data else None
-        cliente.bairro = form.bairro.data.strip() if form.bairro.data else None
+        cliente.bairro = normalizar_bairro(form.bairro.data) if form.bairro.data else None
         cliente.cidade = form.cidade.data.strip() if form.cidade.data else None
         cliente.estado = form.estado.data if form.estado.data else None
         cliente.ativo = form.ativo.data

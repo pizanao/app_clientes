@@ -124,7 +124,7 @@
 
           <div class="col-md-3">
             <label for="bairro" class="form-label">{{ form.bairro.label.text }}</label>
-            {{ form.bairro(class="form-control" + (" is-invalid" if form.bairro.errors else ""), placeholder="Centro, Jardins...", id="bairro") }}
+            {{ form.bairro(class="form-control" + (" is-invalid" if form.bairro.errors else ""), placeholder="Ex: Chácara Cachoeira, Centro...", id="bairro") }}
             {% for error in form.bairro.errors %}
               <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
@@ -132,7 +132,7 @@
 
           <div class="col-md-3">
             <label for="cidade" class="form-label">{{ form.cidade.label.text }}</label>
-            {{ form.cidade(class="form-control" + (" is-invalid" if form.cidade.errors else ""), placeholder="São Paulo, Rio de Janeiro...", id="cidade") }}
+            {{ form.cidade(class="form-control" + (" is-invalid" if form.cidade.errors else ""), placeholder="Campo Grande", id="cidade") }}
             {% for error in form.cidade.errors %}
               <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}

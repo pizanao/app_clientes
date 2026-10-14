@@ -134,7 +134,7 @@
               <i class="bi bi-fire fs-5"></i>
             </div>
             <div>
-              <h5 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">
+              <h5 class="fw-bold mb-0 text-dark">
                 Mapa de Calor: Cobertura Óptica
               </h5>
               <small class="text-muted">Concentração geo-espacial e oportunidades em Campo Grande</small>
@@ -267,7 +267,7 @@
               <i class="bi bi-geo-alt-fill fs-5"></i>
             </div>
             <div>
-              <h5 class="fw-bold mb-0" style="color: var(--dn-blue-dark);">Clusters de Cobertura Óptica</h5>
+              <h5 class="fw-bold mb-0 text-dark">Clusters de Cobertura Óptica</h5>
               <small class="text-muted">Bairros com clientes ativos DigitalNet</small>
             </div>
           </div>
@@ -275,13 +275,13 @@
             <i class="bi bi-pin-map-fill text-primary me-1"></i> {{ clusters|length }} Regiões Mapeadas
           </span>
         </div>
-        <div class="card-body p-3 bg-light bg-opacity-50 flex-grow-1 overflow-auto" style="max-height: 560px;">
+        <div class="card-body p-3 bg-light flex-grow-1 overflow-auto" style="max-height: 560px;">
           <div class="row g-3">
             {% for c in clusters %}
             <div class="col-sm-6">
               <div class="dn-cluster-card {% if bairro_selecionado == c.bairro %}active-cluster{% endif %} h-100 d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                  <h6 class="fw-bold mb-0" style="color: var(--dn-blue-deep);">{{ c.bairro }}</h6>
+                  <h6 class="fw-bold mb-0 text-dark">{{ c.bairro }}</h6>
                   <span class="badge py-1 px-2 rounded-pill" style="background: #e0f2fe; color: #0369a1; font-size: 0.7rem; font-weight: 700;">
                     <i class="bi bi-check-circle-fill me-1 text-success"></i>{{ c.viabilidade_estimada }}
                   </span>
@@ -424,7 +424,7 @@
                 </button>
               </td>
               <td class="ps-2">
-                <div class="fw-bold" style="color: var(--dn-blue-deep);">{{ l.empresa }}</div>
+                <div class="fw-bold text-dark">{{ l.empresa }}</div>
                 <small class="text-muted">{{ l.nome }} {% if l.cargo %}&bull; <span class="text-secondary">{{ l.cargo }}</span>{% endif %}</small>
               </td>
               <td>

@@ -36,6 +36,7 @@ from app.data.perfis_sisgran import (
     PERFIS_CAMPO_GRANDE,
     CEP_PREFIXOS_BAIRROS,
     resolver_bairro,
+    normalizar_bairro,
     obter_perfil_bairro,
     obter_ruas_bairro,
     obter_imoveis_amostra,
@@ -111,37 +112,42 @@ def title_case(text: str) -> str:
 
 
 def resolver_bairro_por_cep(cep_digits: str) -> str:
-    """Resolve o bairro oficial de Campo Grande a partir do prefixo do CEP."""
+    """Resolve o bairro oficial de Campo Grande a partir do prefixo do CEP no formato canônico."""
+    bairro_candidato = None
     prefix5 = cep_digits[:5]
     if prefix5 in CEP_PREFIXOS_BAIRROS:
-        return CEP_PREFIXOS_BAIRROS[prefix5]
+        bairro_candidato = CEP_PREFIXOS_BAIRROS[prefix5]
+    else:
+        prefix4 = cep_digits[:4]
+        for p, b in CEP_PREFIXOS_BAIRROS.items():
+            if p.startswith(prefix4):
+                bairro_candidato = b
+                break
 
-    prefix4 = cep_digits[:4]
-    for p, b in CEP_PREFIXOS_BAIRROS.items():
-        if p.startswith(prefix4):
-            return b
+    if not bairro_candidato:
+        # Mapeamento heurístico padrão por zonas de Campo Grande
+        if prefix5.startswith('7900'):
+            bairro_candidato = 'Centro'
+        elif prefix5.startswith('7902'):
+            bairro_candidato = 'Jardim dos Estados'
+        elif prefix5.startswith('7904'):
+            bairro_candidato = 'Chácara Cachoeira'
+        elif prefix5.startswith('7905'):
+            bairro_candidato = 'Vilas Boas'
+        elif prefix5.startswith('7906'):
+            bairro_candidato = 'Universitário'
+        elif prefix5.startswith('7908'):
+            bairro_candidato = 'Aero Rancho'
+        elif prefix5.startswith('7901'):
+            bairro_candidato = 'Monte Castelo'
+        elif prefix5.startswith('7910'):
+            bairro_candidato = 'Santo Antônio'
+        elif prefix5.startswith('7911'):
+            bairro_candidato = 'Santo Amaro'
+        else:
+            bairro_candidato = 'Centro'
 
-    # Mapeamento heurístico padrão por zonas de Campo Grande
-    if prefix5.startswith('7900'):
-        return 'Centro'
-    elif prefix5.startswith('7902'):
-        return 'Jardim dos Estados'
-    elif prefix5.startswith('7904'):
-        return 'Chácara Cachoeira'
-    elif prefix5.startswith('7905'):
-        return 'Vilas Boas'
-    elif prefix5.startswith('7906'):
-        return 'Universitário'
-    elif prefix5.startswith('7908'):
-        return 'Aero Rancho'
-    elif prefix5.startswith('7901'):
-        return 'Monte Castelo'
-    elif prefix5.startswith('7910'):
-        return 'Santo Antônio'
-    elif prefix5.startswith('7911'):
-        return 'Santo Amaro'
-
-    return 'Centro'
+    return normalizar_bairro(bairro_candidato) or 'Centro'
 
 
 def main():

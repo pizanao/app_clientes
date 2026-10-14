@@ -86,7 +86,7 @@ As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos com
 
 | Comando | Descrição |
 | :--- | :--- |
-| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de testes unitários (55 testes automatizados). |
+| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de testes unitários (58 testes automatizados). |
 | `python scripts/carregar_geojson_sqlite.py --execute` | Carrega as camadas GeoJSON no SQLite com índices espaciais R*Tree. |
 | `python scripts/restaurar_rfb.py` | Restaura a base de 177.614 empresas da RFB a partir do dump compactado ou URL pública. |
 | `python scripts/enriquecer_clientes_rfb.py --limit 150` | Enriquece a tabela `clientes` com empresas reais da RFB. |

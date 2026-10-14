@@ -9,6 +9,7 @@ from app.models.cliente import Cliente
 from app.models.pedido import Pedido, ItemPedido
 from app.models.lead import Lead
 from app.models.plano import Plano
+from app.data.perfis_sisgran import normalizar_bairro
 from app.services.prospector import TelecomProspectorService
 
 
@@ -200,70 +201,9 @@ def register_cli_commands(app):
             total_planos = Plano.seed_planos_iniciais()
             click.echo(f'{total_planos} Planos oficiais de banda larga (PF e PJ) cadastrados com sucesso!')
 
-        # Sample clients
+        # Sample clients (100% Campo Grande - MS com bairros canônicos)
         if Cliente.query.count() == 0:
             clientes_exemplo = [
-                Cliente(
-                    nome='Maria Silva Santos',
-                    email='maria.silva@exemplo.com',
-                    telefone='(11) 98765-4321',
-                    documento='123.456.789-00',
-                    cep='01310-100',
-                    logradouro='Avenida Paulista',
-                    numero='1000',
-                    complemento='Apto 42',
-                    bairro='Bela Vista',
-                    cidade='São Paulo',
-                    estado='SP',
-                    ativo=True,
-                    observacoes='Cliente preferencial, contato apenas no período da tarde.'
-                ),
-                Cliente(
-                    nome='TechSolutions Tecnologia Ltda',
-                    email='contato@techsolutions.com.br',
-                    telefone='(11) 3456-7890',
-                    documento='12.345.678/0001-90',
-                    cep='04543-011',
-                    logradouro='Avenida Presidente Juscelino Kubitschek',
-                    numero='2041',
-                    complemento='Torre E, 15º andar',
-                    bairro='Itaim Bibi',
-                    cidade='São Paulo',
-                    estado='SP',
-                    ativo=True,
-                    observacoes='Empresa do setor de TI, faturamento no dia 10 de cada mês.'
-                ),
-                Cliente(
-                    nome='Distribuidora Sul Brasil',
-                    email='compras@sulbrasil.com.br',
-                    telefone='(41) 3222-8899',
-                    documento='98.765.432/0001-11',
-                    cep='80020-310',
-                    logradouro='Rua XV de Novembro',
-                    numero='780',
-                    complemento='Loja 3',
-                    bairro='Centro',
-                    cidade='Curitiba',
-                    estado='PR',
-                    ativo=True,
-                    observacoes='Pedido mínimo de 10 unidades.'
-                ),
-                Cliente(
-                    nome='Juliana Prado Costa',
-                    email='juliana.prado@yahoo.com.br',
-                    telefone='(71) 99123-4567',
-                    documento='333.444.555-66',
-                    cep='40140-110',
-                    logradouro='Avenida Oceânica',
-                    numero='420',
-                    complemento='Bloco B',
-                    bairro='Barra',
-                    cidade='Salvador',
-                    estado='BA',
-                    ativo=False,
-                    observacoes='Cadastro temporariamente inativo a pedido do cliente.'
-                ),
-                # Clientes Estratégicos DigitalNet MS (Campo Grande)
                 Cliente(
                     nome='Condomínio Residencial Parque das Nações',
                     email='sindico@parquedasnacoes.ms.gov.br',
@@ -308,93 +248,137 @@ def register_cli_commands(app):
                     estado='MS',
                     ativo=True,
                     observacoes='Cliente corporativo DigiCorp com Wi-Fi 6 e redundância para maquininhas de cartão.'
+                ),
+                Cliente(
+                    nome='Hospital Santa Marina Especialidades',
+                    email='diretoria@santamarina.med.br',
+                    telefone='(67) 3316-2000',
+                    documento='33.456.789/0001-01',
+                    cep='79040-020',
+                    logradouro='Rua Dr. Paulo Machado',
+                    numero='500',
+                    complemento='Bloco A',
+                    bairro='Chácara Cachoeira',
+                    cidade='Campo Grande',
+                    estado='MS',
+                    ativo=True,
+                    observacoes='Link Dedicado Corporativo de alta disponibilidade com SLA de 4 horas.'
+                ),
+                Cliente(
+                    nome='Mendes Advogados & Consultoria Jurídica',
+                    email='contato@mendesadv.com.br',
+                    telefone='(67) 3384-9000',
+                    documento='44.567.890/0001-12',
+                    cep='79020-000',
+                    logradouro='Rua Euclides da Cunha',
+                    numero='1120',
+                    complemento='Andar 3',
+                    bairro='Jardim dos Estados',
+                    cidade='Campo Grande',
+                    estado='MS',
+                    ativo=True,
+                    observacoes='Fibra óptica empresarial com upload simétrico para reuniões e audiências online.'
+                ),
+                Cliente(
+                    nome='Supermercado Pantanal & Distribuidora',
+                    email='compras@superpantanal.com.br',
+                    telefone='(67) 3341-8080',
+                    documento='55.678.901/0001-23',
+                    cep='79051-000',
+                    logradouro='Avenida Bom Pastor',
+                    numero='780',
+                    complemento=None,
+                    bairro='Vilas Boas',
+                    cidade='Campo Grande',
+                    estado='MS',
+                    ativo=True,
+                    observacoes='Conexão de fibra DigiCorp PME para os caixas e sistema de estoque em nuvem.'
                 )
             ]
             db.session.add_all(clientes_exemplo)
             db.session.flush()
 
-            # Sample orders
+            # Planos oficiais para associação nos pedidos
+            plano_fibra700 = Plano.query.filter(Plano.nome.ilike('%700%')).first()
+            plano_digicorp = Plano.query.filter(Plano.nome.ilike('%DigiCorp%')).first()
+            plano_fibra900 = Plano.query.filter(Plano.nome.ilike('%900%')).first()
+
+            # Pedidos de exemplo vinculados a planos e clientes de Campo Grande
             pedidos_exemplo = [
                 Pedido(
                     numero_pedido='PED-2026-0001',
                     cliente_id=clientes_exemplo[0].id,
+                    plano_id=plano_fibra700.id if plano_fibra700 else None,
                     data_pedido=datetime.utcnow() - timedelta(days=5),
                     status='concluido',
                     metodo_pagamento='pix',
-                    valor_total=4850.00,
-                    descricao='Desenvolvimento de módulo de relatórios e consultoria técnica especializada (40h).',
-                    observacoes='Pago à vista via PIX com desconto de 5%.'
+                    valor_total=139.90,
+                    descricao='Plano Oficial: Fibra 700 + DigiMesh (Wi-Fi 6) - Mensalidade Recorrente',
+                    observacoes='Instalação de fibra concluída com 1 ponto de acesso Wi-Fi 6.'
                 ),
                 Pedido(
                     numero_pedido='PED-2026-0002',
                     cliente_id=clientes_exemplo[1].id,
+                    plano_id=plano_digicorp.id if plano_digicorp else None,
                     data_pedido=datetime.utcnow() - timedelta(days=3),
                     status='concluido',
-                    metodo_pagamento='cartao_credito',
-                    valor_total=1299.90,
-                    descricao='Assinatura de plano anual Premium + Suporte prioritário 24/7.',
-                    observacoes='Parcelado em 3x no cartão de crédito.'
+                    metodo_pagamento='boleto',
+                    valor_total=399.90,
+                    descricao='Plano Oficial: DigiCorp Link Dedicado PME (500 Mbps) - Mensalidade Recorrente',
+                    observacoes='Contrato corporativo anual com SLA de 8h e IP fixo configurado.'
                 ),
                 Pedido(
                     numero_pedido='PED-2026-0003',
                     cliente_id=clientes_exemplo[2].id,
+                    plano_id=plano_digicorp.id if plano_digicorp else None,
                     data_pedido=datetime.utcnow() - timedelta(days=2),
                     status='processando',
-                    metodo_pagamento='boleto',
-                    valor_total=890.00,
-                    descricao='Kit de equipamentos de automação e licença de software de gestão.',
-                    observacoes='Aguardando compensação bancária do boleto emitido.'
+                    metodo_pagamento='cartao_credito',
+                    valor_total=399.90,
+                    descricao='Plano Oficial: DigiCorp Link Dedicado PME (500 Mbps) - Ordem de Instalação',
+                    observacoes='Equipe técnica em campo para passagem de fibra óptica até o rack principal.'
                 ),
                 Pedido(
                     numero_pedido='PED-2026-0004',
                     cliente_id=clientes_exemplo[3].id,
+                    plano_id=plano_fibra900.id if plano_fibra900 else None,
                     data_pedido=datetime.utcnow() - timedelta(days=1),
                     status='pendente',
                     metodo_pagamento='pix',
-                    valor_total=6420.50,
-                    descricao='Lote de suprimentos de informática (cabos de rede Cat6, switches 8 portas gigabit).',
-                    observacoes='Orçamento aprovado. Enviada chave PIX para faturamento.'
+                    valor_total=149.90,
+                    descricao='Plano Oficial: Fibra 900 Advanced (Wi-Fi 6) - Nova Ativação',
+                    observacoes='Aguardando aprovação de viabilidade e agendamento da visita técnica.'
                 ),
                 Pedido(
                     numero_pedido='PED-2026-0005',
-                    cliente_id=clientes_exemplo[0].id,
+                    cliente_id=clientes_exemplo[4].id,
+                    plano_id=plano_fibra700.id if plano_fibra700 else None,
                     data_pedido=datetime.utcnow(),
                     status='pendente',
-                    metodo_pagamento='transferencia',
-                    valor_total=2500.00,
-                    descricao='Renovação de hospedagem em nuvem e backup corporativo dedicado.',
-                    observacoes='Fatura gerada com vencimento em 5 dias.'
+                    metodo_pagamento='boleto',
+                    valor_total=139.90,
+                    descricao='Plano Oficial: Fibra 700 + DigiMesh (Wi-Fi 6) - Assinatura Mensal',
+                    observacoes='Pedido gerado via radar de prospecção geo-localizada.'
                 ),
             ]
             db.session.add_all(pedidos_exemplo)
             db.session.flush()
 
-            # Add sample items for each order
+            # Itens de pedido correspondentes
             itens_exemplo = [
-                # Pedido 1 (Total: 4850.00)
-                ItemPedido(pedido_id=pedidos_exemplo[0].id, descricao='Desenvolvimento de módulo de relatórios personalizados', quantidade=1.0, valor_unitario=3500.00, valor_total=3500.00),
-                ItemPedido(pedido_id=pedidos_exemplo[0].id, descricao='Consultoria técnica especializada (horas)', quantidade=10.0, valor_unitario=135.00, valor_total=1350.00),
-
-                # Pedido 2 (Total: 1299.90)
-                ItemPedido(pedido_id=pedidos_exemplo[1].id, descricao='Assinatura Anual Plano Premium Cloud', quantidade=1.0, valor_unitario=999.90, valor_total=999.90),
-                ItemPedido(pedido_id=pedidos_exemplo[1].id, descricao='Pacote Suporte Prioritário 24/7 (trimestral)', quantidade=3.0, valor_unitario=100.00, valor_total=300.00),
-
-                # Pedido 3 (Total: 890.00)
-                ItemPedido(pedido_id=pedidos_exemplo[2].id, descricao='Kit de Equipamentos de Automação Comercial', quantidade=1.0, valor_unitario=590.00, valor_total=590.00),
-                ItemPedido(pedido_id=pedidos_exemplo[2].id, descricao='Licença Adicional de Terminal DigitalNet-Prospector', quantidade=1.0, valor_unitario=300.00, valor_total=300.00),
-
-                # Pedido 4 (Total: 6420.50)
-                ItemPedido(pedido_id=pedidos_exemplo[3].id, descricao='Cabo de Rede Furukawa Cat6 (Caixa 100m)', quantidade=2.0, valor_unitario=350.00, valor_total=700.00),
-                ItemPedido(pedido_id=pedidos_exemplo[3].id, descricao='Switch Gigabit Ethernet 8 Portas TP-Link', quantidade=10.0, valor_unitario=180.00, valor_total=1800.00),
-                ItemPedido(pedido_id=pedidos_exemplo[3].id, descricao='Roteador Corporativo Dual Band Wi-Fi 6', quantidade=3.0, valor_unitario=640.00, valor_total=1920.00),
-                ItemPedido(pedido_id=pedidos_exemplo[3].id, descricao='Serviço de Conectorização e Certificação de Rede', quantidade=1.0, valor_unitario=2000.50, valor_total=2000.50),
-
-                # Pedido 5 (Total: 2500.00)
-                ItemPedido(pedido_id=pedidos_exemplo[4].id, descricao='Hospedagem Dedicada Cloud Server (Mensal)', quantidade=1.0, valor_unitario=1800.00, valor_total=1800.00),
-                ItemPedido(pedido_id=pedidos_exemplo[4].id, descricao='Rotina de Backup Corporativo Offsite (500GB)', quantidade=1.0, valor_unitario=700.00, valor_total=700.00),
+                # Pedido 1
+                ItemPedido(pedido_id=pedidos_exemplo[0].id, descricao='Mensalidade Fibra 700 + DigiMesh (Wi-Fi 6)', quantidade=1.0, valor_unitario=139.90, valor_total=139.90),
+                # Pedido 2
+                ItemPedido(pedido_id=pedidos_exemplo[1].id, descricao='Mensalidade DigiCorp Link Dedicado PME (500 Mbps)', quantidade=1.0, valor_unitario=399.90, valor_total=399.90),
+                # Pedido 3
+                ItemPedido(pedido_id=pedidos_exemplo[2].id, descricao='Ativação e Mensalidade DigiCorp Link Dedicado PME', quantidade=1.0, valor_unitario=399.90, valor_total=399.90),
+                # Pedido 4
+                ItemPedido(pedido_id=pedidos_exemplo[3].id, descricao='Mensalidade Fibra 900 Advanced (Wi-Fi 6)', quantidade=1.0, valor_unitario=149.90, valor_total=149.90),
+                # Pedido 5
+                ItemPedido(pedido_id=pedidos_exemplo[4].id, descricao='Mensalidade Fibra 700 + DigiMesh (Wi-Fi 6)', quantidade=1.0, valor_unitario=139.90, valor_total=139.90),
             ]
             db.session.add_all(itens_exemplo)
-            click.echo('Clientes, Pedidos e Itens de exemplo cadastrados com sucesso!')
+            click.echo('Clientes e Pedidos de exemplo em Campo Grande - MS cadastrados com sucesso!')
 
         # Sample leads for telecom prospecting in Campo Grande
         if Lead.query.count() == 0:
@@ -417,3 +401,50 @@ def register_cli_commands(app):
 
         db.session.commit()
         click.echo('Processo de Seed finalizado!')
+
+    @app.cli.command('limpar-e-normalizar-bairros')
+    @with_appcontext
+    def limpar_e_normalizar_bairros_command():
+        """Remove cadastros fora de MS e unifica nomes de bairros de Campo Grande para formato canônico."""
+        db.create_all()
+
+        # 1. Remover cadastros fora de MS
+        clientes_fora = Cliente.query.filter((Cliente.estado != 'MS') | (Cliente.estado.is_(None))).all()
+        removidos_clientes = len(clientes_fora)
+        for c in clientes_fora:
+            for p in c.pedidos:
+                ItemPedido.query.filter_by(pedido_id=p.id).delete()
+            Pedido.query.filter_by(cliente_id=c.id).delete()
+            db.session.delete(c)
+
+        leads_fora = Lead.query.filter((Lead.estado != 'MS') | (Lead.estado.is_(None))).all()
+        removidos_leads = len(leads_fora)
+        for l in leads_fora:
+            db.session.delete(l)
+
+        # 2. Normalizar bairros de todos os clientes
+        clientes = Cliente.query.all()
+        atualizados_clientes = 0
+        for c in clientes:
+            if c.bairro:
+                b_norm = normalizar_bairro(c.bairro)
+                if b_norm and b_norm != c.bairro:
+                    c.bairro = b_norm
+                    atualizados_clientes += 1
+
+        # 3. Normalizar bairros de todos os leads
+        leads = Lead.query.all()
+        atualizados_leads = 0
+        for l in leads:
+            if l.bairro:
+                b_norm = normalizar_bairro(l.bairro)
+                if b_norm and b_norm != l.bairro:
+                    l.bairro = b_norm
+                    atualizados_leads += 1
+
+        db.session.commit()
+        click.echo("Processo de limpeza e normalização concluído com sucesso:")
+        click.echo(f"  - Clientes de fora de MS removidos: {removidos_clientes}")
+        click.echo(f"  - Leads de fora de MS removidos: {removidos_leads}")
+        click.echo(f"  - Bairros de clientes normalizados: {atualizados_clientes}")
+        click.echo(f"  - Bairros de leads normalizados: {atualizados_leads}")

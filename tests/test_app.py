@@ -7,6 +7,8 @@ from app.extensions import db
 from app.models.user import User, PERFIL_ADMIN, PERFIL_AGENTE
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido
+from app.models.lead import Lead
+from app.models.plano import Plano, TIPO_PF, TIPO_PJ
 from app.routes.auth import is_safe_redirect_url
 
 
@@ -89,14 +91,14 @@ class AppTestCase(unittest.TestCase):
         res = self.client.post('/clientes/novo', data={
             'nome': 'Empresa Alpha Tech Ltda',
             'email': 'alpha@tech.com',
-            'telefone': '(11) 98888-7777',
+            'telefone': '(67) 98888-7777',
             'documento': '11.222.333/0001-44',
-            'cep': '01001-000',
-            'logradouro': 'Praça da Sé',
+            'cep': '79040-010',
+            'logradouro': 'Rua Ceará',
             'numero': '10',
-            'bairro': 'Sé',
-            'cidade': 'São Paulo',
-            'estado': 'SP',
+            'bairro': 'CHÁCARA CACHOEIRA',
+            'cidade': 'Campo Grande',
+            'estado': 'MS',
             'ativo': 'y',
             'observacoes': 'Cliente prioritário'
         }, follow_redirects=True)
@@ -105,7 +107,9 @@ class AppTestCase(unittest.TestCase):
 
         cliente = Cliente.query.filter_by(email='alpha@tech.com').first()
         self.assertIsNotNone(cliente)
-        self.assertEqual(cliente.cidade, 'São Paulo')
+        self.assertEqual(cliente.cidade, 'Campo Grande')
+        self.assertEqual(cliente.estado, 'MS')
+        self.assertEqual(cliente.bairro, 'Chácara Cachoeira')
 
         # 2. View details
         res_detail = self.client.get(f'/clientes/{cliente.id}')
@@ -116,16 +120,41 @@ class AppTestCase(unittest.TestCase):
         res_edit = self.client.post(f'/clientes/{cliente.id}/editar', data={
             'nome': 'Empresa Alpha Tech Modificada',
             'email': 'alpha_editada@tech.com',
-            'telefone': '(11) 99999-0000',
+            'telefone': '(67) 99999-0000',
+            'bairro': 'vilasboas',
+            'cidade': 'Campo Grande',
+            'estado': 'MS',
             'ativo': 'y'
         }, follow_redirects=True)
         self.assertEqual(res_edit.status_code, 200)
         self.assertIn(b'Empresa Alpha Tech Modificada', res_edit.data)
+        cliente_editado = db.session.get(Cliente, cliente.id)
+        self.assertEqual(cliente_editado.bairro, 'Vilas Boas')
 
         # 4. Delete client
         res_del = self.client.post(f'/clientes/{cliente.id}/excluir', follow_redirects=True)
         self.assertEqual(res_del.status_code, 200)
         self.assertIsNone(db.session.get(Cliente, cliente.id))
+
+    def test_cliente_validacao_estado_ms(self):
+        self.login()
+        # Tentativa de cadastro com estado diferente de MS deve ser rejeitada
+        res = self.client.post('/clientes/novo', data={
+            'nome': 'Empresa Fora do Estado',
+            'email': 'fora@sp.com',
+            'telefone': '(11) 98888-7777',
+            'documento': '11.222.333/0001-44',
+            'cep': '01001-000',
+            'logradouro': 'Praça da Sé',
+            'numero': '10',
+            'bairro': 'Sé',
+            'cidade': 'São Paulo',
+            'estado': 'SP',
+            'ativo': 'y'
+        }, follow_redirects=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('A DigitalNet MS atende exclusivamente no estado de Mato Grosso do Sul (MS).'.encode('utf-8'), res.data)
+        self.assertIsNone(Cliente.query.filter_by(email='fora@sp.com').first())
 
     # --- PEDIDOS CRUD TESTS ---
     def test_pedido_crud(self):
@@ -386,6 +415,108 @@ class AppTestCase(unittest.TestCase):
         # (100 + 300) / 2 pedidos válidos = 200,00 (antes era 400 / 3 = 133,33)
         self.assertIn('Ticket Médio: <strong>R$ 200,00</strong>'.encode('utf-8'), res.data)
 
+    def test_dashboard_indicadores_atendimento_e_monitoramento(self):
+        """Testa o carregamento de todos os novos indicadores operacionais, funil de leads e mix de planos."""
+        self.login()
+
+        # 1. Cria planos oficiais
+        plano_pf = Plano(
+            nome='Fibra 700 Teste Dash',
+            tipo=TIPO_PF,
+            velocidade_download=700,
+            velocidade_upload=350,
+            valor_mensal=139.90,
+            roteador_wifi='Wi-Fi 6 em comodato'
+        )
+        plano_pj = Plano(
+            nome='DigiCorp Teste Dash',
+            tipo=TIPO_PJ,
+            velocidade_download=900,
+            velocidade_upload=450,
+            valor_mensal=399.90,
+            sla_horas=12,
+            roteador_wifi='2 repetidores Wi-Fi 6'
+        )
+        db.session.add_all([plano_pf, plano_pj])
+
+        # 2. Cria cliente com bairro específico de Campo Grande
+        cliente = Cliente(
+            nome='Hospital Santa Marina',
+            email='contato@santamarina.com.br',
+            bairro='Chácara Cachoeira',
+            cidade='Campo Grande',
+            estado='MS',
+            ativo=True
+        )
+        db.session.add(cliente)
+        db.session.flush()
+
+        # 3. Cria pedidos vinculados com planos
+        p1 = Pedido(
+            numero_pedido='PED-DASH-01',
+            cliente_id=cliente.id,
+            plano_id=plano_pj.id,
+            status='processando',
+            valor_total=399.90
+        )
+        p2 = Pedido(
+            numero_pedido='PED-DASH-02',
+            cliente_id=cliente.id,
+            plano_id=plano_pf.id,
+            status='pendente',
+            valor_total=139.90
+        )
+        db.session.add_all([p1, p2])
+
+        # 4. Cria leads para testar funil e taxa de opt-in
+        l1 = Lead(
+            nome='Dr. Roberto',
+            empresa='Clínica Olhos MS',
+            bairro='Chácara Cachoeira',
+            operadora_atual='Vivo Fibra',
+            plano_sugerido='Fibra 700 Teste Dash',
+            valor_mensal_sugerido=139.90,
+            status='optin_aceito',
+            optin_status='aceito',
+            lead_score=95
+        )
+        l2 = Lead(
+            nome='Dra. Camila',
+            empresa='Consultório Sorrir',
+            bairro='Centro',
+            operadora_atual='Claro NET',
+            plano_sugerido='DigiCorp Teste Dash',
+            valor_mensal_sugerido=399.90,
+            status='novo',
+            optin_status='pendente',
+            lead_score=80
+        )
+        db.session.add_all([l1, l2])
+        db.session.commit()
+
+        # 5. Executa requisição GET ao dashboard
+        res = self.client.get('/dashboard')
+        self.assertEqual(res.status_code, 200)
+
+        html = res.get_data(as_text=True)
+        # Verifica se os títulos dos blocos estão presentes
+        self.assertIn('Painel de Atendimento & Monitoramento', html)
+        self.assertIn('MRR Estimado (Recorrente)', html)
+        self.assertIn('Ordens Técnicas Abertas', html)
+        self.assertIn('Opt-in WhatsApp (Anti-Ban)', html)
+        self.assertIn('Fila de Atendimento & Abordagem Rápida', html)
+        self.assertIn('Fila de Despacho Técnico & Ativações', html)
+        self.assertIn('Top Bairros com Maior Ativação', html)
+        self.assertIn('Mix de Assinaturas & Planos Contratados', html)
+
+        # Verifica dados específicos populados
+        self.assertIn('Clínica Olhos MS', html)
+        self.assertIn('Hospital Santa Marina', html)
+        self.assertIn('Chácara Cachoeira', html)
+        self.assertIn('PED-DASH-01', html)
+        self.assertIn('Vivo Fibra', html)
+        self.assertIn('SLA 12h', html)
+
     # --- CLI ---
     def test_seed_nao_usa_senha_fixa(self):
         runner = self.app.test_cli_runner()
@@ -407,6 +538,26 @@ class AppTestCase(unittest.TestCase):
 
         curta = runner.invoke(args=['create-admin', '--username', 'x', '--email', 'x@x.com', '--password', '123'])
         self.assertNotEqual(curta.exit_code, 0)
+
+    def test_sidebar_compacta_e_alternancia_tema(self):
+        self.login()
+        res = self.client.get('/dashboard')
+        self.assertEqual(res.status_code, 200)
+        html = res.get_data(as_text=True)
+
+        # 1. Alternância de tema claro/escuro
+        self.assertIn('data-bs-theme', html)
+        self.assertIn('id="themeToggle"', html)
+        self.assertIn('id="themeIcon"', html)
+        self.assertIn('id="dropdownThemeToggle"', html)
+
+        # 2. Estrutura para sidebar compacta apenas com ícones
+        self.assertIn('class="brand-text"', html)
+        self.assertIn('class="user-info text-truncate"', html)
+        self.assertIn('title="Dashboard"', html)
+        self.assertIn('title="Radar de Leads"', html)
+        self.assertIn('title="Clientes"', html)
+        self.assertIn('title="Pedidos & Instalação"', html)
 
 
 class SecretKeyConfigTestCase(unittest.TestCase):

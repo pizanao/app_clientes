@@ -26,6 +26,14 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 
+    <!-- Dark Mode FOUT Prevention -->
+    <script>
+      (function () {
+        const savedTheme = localStorage.getItem('digitalnet_theme') || 'light';
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+      })();
+    </script>
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_css %}{% endblock %}
@@ -38,12 +46,12 @@
     <!-- SIDEBAR DE NAVEGAÇÃO -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <a href="{{ url_for('main.dashboard') }}" class="brand-logo">
+            <a href="{{ url_for('main.dashboard') }}" class="brand-logo" title="DigitalNet MS - Telecom Inteligência">
                 <div class="brand-icon"
                      style="background: linear-gradient(135deg, #1b4f99, #0f2d57); box-shadow: 0 4px 12px rgba(27, 79, 153, 0.4);">
                     <i class="bi bi-broadcast-pin" style="color: #fbbf24;"></i>
                 </div>
-                <div>
+                <div class="brand-text">
                     <div style="line-height: 1.1; font-weight: 800; letter-spacing: -0.02em;">Digital<span
                             style="color: #fbbf24;">Net</span></div>
                     <small style="font-size: 0.7rem; color: #94a3b8; font-weight: 500;">Telecom Inteligência</small>
@@ -55,13 +63,15 @@
             <div class="nav-section-title">Comercial & Prospecção</div>
 
             <a href="{{ url_for('main.dashboard') }}"
-               class="sidebar-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+               class="sidebar-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}"
+               title="Dashboard">
                 <i class="bi bi-speedometer2"></i>
                 <span>Dashboard</span>
             </a>
 
             <a href="{{ url_for('leads.index') }}"
-               class="sidebar-link {% if request.blueprint == 'leads' %}active{% endif %}">
+               class="sidebar-link {% if request.blueprint == 'leads' %}active{% endif %}"
+               title="Radar de Leads">
                 <i class="bi bi-crosshair2 text-warning"></i>
                 <span>Radar de Leads</span>
                 <span class="badge bg-warning text-dark ms-auto" style="font-size: 0.65rem;">SDR</span>
@@ -70,13 +80,15 @@
             <div class="nav-section-title">Operações</div>
 
             <a href="{{ url_for('clientes.index') }}"
-               class="sidebar-link {% if request.blueprint == 'clientes' %}active{% endif %}">
+               class="sidebar-link {% if request.blueprint == 'clientes' %}active{% endif %}"
+               title="Clientes">
                 <i class="bi bi-people"></i>
                 <span>Clientes</span>
             </a>
 
             <a href="{{ url_for('pedidos.index') }}"
-               class="sidebar-link {% if request.blueprint == 'pedidos' %}active{% endif %}">
+               class="sidebar-link {% if request.blueprint == 'pedidos' %}active{% endif %}"
+               title="Pedidos & Instalação">
                 <i class="bi bi-cart3"></i>
                 <span>Pedidos & Instalação</span>
             </a>
@@ -87,17 +99,20 @@
                 <span>Administração</span>
             </div>
             <a href="{{ url_for('admin.usuarios') }}"
-               class="sidebar-link {% if request.blueprint == 'admin' and 'usuario' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-people-gear text-warning"></i>
+               class="sidebar-link {% if request.blueprint == 'admin' and 'usuario' in request.endpoint %}active{% endif %}"
+               title="Usuários">
+                <i class="bi bi-people-fill text-warning"></i>
                 <span>Usuários</span>
             </a>
             <a href="{{ url_for('admin.grupos') }}"
-               class="sidebar-link {% if request.blueprint == 'admin' and 'grupo' in request.endpoint %}active{% endif %}">
+               class="sidebar-link {% if request.blueprint == 'admin' and 'grupo' in request.endpoint %}active{% endif %}"
+               title="Grupos de Acesso">
                 <i class="bi bi-shield-lock text-info"></i>
                 <span>Grupos de Acesso</span>
             </a>
             <a href="{{ url_for('admin.planos') }}"
-               class="sidebar-link {% if request.blueprint == 'admin' and 'plano' in request.endpoint %}active{% endif %}">
+               class="sidebar-link {% if request.blueprint == 'admin' and 'plano' in request.endpoint %}active{% endif %}"
+               title="Planos de Banda Larga">
                 <i class="bi bi-router-fill text-success"></i>
                 <span>Planos de Banda Larga</span>
             </a>
@@ -105,11 +120,11 @@
         </nav>
 
         <div class="sidebar-footer">
-            <div class="user-badge">
+            <div class="user-badge" title="{{ current_user.nome if current_user.is_authenticated else 'Usuário' }}">
                 <div class="user-avatar" style="{% if current_user.is_authenticated and current_user.is_admin %}background: linear-gradient(135deg, #d97706, #b45309);{% elif current_user.is_authenticated and current_user.is_lider_tecnico %}background: linear-gradient(135deg, #0284c7, #0369a1);{% endif %}">
                     {{ current_user.nome[:2].upper() if current_user.is_authenticated else 'U' }}
                 </div>
-                <div class="text-truncate" style="flex: 1;">
+                <div class="user-info text-truncate" style="flex: 1;">
                     <div class="fw-bold text-white text-truncate" style="font-size: 0.88rem;">
                         {{ current_user.nome if current_user.is_authenticated else 'Usuário' }}
                     </div>
@@ -167,6 +182,16 @@
                    class="btn btn-sm btn-dn-blue d-none d-sm-inline-flex align-items-center gap-1">
                     <i class="bi bi-cart-plus"></i> + Pedido
                 </a>
+
+                <!-- BOTÃO ALTERNAR TEMA CLARO / ESCURO -->
+                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center p-2 rounded-3 shadow-none"
+                        id="themeToggle"
+                        type="button"
+                        title="Alternar Tema Claro / Escuro"
+                        aria-label="Alternar Tema">
+                    <i class="bi bi-moon-stars-fill text-warning fs-6" id="themeIcon"></i>
+                </button>
+
                 <div class="vr mx-2 d-none d-sm-block"></div>
                 <div class="dropdown">
                     <button class="btn btn-light-custom btn-sm dropdown-toggle d-flex align-items-center gap-2"
@@ -184,13 +209,19 @@
                                 class="bi bi-people me-2"></i>Clientes</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('pedidos.index') }}"><i
                                 class="bi bi-bag-check me-2"></i>Meus Pedidos</a></li>
+                        <li>
+                            <button class="dropdown-item d-flex align-items-center justify-content-between" type="button" id="dropdownThemeToggle">
+                                <span><i class="bi bi-circle-half me-2"></i>Alternar Tema</span>
+                                <span class="badge bg-secondary" id="dropdownThemeBadge">Claro</span>
+                            </button>
+                        </li>
                         {% if current_user.is_authenticated and current_user.is_admin %}
                         <li>
                             <hr class="dropdown-divider">
                         </li>
                         <li><h6 class="dropdown-header text-warning">Administração</h6></li>
                         <li><a class="dropdown-item" href="{{ url_for('admin.usuarios') }}"><i
-                                class="bi bi-people-gear me-2 text-warning"></i>Gestão de Usuários</a></li>
+                                class="bi bi-people-fill me-2 text-warning"></i>Gestão de Usuários</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('admin.grupos') }}"><i
                                 class="bi bi-shield-lock me-2 text-info"></i>Grupos de Acesso</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('admin.planos') }}"><i

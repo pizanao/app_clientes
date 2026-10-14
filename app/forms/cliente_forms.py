@@ -1,9 +1,10 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, BooleanField, TextAreaField, SelectField, SubmitField
-from wtforms.validators import DataRequired, Email, Length, Optional
+from wtforms.validators import DataRequired, Email, Length, Optional, ValidationError
 
 ESTADOS_BRASIL = [
     ('', 'Selecione o Estado'),
+    ('MS', 'Mato Grosso do Sul (MS)'),
     ('AC', 'Acre (AC)'),
     ('AL', 'Alagoas (AL)'),
     ('AP', 'Amapá (AP)'),
@@ -15,7 +16,6 @@ ESTADOS_BRASIL = [
     ('GO', 'Goiás (GO)'),
     ('MA', 'Maranhão (MA)'),
     ('MT', 'Mato Grosso (MT)'),
-    ('MS', 'Mato Grosso do Sul (MS)'),
     ('MG', 'Minas Gerais (MG)'),
     ('PA', 'Pará (PA)'),
     ('PB', 'Paraíba (PB)'),
@@ -71,15 +71,19 @@ class ClienteForm(FlaskForm):
         Optional(),
         Length(max=80)
     ])
-    cidade = StringField('Cidade', validators=[
-        Optional(),
+    cidade = StringField('Cidade *', default='Campo Grande', validators=[
+        DataRequired(message='A cidade é obrigatória.'),
         Length(max=80)
     ])
-    estado = SelectField('Estado (UF)', choices=ESTADOS_BRASIL, validators=[
-        Optional()
+    estado = SelectField('Estado (UF) *', choices=ESTADOS_BRASIL, default='MS', validators=[
+        DataRequired(message='O estado é obrigatório.')
     ])
     ativo = BooleanField('Cliente Ativo', default=True)
     observacoes = TextAreaField('Observações Internas', validators=[
         Optional()
     ])
     submit = SubmitField('Salvar Cliente')
+
+    def validate_estado(self, field):
+        if field.data and field.data.strip().upper() != 'MS':
+            raise ValidationError('A DigitalNet MS atende exclusivamente no estado de Mato Grosso do Sul (MS).')

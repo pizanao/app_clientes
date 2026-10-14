@@ -5,12 +5,36 @@ document.addEventListener('DOMContentLoaded', function () {
   const sidebarBackdrop = document.getElementById('sidebarBackdrop');
   const appWrapper = document.querySelector('.app-wrapper') || document.body;
 
+  // Função para gerenciar tooltips nos ícones do menu lateral quando recolhido
+  function updateSidebarTooltips() {
+    const isCollapsed = appWrapper && appWrapper.classList.contains('sidebar-collapsed');
+    const links = document.querySelectorAll('.sidebar-link');
+    links.forEach(function (link) {
+      const existingTooltip = bootstrap.Tooltip.getInstance(link);
+      if (isCollapsed && window.innerWidth >= 992) {
+        if (!existingTooltip && link.getAttribute('title')) {
+          new bootstrap.Tooltip(link, {
+            placement: 'right',
+            trigger: 'hover',
+            boundary: 'window'
+          });
+        }
+      } else {
+        if (existingTooltip) {
+          existingTooltip.dispose();
+        }
+      }
+    });
+  }
+
   // Restaurar estado recolhido no desktop via localStorage
   if (appWrapper && window.innerWidth >= 992) {
     if (localStorage.getItem('sidebar_collapsed') === 'true') {
       appWrapper.classList.add('sidebar-collapsed');
     }
   }
+  updateSidebarTooltips();
+  window.addEventListener('resize', updateSidebarTooltips);
 
   if (sidebarToggle && sidebar) {
     sidebarToggle.addEventListener('click', function () {
@@ -19,15 +43,16 @@ document.addEventListener('DOMContentLoaded', function () {
         sidebar.classList.toggle('show');
         if (sidebarBackdrop) sidebarBackdrop.classList.toggle('show');
       } else {
-        // Modo Desktop: Recolhe/expande barra lateral
+        // Modo Desktop: Recolhe/expande barra lateral (modo compacto com apenas ícones)
         if (appWrapper) {
           appWrapper.classList.toggle('sidebar-collapsed');
           const isCollapsed = appWrapper.classList.contains('sidebar-collapsed');
           localStorage.setItem('sidebar_collapsed', isCollapsed ? 'true' : 'false');
+          updateSidebarTooltips();
           // Dispara resize para Leaflet e gráficos se adaptarem perfeitamente
           setTimeout(function () {
             window.dispatchEvent(new Event('resize'));
-          }, 320);
+          }, 280);
         }
       }
     });
@@ -153,4 +178,47 @@ document.addEventListener('DOMContentLoaded', function () {
   tooltipTriggerList.map(function (tooltipTriggerEl) {
     return new bootstrap.Tooltip(tooltipTriggerEl);
   });
+
+  // 6. Theme Switcher (Claro / Escuro com persistência via localStorage)
+  const themeToggle = document.getElementById('themeToggle');
+  const dropdownThemeToggle = document.getElementById('dropdownThemeToggle');
+  const themeIcon = document.getElementById('themeIcon');
+  const dropdownThemeBadge = document.getElementById('dropdownThemeBadge');
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-bs-theme', theme);
+    localStorage.setItem('digitalnet_theme', theme);
+
+    if (themeIcon) {
+      if (theme === 'dark') {
+        themeIcon.className = 'bi bi-sun-fill text-warning fs-6';
+      } else {
+        themeIcon.className = 'bi bi-moon-stars-fill text-warning fs-6';
+      }
+    }
+    if (dropdownThemeBadge) {
+      dropdownThemeBadge.textContent = theme === 'dark' ? 'Escuro' : 'Claro';
+      dropdownThemeBadge.className = theme === 'dark' ? 'badge bg-warning text-dark' : 'badge bg-secondary';
+    }
+    if (themeToggle) {
+      themeToggle.setAttribute('title', theme === 'dark' ? 'Alternar para Tema Claro' : 'Alternar para Tema Escuro');
+    }
+  }
+
+  // Sincronizar estado inicial dos botões com o tema ativo
+  const currentTheme = document.documentElement.getAttribute('data-bs-theme') || localStorage.getItem('digitalnet_theme') || 'light';
+  applyTheme(currentTheme);
+
+  function toggleTheme() {
+    const activeTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+    const nextTheme = activeTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme);
+  }
+
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+  }
+  if (dropdownThemeToggle) {
+    dropdownThemeToggle.addEventListener('click', toggleTheme);
+  }
 });

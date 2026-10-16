@@ -1260,24 +1260,50 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             if not lead.valor_mensal_sugerido or lead.valor_mensal_sugerido <= 0:
                 lead.valor_mensal_sugerido = plano.valor_mensal
 
-        # 1. Cria o Cliente
-        novo_cliente = Cliente(
-            nome=f"{lead.empresa} ({lead.nome})",
-            email=lead.email or f"contato@{re.sub(r'[^a-z0-9]', '', lead.empresa.lower())[:10]}.com.br",
-            telefone=lead.telefone or '(67) 99999-9999',
-            documento=lead.documento or '00.000.000/0001-00',
-            cep=lead.cep or '79000-000',
-            logradouro=lead.logradouro or 'Rua de Acesso',
-            numero=lead.numero or 'S/N',
-            complemento=lead.complemento,
-            bairro=lead.bairro,
-            cidade=lead.cidade,
-            estado=lead.estado,
-            ativo=True,
-            observacoes=f"Cliente convertido via Prospecção Geo-Localizada. Dor anterior: {lead.dor_principal or 'N/A'}"
-        )
-        db.session.add(novo_cliente)
-        db.session.flush()
+        # 1. Localiza ou Cria o Cliente
+        cliente_existente = None
+        doc_raw = re.sub(r'\D', '', lead.documento or '')
+        if doc_raw and doc_raw not in ('00000000000100', '00000000000'):
+            cliente_existente = Cliente.query.filter(
+                Cliente.documento.isnot(None),
+                db.func.replace(db.func.replace(db.func.replace(db.func.replace(Cliente.documento, '.', ''), '/', ''), '-', ''), ' ', '') == doc_raw
+            ).first()
+
+        if not cliente_existente and lead.email:
+            cliente_existente = Cliente.query.filter(
+                Cliente.email.isnot(None),
+                db.func.lower(Cliente.email) == lead.email.strip().lower()
+            ).first()
+
+        if not cliente_existente and lead.empresa:
+            empresa_nome = lead.empresa.strip()
+            cliente_existente = Cliente.query.filter(
+                db.or_(
+                    db.func.lower(Cliente.nome) == empresa_nome.lower(),
+                    Cliente.nome.ilike(f"{empresa_nome} (%")
+                )
+            ).first()
+
+        if cliente_existente:
+            novo_cliente = cliente_existente
+        else:
+            novo_cliente = Cliente(
+                nome=f"{lead.empresa} ({lead.nome})",
+                email=lead.email or f"contato@{re.sub(r'[^a-z0-9]', '', lead.empresa.lower())[:10]}.com.br",
+                telefone=lead.telefone or '(67) 99999-9999',
+                documento=lead.documento or '00.000.000/0001-00',
+                cep=lead.cep or '79000-000',
+                logradouro=lead.logradouro or 'Rua de Acesso',
+                numero=lead.numero or 'S/N',
+                complemento=lead.complemento,
+                bairro=lead.bairro,
+                cidade=lead.cidade,
+                estado=lead.estado,
+                ativo=True,
+                observacoes=f"Cliente convertido via Prospecção Geo-Localizada. Dor anterior: {lead.dor_principal or 'N/A'}"
+            )
+            db.session.add(novo_cliente)
+            db.session.flush()
 
         # 2. Cria o Pedido da Assinatura
         prefixo = f"NET-{datetime.utcnow().year}"

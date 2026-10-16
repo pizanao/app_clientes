@@ -17,29 +17,29 @@ Utiliza a biblioteca padrão `sqlite3` do Python com suporte nativo a tabelas vi
 
 Os arquivos estão localizados em `geojson/`:
 
-| Arquivo GeoJSON | Tabela SQLite | Features | Tipo Geométrico | Descrição |
+| Arquivo / Dump | Tabela SQLite | Features | Tipo Geométrico | Descrição |
 | :--- | :--- | :--- | :--- | :--- |
 | `bairros.geojson` | `geo_bairros` | 74 | MultiPolygon | 74 Bairros Oficiais de Campo Grande (PLANURB/SISGRAN) |
-| `imoveis.geojson` | `geo_imoveis` | 20.000 | MultiPolygon | Lotes, quadras e cadastros de imóveis municipais |
+| `data/geo_imoveis.sql.gz` (`imoveis.geojson`) | `geo_imoveis` | 462.744 | MultiPolygon | Base completa de lotes, quadras e cadastros de imóveis municipais |
 | `parcelamentos.geojson` | `geo_parcelamentos` | 894 | MultiPolygon | Parcelamentos urbanos e loteamentos aprovados |
 | `pd-macrozonas-urbanas.geojson` | `geo_pd_macrozonas_urbanas` | 74 | MultiPolygon | Macrozonas do Plano Diretor de Campo Grande |
 
 ---
 
-## 3. Execução do Script de Carga (`scripts/carregar_geojson_sqlite.py`)
+## 3. Execução dos Scripts de Carga e Restauração (`scripts/carregar_geojson_sqlite.py` e `scripts/restaurar_imoveis.py`)
 
 ```bash
 # 1. Analisar os arquivos e exibir o relatório de colunas e limites geográficos (dry-run):
 python scripts/carregar_geojson_sqlite.py
 
-# 2. Executar a criação das tabelas e carregar todas as 21.042 features no SQLite:
+# 2. Executar a criação das tabelas e carregar/restaurar todas as 463.786 features no SQLite:
 python scripts/carregar_geojson_sqlite.py --execute
 
-# 3. Limpar tabelas anteriores e reimportar do zero:
-python scripts/carregar_geojson_sqlite.py --execute --clean
+# 3. Restaurar diretamente a camada completa de 462.744 imóveis a partir do dump comprimido (32,4 MB):
+python scripts/restaurar_imoveis.py
 
-# 4. Exportar o schema SQL DDL gerado para arquivo:
-python scripts/carregar_geojson_sqlite.py --output-sql schema_geo_sqlite.sql
+# 4. Regenerar o dump comprimido data/geo_imoveis.sql.gz a partir de geojson/imoveis.geojson:
+python scripts/restaurar_imoveis.py --gerar-dump
 ```
 
 ---
@@ -52,14 +52,14 @@ Cada tabela recebe as propriedades inferidas do GeoJSON mais colunas espaciais p
 CREATE TABLE IF NOT EXISTS "geo_imoveis" (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     gid INTEGER,
-    codlote INTEGER,
+    codlote TEXT,
     codimo INTEGER,
     ruaimo TEXT,
     nrporta INTEGER,
     nomebairro TEXT,
     nomeregiao TEXT,
     areaterren REAL,
-    geometry_geojson TEXT,      -- Geometria GeoJSON completa
+    geometry_geojson TEXT,      -- Geometria GeoJSON completa (WGS84 EPSG:4326)
     geometry_type TEXT,         -- MultiPolygon / Polygon / Point
     min_lng REAL,               -- Limite Oeste
     min_lat REAL,               -- Limite Sul

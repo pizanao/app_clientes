@@ -30,8 +30,9 @@ ENV/
 # Database & Sessions
 instance/
 *.db
-# GeoJSON temporários e pesados
+# GeoJSON temporários e pesados (imoveis.geojson 469MB é versionado comprimido em data/geo_imoveis.sql.gz)
 geojson/*.json
+geojson/imoveis.geojson
 # Environment
 .env
 .env.local

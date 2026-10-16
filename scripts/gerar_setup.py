@@ -25,9 +25,10 @@ DELIM = 'OMNI_EOF'
 
 # Arquivos que não fazem sentido dentro do setup.sh
 EXCLUIR = {
-    'setup.sh',               # o próprio script gerado
-    'README.md',              # documentação do repositório
-    'scripts/gerar_setup.py', # ferramenta de manutenção
+    'setup.sh',                 # o próprio script gerado
+    'README.md',                # documentação do repositório
+    'scripts/gerar_setup.py',   # ferramenta de manutenção
+    'geojson/imoveis.geojson',  # base bruta de 469MB (restaurada via data/geo_imoveis.sql.gz)
 }
 EXCLUIR_PREFIXOS = ('.idea/', '.vscode/', 'instance/', '.venv/', 'data/')
 
@@ -228,10 +229,18 @@ fi
 .venv/bin/flask seed
 
 echo -e "\n${YELLOW}• Carregando camadas geoespaciais urbanas no SQLite...${NC}"
-.venv/bin/python scripts/carregar_geojson_sqlite.py --execute
+mkdir -p data
+if [ ! -f data/geo_imoveis.sql.gz ]; then
+    if [ -f geo_imoveis.sql.gz ]; then
+        cp geo_imoveis.sql.gz data/
+    elif [ -f ../geo_imoveis.sql.gz ]; then
+        cp ../geo_imoveis.sql.gz data/
+    fi
+fi
+.venv/bin/python scripts/carregar_geojson_sqlite.py --execute --skip-imoveis
+.venv/bin/python scripts/restaurar_imoveis.py || true
 
 echo -e "\n${YELLOW}• Configurando base de dados RFB (177.614 empresas de Campo Grande)...${NC}"
-mkdir -p data
 # Se o dump comprimido estiver junto no pendrive ou pasta atual, copia para data/
 if [ ! -f data/leeds_campo_grande.sql.gz ]; then
     if [ -f leeds_campo_grande.sql.gz ]; then

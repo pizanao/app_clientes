@@ -26,12 +26,12 @@ A aplicação é uma plataforma completa de **Gestão Comercial, Controle de Ace
 - **`leads` (`app/models/lead.py`):** Oportunidades comerciais de prospecção geo-localizada, com pontuação (`lead_score`), operadora atual (Vivo Fibra / Claro), dor operacional mapeada, roteiro WhatsApp anti-ban, dossiê comercial e vínculo de conversão (`cliente_convertido_id`).
 
 ### 2.2 Base de Inteligência da Receita Federal (RFB)
-- **`leeds_campo_grande`:** Base de 177.614 empresas comerciais e prestadores de serviço ativos em Campo Grande - MS com CNPJ, CNAE, razão social, endereço, telefone, decidor e CEP. Utilizada prioritariamente pelo motor de prospecção.
+- **`leeds_campo_grande`:** Base de 158.558 empresas comerciais e prestadores de serviço ativos em Campo Grande - MS com CNPJ, CNAE, razão social, logradouro, número, bairro, complemento, telefone, decisor e CEP (`data/leeds_campo_grande.sql.gz`). Utilizada prioritariamente pelo motor de prospecção.
 
 ### 2.3 Camadas Geoespaciais Urbanas (SISGRAN / PLANURB)
-Carregadas no SQLite via `scripts/carregar_geojson_sqlite.py` ou PostGIS via `scripts/analisar_geojson_postgis.py`:
+Carregadas no SQLite via `scripts/carregar_geojson_sqlite.py` e `scripts/restaurar_imoveis.py` (ou PostGIS via `scripts/analisar_geojson_postgis.py`):
 - **`geo_bairros`:** 74 bairros oficiais com geometria, macrozona e dados legais.
-- **`geo_imoveis`:** 20.000 cadastros imobiliários urbanos com logradouro, número de porta e área.
+- **`geo_imoveis`:** 462.744 cadastros imobiliários urbanos completos de Campo Grande - MS com logradouro, número de porta, uso do imóvel, área de lote/edificada, geometria WGS84 e índice espacial R*Tree (`data/geo_imoveis.sql.gz`).
 - **`geo_parcelamentos`:** 894 parcelamentos e loteamentos urbanos aprovados.
 - **`geo_pd_macrozonas_urbanas`:** Macrozonas do Plano Diretor Municipal.
 
@@ -76,8 +76,8 @@ flowchart TD
 ## 5. SKILLs Disponíveis no Workspace
 
 As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos comprovados do repositório:
-- **`enriquecer-prospectar-rfb` (`.agents/skills/enriquecer-prospectar-rfb/SKILL.md`):** Procedimento de enriquecimento e prospecção com a base de 177k empresas da RFB, scripts anti-ban no WhatsApp e conversão em 1-clique.
-- **`carregar-geojson-sqlite` (`.agents/skills/carregar-geojson-sqlite/SKILL.md`):** Carregamento de camadas GeoJSON no SQLite com inferência de tipos, bounding boxes e indexação espacial R*Tree.
+- **`enriquecer-prospectar-rfb` (`.agents/skills/enriquecer-prospectar-rfb/SKILL.md`):** Procedimento de enriquecimento e prospecção com a base de empresas da RFB, scripts anti-ban no WhatsApp e conversão em 1-clique.
+- **`carregar-geojson-sqlite` (`.agents/skills/carregar-geojson-sqlite/SKILL.md`):** Carregamento de camadas GeoJSON e dump comprimido de 462k imóveis no SQLite com inferência de tipos, bounding boxes e indexação espacial R*Tree.
 
 ---
 
@@ -85,9 +85,10 @@ As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos com
 
 | Comando | Descrição |
 | :--- | :--- |
-| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de testes unitários (53 testes automatizados). |
+| `.venv/bin/python -m unittest discover -s tests -v` | Executa a suíte de testes unitários automatizados. |
 | `python scripts/carregar_geojson_sqlite.py --execute` | Carrega as camadas GeoJSON no SQLite com índices espaciais R*Tree. |
-| `python scripts/restaurar_rfb.py` | Restaura a base de 177.614 empresas da RFB a partir do dump compactado ou URL pública. |
+| `python scripts/restaurar_imoveis.py` | Restaura os 462.744 imóveis urbanos (`geo_imoveis`) a partir de `data/geo_imoveis.sql.gz`. |
+| `python scripts/restaurar_rfb.py` | Restaura a base de empresas da RFB a partir de `data/leeds_campo_grande.sql.gz`. |
 | `python scripts/enriquecer_clientes_rfb.py --limit 150` | Enriquece a tabela `clientes` com empresas reais da RFB. |
 | `python scripts/gerar_perfis_sisgran.py` | Atualiza o dicionário de bairros em `app/data/perfis_sisgran.py`. |
 | `python scripts/gerar_setup.py && python scripts/gerar_setup.py --check` | Regenera o instalador autônomo `setup.sh` e verifica integridade. |
@@ -99,6 +100,6 @@ As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos com
 
 1. **Evidência Antes de Afirmações:** Nunca declare uma alteração concluída sem rodar a suíte de testes (`unittest`) e confirmar código de saída 0.
 2. **Integridade de Documentação:** Mantenha docstrings e comentários existentes.
-3. **Não poluir setup.sh com dumps temporários:** O `setup.sh` deve incluir apenas arquivos essenciais versionados; dumps brutos de curl `.json` devem ser ignorados no `.gitignore`.
+3. **Não poluir setup.sh com dumps temporários:** O `setup.sh` deve incluir apenas arquivos essenciais versionados; dumps brutos de curl `.json` e arquivos gigantes (`geojson/imoveis.geojson`) devem ser ignorados no `.gitignore`.
 4. **Isolamento de Conexão no SQLite :memory::** Em testes unitários com SQLite `:memory:`, NUNCA chame `inspect(db.engine)` diretamente, pois isso causa alocação de conexões separadas no pool e isola a sessão de teste. Utilize consultas diretas via `db.session`.
-5. **Estratégia Blindada para POC:** O `setup.sh` foi projetado para recriar 100% do sistema em ambientes Ubuntu limpos em menos de 30 segundos, suportando execução offline (com `data/leeds_campo_grande.sql.gz` local) ou online (via GitHub público sem autenticação).
+5. **Estratégia Blindada para POC:** O `setup.sh` foi projetado para recriar 100% do sistema em ambientes Ubuntu limpos em menos de 30 segundos, suportando execução offline (com `data/leeds_campo_grande.sql.gz` e `data/geo_imoveis.sql.gz` locais) ou online (via GitHub público sem autenticação).

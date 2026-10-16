@@ -512,4 +512,95 @@ class LeadsTestCase(unittest.TestCase):
         self.assertEqual(lead_com_pipe.telefone_e164, '+556799824822')
         self.assertTrue(lead_com_pipe.whatsapp_url.startswith('https://wa.me/556799824822?text='))
 
+    def test_geo_imoveis_reprojection_and_restore(self):
+        """Testa reprojeção EPSG:31981 -> WGS84 e rotina de compressão/restauração de geo_imoveis."""
+        import tempfile
+        import sqlite3
+        from pathlib import Path
+        from scripts.carregar_geojson_sqlite import (
+            utm21s_to_wgs84,
+            extract_coordinates_and_bounds,
+            FieldStats,
+        )
+        from scripts.restaurar_imoveis import (
+            CREATE_TABLE_GEO_IMOVEIS_SQL,
+            INDEXES_GEO_IMOVEIS_SQL,
+            gerar_dump,
+            restaurar_dump,
+            verificar_tabela_existente,
+        )
+
+        # 1. Reprojeção UTM Zona 21S (EPSG:31981) -> WGS84 (EPSG:4326)
+        lon, lat = utm21s_to_wgs84(744866.7916, 7737103.7295)
+        self.assertAlmostEqual(lon, -54.652909, places=4)
+        self.assertAlmostEqual(lat, -20.448769, places=4)
+
+        geom_utm = {
+            'type': 'MultiPolygon',
+            'coordinates': [[[[744866.7916, 7737103.7295], [744877.075, 7737097.5448], [744866.7916, 7737103.7295]]]]
+        }
+        g_type, (min_lng, min_lat, max_lng, max_lat), (cent_lat, cent_lng) = extract_coordinates_and_bounds(geom_utm)
+        self.assertEqual(g_type, 'MultiPolygon')
+        self.assertTrue(-55.0 < min_lng < -54.0)
+        self.assertTrue(-21.0 < min_lat < -20.0)
+        self.assertTrue(-55.0 < geom_utm['coordinates'][0][0][0][0] < -54.0)
+
+        # 2. Preservação de zeros à esquerda como TEXT em FieldStats
+        st_codlote = FieldStats('codlote')
+        st_codlote.record_value('04160902071')
+        self.assertEqual(st_codlote.infer_sqlite_type(), 'TEXT')
+
+        # 3. Geração e restauração de dump comprimido .sql.gz com R*Tree
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_db = Path(tmpdir) / 'test_geo.db'
+            tmp_gz = Path(tmpdir) / 'geo_imoveis_test.sql.gz'
+
+            con = sqlite3.connect(str(tmp_db))
+            con.execute(CREATE_TABLE_GEO_IMOVEIS_SQL)
+            con.execute(
+                'INSERT INTO "geo_imoveis" (gid, codlote, ruaimo, nrporta, nomebairro, usoimovel, '
+                'areaterren, arealote, areaedific, geometry_geojson, geometry_type, '
+                'min_lng, min_lat, max_lng, max_lat, centroid_lat, centroid_lng) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (1, '04160902071', 'JERUSALEM', 190, 'SANTO AMARO', 'RESIDENCIAL',
+                 432.0, 432.0, 70.19, '{"type":"MultiPolygon","coordinates":[]}', 'MultiPolygon',
+                 -54.653, -20.449, -54.652, -20.448, -20.4488, -54.6529)
+            )
+            for idx_sql in INDEXES_GEO_IMOVEIS_SQL:
+                con.execute(idx_sql)
+            con.commit()
+            self.assertEqual(verificar_tabela_existente(con), 1)
+            con.close()
+
+            # Gera dump comprimido a partir do banco de teste (sem disparar carga do geojson completo)
+            import scripts.restaurar_imoveis as mod_rest
+            orig_geojson = mod_rest.GEOJSON_IMOVEIS
+            try:
+                mod_rest.GEOJSON_IMOVEIS = Path(tmpdir) / 'nao_existe.geojson'
+                gerar_dump(tmp_db, tmp_gz)
+            finally:
+                mod_rest.GEOJSON_IMOVEIS = orig_geojson
+
+            self.assertTrue(tmp_gz.exists())
+            self.assertGreater(tmp_gz.stat().st_size, 100)
+
+            # Restaura em um novo banco limpo e verifica R*Tree
+            tmp_db2 = Path(tmpdir) / 'test_geo_restored.db'
+            restaurar_dump(tmp_gz, tmp_db2, force=True)
+
+            con2 = sqlite3.connect(str(tmp_db2))
+            self.assertEqual(verificar_tabela_existente(con2), 1)
+            cur2 = con2.cursor()
+            cur2.execute(
+                'SELECT i.codlote, i.ruaimo, i.nomebairro FROM geo_imoveis i '
+                'JOIN geo_imoveis_rtree r ON i.id = r.id '
+                'WHERE r.min_lng >= -54.66 AND r.max_lng <= -54.65'
+            )
+            row = cur2.fetchone()
+            self.assertIsNotNone(row)
+            self.assertEqual(row[0], '04160902071')
+            self.assertEqual(row[1], 'JERUSALEM')
+            self.assertEqual(row[2], 'SANTO AMARO')
+            con2.close()
+
 

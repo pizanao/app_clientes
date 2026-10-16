@@ -185,8 +185,115 @@ CEP_ESPECIFICOS = {
 }
 
 
+BAIRRO_IMOVEIS_ALIASES = {
+    'CENTRO-OESTE': 'CENTRO OESTE',
+    'DR ALBUQUERQUE': 'DR. ALBUQUERQUE',
+    'JOCKEI CLUB': 'JOCKEY CLUB',
+}
+
+
+def carregar_dados_imoveis_sqlite() -> Dict[str, Dict[str, Any]]:
+    """Extrai ruas reais, amostras e estatísticas dos 462.744 imóveis a partir da tabela geo_imoveis no SQLite."""
+    import sqlite3
+    db_path = ROOT / 'instance' / 'app_clientes.db'
+    if not db_path.exists():
+        return {}
+
+    try:
+        con = sqlite3.connect(str(db_path))
+        cur = con.cursor()
+        cur.execute("SELECT COUNT(*) FROM geo_imoveis")
+        total = cur.fetchone()[0]
+        if total == 0:
+            con.close()
+            return {}
+
+        resultado: Dict[str, Dict[str, Any]] = {}
+
+        # 1. Estatísticas gerais por bairro
+        cur.execute("""
+            SELECT
+                nomebairro,
+                COUNT(*) AS total_imoveis,
+                ROUND(COALESCE(AVG(NULLIF(arealote, 0)), 0), 1) AS media_arealote,
+                ROUND(COALESCE(AVG(NULLIF(areaedific, 0)), 0), 1) AS media_areaedific,
+                SUM(CASE WHEN usoimovel = 'COMERCIAL' THEN 1 ELSE 0 END) AS qtd_comercial,
+                SUM(CASE WHEN usoimovel = 'RESIDENCIAL' THEN 1 ELSE 0 END) AS qtd_residencial,
+                SUM(CASE WHEN usoimovel = 'TERRITORIAL' THEN 1 ELSE 0 END) AS qtd_territorial
+            FROM geo_imoveis
+            WHERE nomebairro IS NOT NULL AND nomebairro != ''
+            GROUP BY nomebairro
+        """)
+        for row in cur.fetchall():
+            b_raw = row[0].strip()
+            b_key = BAIRRO_IMOVEIS_ALIASES.get(normalize(b_raw), normalize(b_raw))
+            resultado[b_key] = {
+                'bairro': b_raw,
+                'total_imoveis': row[1],
+                'media_arealote': row[2],
+                'media_areaedific': row[3],
+                'qtd_comercial': row[4],
+                'qtd_residencial': row[5],
+                'qtd_territorial': row[6],
+                'ruas': [],
+                'amostras': [],
+            }
+
+        # 2. Top 10 logradouros por bairro
+        cur.execute("""
+            SELECT nomebairro, TRIM(COALESCE(tipoloc, '') || ' ' || ruaimo) AS rua_nome, COUNT(*) AS qtd
+            FROM geo_imoveis
+            WHERE nomebairro IS NOT NULL AND ruaimo IS NOT NULL AND ruaimo != ''
+            GROUP BY nomebairro, rua_nome
+            ORDER BY nomebairro, qtd DESC
+        """)
+        for b_raw, rua_nome, _ in cur.fetchall():
+            b_key = BAIRRO_IMOVEIS_ALIASES.get(normalize(b_raw), normalize(b_raw))
+            entry = resultado.get(b_key)
+            if entry is not None and len(entry['ruas']) < 10 and rua_nome not in entry['ruas']:
+                entry['ruas'].append(rua_nome)
+
+        # 3. 4 amostras de imóveis (priorizando comerciais/serviços e residenciais com edificação)
+        cur.execute("""
+            SELECT
+                nomebairro,
+                TRIM(COALESCE(tipoloc, '') || ' ' || ruaimo) AS logradouro,
+                nrporta,
+                usoimovel,
+                arealote,
+                areaedific
+            FROM geo_imoveis
+            WHERE nomebairro IS NOT NULL
+              AND ruaimo IS NOT NULL AND ruaimo != ''
+              AND nrporta IS NOT NULL AND nrporta != 0 AND nrporta != '0'
+            ORDER BY
+                CASE WHEN usoimovel IN ('COMERCIAL', 'SERVICOS', 'MISTO') THEN 0 ELSE 1 END,
+                gid ASC
+        """)
+        for b_raw, logr, nrporta, uso, arealote, areaedific in cur.fetchall():
+            b_key = BAIRRO_IMOVEIS_ALIASES.get(normalize(b_raw), normalize(b_raw))
+            entry = resultado.get(b_key)
+            if entry is not None and len(entry['amostras']) < 4:
+                entry['amostras'].append({
+                    'logradouro': logr,
+                    'numero': str(nrporta),
+                    'uso': uso or 'RESIDENCIAL',
+                    'arealote': float(arealote or 0),
+                    'areaedific': float(areaedific or 0),
+                })
+
+        con.close()
+        return resultado
+    except Exception as e:
+        print(f"Aviso: Falha ao consultar geo_imoveis no SQLite ({e}).")
+        return {}
+
+
 def carregar_dados_imoveis_postgis() -> Dict[str, Dict[str, Any]]:
-    """Consulta PostGIS db_geo para extrair ruas reais e estatísticas de imóveis por bairro."""
+    """Consulta SQLite geo_imoveis prioritariamente ou PostGIS db_geo para extrair ruas reais e estatísticas."""
+    dados_sqlite = carregar_dados_imoveis_sqlite()
+    if dados_sqlite:
+        return dados_sqlite
     query = """
     WITH imoveis_ruas AS (
         SELECT 

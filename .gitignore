@@ -43,6 +43,9 @@ geojson/imoveis.geojson
 *.sublime-project
 *.sublime-workspace
 
+# Local Git worktrees
+.worktrees/
+
 # Screenshots, Vídeos & temporários
 *.png
 *.jpg

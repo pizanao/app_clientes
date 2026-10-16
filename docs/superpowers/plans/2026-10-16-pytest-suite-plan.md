@@ -50,7 +50,7 @@
     - `sample_planos(db_session) -> dict[str, Plano]` (chaves: `'pf'`, `'pj'`)
     - `rfb_memory_seeded(db_session) -> int` (cria `leeds_campo_grande` e view `leads_campo_grande` com 4 empresas e retorna `4`)
 
-- [ ] **Step 1: Add `pytest` to `requirements.txt` and install in `.venv`**
+- [x] **Step 1: Add `pytest` to `requirements.txt` and install in `.venv`**
 
 Atualize `requirements.txt` adicionando `pytest==8.3.5` em ordem alfabética:
 
@@ -84,7 +84,7 @@ WTForms==3.2.2
 Run: `.venv/bin/pip install pytest==8.3.5`
 Expected: `Successfully installed ... pytest-8.3.5`
 
-- [ ] **Step 2: Create `pytest.ini`**
+- [x] **Step 2: Create `pytest.ini`**
 
 Crie `pytest.ini` na raiz do projeto:
 
@@ -100,7 +100,7 @@ filterwarnings =
     ignore::DeprecationWarning
 ```
 
-- [ ] **Step 3: Create `tests/conftest.py` with shared fixtures**
+- [x] **Step 3: Create `tests/conftest.py` with shared fixtures**
 
 Crie `tests/conftest.py`:
 
@@ -363,12 +363,12 @@ def rfb_memory_seeded(db_session):
     return len(registros)
 ```
 
-- [ ] **Step 4: Run `pytest` to verify the 60 existing `unittest` tests pass under `pytest`**
+- [x] **Step 4: Run `pytest` to verify the 60 existing `unittest` tests pass under `pytest`**
 
 Run: `.venv/bin/pytest`
 Expected: `60 passed`
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add requirements.txt pytest.ini tests/conftest.py
@@ -390,7 +390,7 @@ git commit -m "test(pytest): configurar pytest.ini e fixtures compartilhadas em 
 - Produces:
   - Self-contained pytest test suite in `tests/test_pytest_prospector.py` (12 test functions including parameterized tests)
 
-- [ ] **Step 1: Create `tests/test_pytest_prospector.py` with tests for the AI/RFB/Synthetic cascade, deduplication, objection tutors, and 1-click conversion**
+- [x] **Step 1: Create `tests/test_pytest_prospector.py` with tests for the AI/RFB/Synthetic cascade, deduplication, objection tutors, and 1-click conversion**
 
 Crie `tests/test_pytest_prospector.py`:
 
@@ -646,12 +646,12 @@ def test_convert_lead_to_client_and_reuse_existing(db_session, sample_planos):
     assert Pedido.query.filter_by(cliente_id=cliente1.id).count() == 2
 ```
 
-- [ ] **Step 2: Run `pytest tests/test_pytest_prospector.py`**
+- [x] **Step 2: Run `pytest tests/test_pytest_prospector.py`**
 
 Run: `.venv/bin/pytest tests/test_pytest_prospector.py -v`
 Expected: `9 passed` (6 functions + 3 extra parametrize cases)
 
-- [ ] **Step 3: Commit Task 2**
+- [x] **Step 3: Commit Task 2**
 
 ```bash
 git add tests/test_pytest_prospector.py
@@ -674,7 +674,7 @@ git commit -m "test(prospector): adicionar suite pytest para cascata IA/RFB, obj
 - Produces:
   - Self-contained pytest suite in `tests/test_pytest_geo_rfb.py` using `tmp_path` and `monkeypatch`
 
-- [ ] **Step 1: Create `tests/test_pytest_geo_rfb.py`**
+- [x] **Step 1: Create `tests/test_pytest_geo_rfb.py`**
 
 Crie `tests/test_pytest_geo_rfb.py`:
 
@@ -876,12 +876,12 @@ def test_enriquecer_format_cep(raw_cep, expected_cep):
     assert format_cep(raw_cep, '79002') == expected_cep
 ```
 
-- [ ] **Step 2: Run `pytest tests/test_pytest_geo_rfb.py`**
+- [x] **Step 2: Run `pytest tests/test_pytest_geo_rfb.py`**
 
 Run: `.venv/bin/pytest tests/test_pytest_geo_rfb.py -v`
 Expected: `17 passed`
 
-- [ ] **Step 3: Commit Task 3**
+- [x] **Step 3: Commit Task 3**
 
 ```bash
 git add tests/test_pytest_geo_rfb.py
@@ -905,7 +905,7 @@ git commit -m "test(geo-rfb): adicionar suite pytest para reprojecao WGS84, R*Tr
 - Produces:
   - Self-contained pytest suite in `tests/test_pytest_cli_security.py`
 
-- [ ] **Step 1: Create `tests/test_pytest_cli_security.py`**
+- [x] **Step 1: Create `tests/test_pytest_cli_security.py`**
 
 Crie `tests/test_pytest_cli_security.py`:
 
@@ -1081,12 +1081,12 @@ def test_pedido_boundary_10_items_and_bairro_normalization(admin_client, db_sess
     assert abs(pedido.total - 1005.00) < 0.01
 ```
 
-- [ ] **Step 2: Run `pytest tests/test_pytest_cli_security.py`**
+- [x] **Step 2: Run `pytest tests/test_pytest_cli_security.py`**
 
 Run: `.venv/bin/pytest tests/test_pytest_cli_security.py -v`
 Expected: `24 passed`
 
-- [ ] **Step 3: Commit Task 4**
+- [x] **Step 3: Commit Task 4**
 
 ```bash
 git add tests/test_pytest_cli_security.py
@@ -1105,7 +1105,7 @@ git commit -m "test(cli-security): adicionar suite pytest para Flask CLI, filtro
 - Consumes: All test files in `tests/`, `scripts/gerar_setup.py`
 - Produces: Synchronized `setup.sh` passing `python scripts/gerar_setup.py --check` and full test runs passing under both `pytest` and `unittest`.
 
-- [ ] **Step 1: Update `test.sh` template in `scripts/gerar_setup.py` to run `pytest` (which runs both `unittest` and `pytest` suites)**
+- [x] **Step 1: Update `test.sh` template in `scripts/gerar_setup.py` to run `pytest` (which runs both `unittest` and `pytest` suites)**
 
 Em `scripts/gerar_setup.py`, atualize o bloco `test.sh` (linhas 187-195) para executar `pytest` (com fallback para `unittest`):
 
@@ -1120,19 +1120,19 @@ python3 -m pytest -v
 OMNI_EOF
 ```
 
-- [ ] **Step 2: Regenerate `setup.sh` and verify `--check`**
+- [x] **Step 2: Regenerate `setup.sh` and verify `--check`**
 
 Run: `.venv/bin/python scripts/gerar_setup.py && .venv/bin/python scripts/gerar_setup.py --check`
 Expected: `setup.sh está atualizado.`
 
-- [ ] **Step 3: Run both `pytest` and `unittest` full suites to verify 100% pass rate**
+- [x] **Step 3: Run both `pytest` and `unittest` full suites to verify 100% pass rate**
 
 Run: `.venv/bin/pytest && .venv/bin/python -m unittest discover -s tests -v`
 Expected:
 - `pytest`: `110 passed` (60 legacy `unittest` + 50 new `pytest` test cases)
 - `unittest`: `Ran 60 tests ... OK`
 
-- [ ] **Step 4: Commit Task 5**
+- [x] **Step 4: Commit Task 5**
 
 ```bash
 git add scripts/gerar_setup.py setup.sh

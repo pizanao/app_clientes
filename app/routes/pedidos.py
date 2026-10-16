@@ -199,9 +199,14 @@ def novo():
         itens_data, itens_erros, valor_total_itens = processar_itens_post(request.form)
 
         # Check if order number already exists
-        existente = Pedido.query.filter_by(numero_pedido=form.numero_pedido.data.strip().upper()).first()
+        num_pedido_str = (form.numero_pedido.data or '').strip().upper()
+        if not num_pedido_str:
+            num_pedido_str = gerar_numero_pedido()
+            form.numero_pedido.data = num_pedido_str
+
+        existente = Pedido.query.filter_by(numero_pedido=num_pedido_str).first()
         if existente:
-            flash(f'O número de pedido "{form.numero_pedido.data}" já existe. Geramos outro para você.', 'warning')
+            flash(f'O número de pedido "{num_pedido_str}" já existe. Geramos outro para você.', 'warning')
             form.numero_pedido.data = gerar_numero_pedido()
             return render_template(
                 'pedidos/form.html',
@@ -234,7 +239,7 @@ def novo():
             pedido = Pedido(
                 cliente_id=form.cliente_id.data,
                 plano_id=plano_id_val,
-                numero_pedido=form.numero_pedido.data.strip().upper(),
+                numero_pedido=num_pedido_str,
                 data_pedido=form.data_pedido.data,
                 status=form.status.data,
                 metodo_pagamento=form.metodo_pagamento.data,

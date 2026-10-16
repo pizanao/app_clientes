@@ -86,6 +86,10 @@ class Pedido(db.Model):
         return len(self.itens)
 
     @property
+    def total(self) -> float:
+        return float(self.valor_total or 0.0)
+
+    @property
     def plano_nome(self) -> str:
         if self.plano:
             return self.plano.nome

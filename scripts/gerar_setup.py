@@ -30,7 +30,7 @@ EXCLUIR = {
     'scripts/gerar_setup.py',   # ferramenta de manutenção
     'geojson/imoveis.geojson',  # base bruta de 469MB (restaurada via data/geo_imoveis.sql.gz)
 }
-EXCLUIR_PREFIXOS = ('.idea/', '.vscode/', 'instance/', '.venv/', 'data/')
+EXCLUIR_PREFIXOS = ('.idea/', '.vscode/', 'instance/', '.venv/', 'data/', 'docs/superpowers/')
 
 
 def listar_arquivos():

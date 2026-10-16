@@ -187,11 +187,11 @@ OMNI_EOF
 
 cat > test.sh <<'OMNI_EOF'
 #!/usr/bin/env bash
-# Executa a suíte de testes automatizados no Linux
+# Executa a suíte completa de testes automatizados (unittest + pytest) no Linux
 set -e
 source .venv/bin/activate
-echo "Executando suíte de testes automatizados..."
-python3 -m unittest discover -s tests -v
+echo "Executando suíte de testes automatizados (pytest + unittest)..."
+python3 -m pytest -v
 OMNI_EOF
 
 cat > seed.sh <<'OMNI_EOF'

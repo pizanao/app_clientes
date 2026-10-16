@@ -86,7 +86,7 @@ mkdir -p \
 echo -e "${GREEN}✓ Estrutura de pastas criada com sucesso.${NC}"
 
 # 3. Criação dos arquivos do projeto
-echo -e "\n${YELLOW}[3/6] Criando 86 arquivos de código-fonte...${NC}"
+echo -e "\n${YELLOW}[3/6] Criando 91 arquivos de código-fonte...${NC}"
 
 # --- .agents/skills.json ---
 cat > '.agents/skills.json' <<'OMNI_EOF'
@@ -427,6 +427,9 @@ geojson/imoveis.geojson
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# Local Git worktrees
+.worktrees/
 
 # Screenshots, Vídeos & temporários
 *.png
@@ -3541,6 +3544,10 @@ class Pedido(db.Model):
         return len(self.itens)
 
     @property
+    def total(self) -> float:
+        return float(self.valor_total or 0.0)
+
+    @property
     def plano_nome(self) -> str:
         if self.plano:
             return self.plano.nome
@@ -5564,9 +5571,14 @@ def novo():
         itens_data, itens_erros, valor_total_itens = processar_itens_post(request.form)
 
         # Check if order number already exists
-        existente = Pedido.query.filter_by(numero_pedido=form.numero_pedido.data.strip().upper()).first()
+        num_pedido_str = (form.numero_pedido.data or '').strip().upper()
+        if not num_pedido_str:
+            num_pedido_str = gerar_numero_pedido()
+            form.numero_pedido.data = num_pedido_str
+
+        existente = Pedido.query.filter_by(numero_pedido=num_pedido_str).first()
         if existente:
-            flash(f'O número de pedido "{form.numero_pedido.data}" já existe. Geramos outro para você.', 'warning')
+            flash(f'O número de pedido "{num_pedido_str}" já existe. Geramos outro para você.', 'warning')
             form.numero_pedido.data = gerar_numero_pedido()
             return render_template(
                 'pedidos/form.html',
@@ -5599,7 +5611,7 @@ def novo():
             pedido = Pedido(
                 cliente_id=form.cliente_id.data,
                 plano_id=plano_id_val,
-                numero_pedido=form.numero_pedido.data.strip().upper(),
+                numero_pedido=num_pedido_str,
                 data_pedido=form.data_pedido.data,
                 status=form.status.data,
                 metodo_pagamento=form.metodo_pagamento.data,
@@ -7037,24 +7049,50 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             if not lead.valor_mensal_sugerido or lead.valor_mensal_sugerido <= 0:
                 lead.valor_mensal_sugerido = plano.valor_mensal
 
-        # 1. Cria o Cliente
-        novo_cliente = Cliente(
-            nome=f"{lead.empresa} ({lead.nome})",
-            email=lead.email or f"contato@{re.sub(r'[^a-z0-9]', '', lead.empresa.lower())[:10]}.com.br",
-            telefone=lead.telefone or '(67) 99999-9999',
-            documento=lead.documento or '00.000.000/0001-00',
-            cep=lead.cep or '79000-000',
-            logradouro=lead.logradouro or 'Rua de Acesso',
-            numero=lead.numero or 'S/N',
-            complemento=lead.complemento,
-            bairro=lead.bairro,
-            cidade=lead.cidade,
-            estado=lead.estado,
-            ativo=True,
-            observacoes=f"Cliente convertido via Prospecção Geo-Localizada. Dor anterior: {lead.dor_principal or 'N/A'}"
-        )
-        db.session.add(novo_cliente)
-        db.session.flush()
+        # 1. Localiza ou Cria o Cliente
+        cliente_existente = None
+        doc_raw = re.sub(r'\D', '', lead.documento or '')
+        if doc_raw and doc_raw not in ('00000000000100', '00000000000'):
+            cliente_existente = Cliente.query.filter(
+                Cliente.documento.isnot(None),
+                db.func.replace(db.func.replace(db.func.replace(db.func.replace(Cliente.documento, '.', ''), '/', ''), '-', ''), ' ', '') == doc_raw
+            ).first()
+
+        if not cliente_existente and lead.email:
+            cliente_existente = Cliente.query.filter(
+                Cliente.email.isnot(None),
+                db.func.lower(Cliente.email) == lead.email.strip().lower()
+            ).first()
+
+        if not cliente_existente and lead.empresa:
+            empresa_nome = lead.empresa.strip()
+            cliente_existente = Cliente.query.filter(
+                db.or_(
+                    db.func.lower(Cliente.nome) == empresa_nome.lower(),
+                    Cliente.nome.ilike(f"{empresa_nome} (%")
+                )
+            ).first()
+
+        if cliente_existente:
+            novo_cliente = cliente_existente
+        else:
+            novo_cliente = Cliente(
+                nome=f"{lead.empresa} ({lead.nome})",
+                email=lead.email or f"contato@{re.sub(r'[^a-z0-9]', '', lead.empresa.lower())[:10]}.com.br",
+                telefone=lead.telefone or '(67) 99999-9999',
+                documento=lead.documento or '00.000.000/0001-00',
+                cep=lead.cep or '79000-000',
+                logradouro=lead.logradouro or 'Rua de Acesso',
+                numero=lead.numero or 'S/N',
+                complemento=lead.complemento,
+                bairro=lead.bairro,
+                cidade=lead.cidade,
+                estado=lead.estado,
+                ativo=True,
+                observacoes=f"Cliente convertido via Prospecção Geo-Localizada. Dor anterior: {lead.dor_principal or 'N/A'}"
+            )
+            db.session.add(novo_cliente)
+            db.session.flush()
 
         # 2. Cria o Pedido da Assinatura
         prefixo = f"NET-{datetime.utcnow().year}"
@@ -118084,6 +118122,20 @@ def downgrade():
     # ### end Alembic commands ###
 OMNI_EOF
 
+# --- pytest.ini ---
+cat > 'pytest.ini' <<'OMNI_EOF'
+[pytest]
+pythonpath = .
+testpaths = tests
+python_files = test_*.py
+python_classes = Test* *TestCase
+python_functions = test_*
+addopts = -v --tb=short
+filterwarnings =
+    ignore::ResourceWarning
+    ignore::DeprecationWarning
+OMNI_EOF
+
 # --- requirements.txt ---
 cat > 'requirements.txt' <<'OMNI_EOF'
 alembic==1.20.0
@@ -118104,6 +118156,7 @@ Jinja2==3.1.6
 Mako==1.4.3
 MarkupSafe==3.0.4
 msgspec==0.22.0
+pytest==8.3.5
 python-dotenv==1.2.4
 SQLAlchemy==2.1.4
 typing_extensions==4.16.0
@@ -122460,6 +122513,273 @@ if __name__ == '__main__':
     main()
 OMNI_EOF
 
+# --- tests/conftest.py ---
+cat > 'tests/conftest.py' <<'OMNI_EOF'
+import pytest
+from sqlalchemy import text
+
+from app import create_app
+from app.config import Config
+from app.extensions import db
+from app.models.plano import Plano, TIPO_PF, TIPO_PJ
+from app.models.user import (
+    PERFIL_ADMIN,
+    PERFIL_AGENTE,
+    PERFIL_LIDER,
+    Grupo,
+    User,
+)
+
+
+class PytestConfig(Config):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    WTF_CSRF_ENABLED = False
+    AISA_API_KEY = ''
+    GEMINI_API_KEY = ''
+
+
+@pytest.fixture
+def app():
+    """Cria uma instância isolada da aplicação Flask com SQLite em memória."""
+    flask_app = create_app(PytestConfig)
+    ctx = flask_app.app_context()
+    ctx.push()
+    db.create_all()
+    yield flask_app
+    db.session.remove()
+    db.drop_all()
+    ctx.pop()
+
+
+@pytest.fixture
+def db_session(app):
+    """Retorna a sessão ativa do SQLAlchemy vinculada ao banco em memória."""
+    return db.session
+
+
+@pytest.fixture
+def client(app):
+    """Retorna o cliente HTTP de testes do Flask."""
+    return app.test_client()
+
+
+@pytest.fixture
+def cli_runner(app):
+    """Retorna o executor de comandos CLI do Flask."""
+    return app.test_cli_runner()
+
+
+@pytest.fixture
+def rbac_users(db_session):
+    """Cria e retorna usuários e grupos para os 3 perfis hierárquicos RBAC."""
+    grupo_lider = Grupo(
+        nome='Grupo Lideranca',
+        papel=PERFIL_LIDER,
+        descricao='Grupo de líderes técnicos',
+    )
+    grupo_comercial = Grupo(
+        nome='Grupo Comercial',
+        papel=PERFIL_AGENTE,
+        descricao='Grupo de agentes comerciais',
+    )
+    db_session.add_all([grupo_lider, grupo_comercial])
+
+    admin = User(
+        nome='Admin Pytest',
+        username='admin_pytest',
+        email='admin@pytest.local',
+        perfil=PERFIL_ADMIN,
+        ativo=True,
+    )
+    admin.set_password('Senha@123')
+
+    lider = User(
+        nome='Lider Pytest',
+        username='lider_pytest',
+        email='lider@pytest.local',
+        perfil=PERFIL_LIDER,
+        ativo=True,
+    )
+    lider.set_password('Senha@123')
+    lider.grupos.append(grupo_lider)
+
+    agente = User(
+        nome='Agente Pytest',
+        username='agente_pytest',
+        email='agente@pytest.local',
+        perfil=PERFIL_AGENTE,
+        ativo=True,
+    )
+    agente.set_password('Senha@123')
+    agente.grupos.append(grupo_comercial)
+
+    db_session.add_all([admin, lider, agente])
+    db_session.commit()
+
+    return {
+        'admin': admin,
+        'lider': lider,
+        'agente': agente,
+        'grupo_lider': grupo_lider,
+        'grupo_comercial': grupo_comercial,
+    }
+
+
+@pytest.fixture
+def admin_client(client, rbac_users):
+    """Retorna um test_client autenticado com perfil Administrador."""
+    client.post(
+        '/auth/login',
+        data={'login': rbac_users['admin'].username, 'password': 'Senha@123'},
+        follow_redirects=True,
+    )
+    return client
+
+
+@pytest.fixture
+def lider_client(client, rbac_users):
+    """Retorna um test_client autenticado com perfil Líder Técnico."""
+    client.post(
+        '/auth/login',
+        data={'login': rbac_users['lider'].username, 'password': 'Senha@123'},
+        follow_redirects=True,
+    )
+    return client
+
+
+@pytest.fixture
+def agente_client(client, rbac_users):
+    """Retorna um test_client autenticado com perfil Agente Comercial."""
+    client.post(
+        '/auth/login',
+        data={'login': rbac_users['agente'].username, 'password': 'Senha@123'},
+        follow_redirects=True,
+    )
+    return client
+
+
+@pytest.fixture
+def sample_planos(db_session):
+    """Popula planos PF e PJ básicos para testes de conversão e pedidos."""
+    plano_pf = Plano(
+        nome='DigitalNet Fibra 700 + DigiMesh (Wi-Fi 6)',
+        tipo=TIPO_PF,
+        velocidade_download=700,
+        velocidade_upload=350,
+        valor_mensal=139.90,
+        beneficios='Instalação grátis\nWi-Fi 6 incluso',
+        destaque=True,
+        ativo=True,
+    )
+    plano_pj = Plano(
+        nome='DigitalNet B2B Link Dedicado Pro',
+        tipo=TIPO_PJ,
+        velocidade_download=1000,
+        velocidade_upload=1000,
+        valor_mensal=399.90,
+        beneficios='SLA 4h\nIP Fixo incluso',
+        destaque=True,
+        ativo=True,
+    )
+    db_session.add_all([plano_pf, plano_pj])
+    db_session.commit()
+    return {'pf': plano_pf, 'pj': plano_pj}
+
+
+@pytest.fixture
+def rfb_memory_seeded(db_session):
+    """Cria a tabela e view RFB na conexão SQLite :memory: dos testes."""
+    db_session.execute(text("""
+        CREATE TABLE IF NOT EXISTS "leeds_campo_grande" (
+            empresa TEXT,
+            cnpj TEXT PRIMARY KEY,
+            nome TEXT,
+            cargo TEXT,
+            telefone TEXT,
+            email TEXT,
+            logradouro TEXT,
+            numero TEXT,
+            bairro TEXT,
+            complemento TEXT,
+            cep TEXT,
+            operadora_atual TEXT,
+            plano_sugerido TEXT,
+            valor_mensal_sugerido REAL,
+            lead_score INTEGER,
+            cnae_fiscal TEXT,
+            motivo_situacao TEXT,
+            municipio_nome TEXT,
+            situacao_cadastral TEXT
+        );
+    """))
+    db_session.execute(text(
+        'CREATE VIEW IF NOT EXISTS leads_campo_grande AS SELECT * FROM leeds_campo_grande;'
+    ))
+
+    registros = [
+        (
+            'CLINICA MEDICA PANTANAL LTDA', '12345678000190',
+            'DR ROBERTO ALMEIDA', 'Sócio-Administrador',
+            '+5567991234567 | +556733210000', 'CONTATO@CLINICAPANTANAL.COM.BR',
+            'RAUL PIRES BARBOSA', '1240', 'CHACARA CACHOEIRA', 'SALA 02', '79040150',
+            'Vivo Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 95,
+            'Atividade médica ambulatorial com recursos para realização de procedimentos cirúrgicos',
+            'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
+        ),
+        (
+            'CONTABILIDADE EXATA MS LTDA', '23456789000181',
+            'MARCOS VINICIUS SOUZA', 'Sócio-Administrador',
+            '+556798234567 | +55', 'FISCAL@EXATAMS.COM.BR',
+            'JERIBA', '455', 'CHACARA CACHOEIRA', '', '79040220',
+            'Claro / Embratel', 'DigitalNet Fibra 700 + DigiMesh (Wi-Fi 6)', 139.9, 91,
+            'Atividades de contabilidade',
+            'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
+        ),
+        (
+            'ADVOCACIA CENTRAL ASSOCIADOS', '34567890000172',
+            'DRA PATRICIA NOGUEIRA', 'Titular',
+            '+556733824455 | +55000000000000', 'CONTATO@CENTRALADV.COM.BR',
+            'AFONSO PENA', '2500', 'CENTRO', 'CONJ 801', '79002074',
+            'Vivo Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 93,
+            'Serviços advocatícios',
+            'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
+        ),
+        (
+            'SUPERMERCADO ESTRELA DO SUL LTDA', '45678901000163',
+            'CARLOS EDUARDO MENDES', 'Diretor Comercial',
+            '+556799876543 | +55', 'COMPRAS@ESTRELASUL.COM.BR',
+            'MATO GROSSO', '1800', 'JARDIM DOS ESTADOS', 'LOJA A', '79020200',
+            'Oi Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 90,
+            'Comércio varejista de mercadorias em geral, com predominância de produtos alimentícios - supermercados',
+            'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
+        ),
+        (
+            'TECNOLOGIA CAMPO GRANDE LTDA', '56789012000154',
+            'ANA PAULA FERREIRA', 'Sócia-Administradora',
+            '+5567995554433 | +556733221100', 'CONTATO@TECNOCG.COM.BR',
+            'VIA PARK', '700', 'VILA ALTA', 'SALA 12', '79051000',
+            'Vivo Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 89,
+            'Desenvolvimento de programas de computador sob encomenda',
+            'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
+        ),
+    ]
+
+    for reg in registros:
+        db_session.execute(
+            text("""
+                INSERT INTO leeds_campo_grande VALUES (
+                    :p0, :p1, :p2, :p3, :p4, :p5, :p6, :p7, :p8, :p9,
+                    :p10, :p11, :p12, :p13, :p14, :p15, :p16, :p17, :p18
+                )
+            """),
+            {f'p{i}': value for i, value in enumerate(reg)},
+        )
+
+    db_session.commit()
+    return len(registros)
+OMNI_EOF
+
 # --- tests/test_app.py ---
 cat > 'tests/test_app.py' <<'OMNI_EOF'
 import os
@@ -124032,6 +124352,969 @@ if __name__ == '__main__':
     unittest.main()
 OMNI_EOF
 
+# --- tests/test_pytest_cli_security.py ---
+cat > 'tests/test_pytest_cli_security.py' <<'OMNI_EOF'
+from datetime import datetime
+import pytest
+from app.models.cliente import Cliente
+from app.models.pedido import Pedido
+from app.models.plano import Plano
+from app.models.user import (
+    User,
+    Grupo,
+    PERFIL_ADMIN,
+    PERFIL_LIDER,
+    PERFIL_AGENTE,
+)
+from app.routes.auth import is_safe_redirect_url
+from app.utils.filters import (
+    format_currency,
+    format_date,
+    format_date_short,
+    format_document,
+    format_phone,
+)
+
+
+def test_cli_init_db_and_seed_planos(cli_runner, db_session):
+    """Testa os comandos CLI flask init-db e flask seed-planos."""
+    res_init = cli_runner.invoke(args=['init-db'])
+    assert res_init.exit_code == 0
+    assert 'inicializado com sucesso' in res_init.output
+
+    res_planos = cli_runner.invoke(args=['seed-planos'])
+    assert res_planos.exit_code == 0
+    assert Plano.query.count() == 9
+
+
+def test_cli_create_admin_validation_and_duplicate(cli_runner, db_session):
+    """Testa criação de administrador via CLI, validação de senha curta e duplicidade."""
+    # Senha com menos de 8 caracteres deve falhar com BadParameter
+    res_short = cli_runner.invoke(
+        args=['create-admin', '--username', 'adm_curto', '--email', 'c@t.local', '--password', '12345']
+    )
+    assert res_short.exit_code != 0
+    assert User.query.filter_by(username='adm_curto').first() is None
+
+    # Criação válida
+    res_ok = cli_runner.invoke(
+        args=['create-admin', '--username', 'adm_novo', '--email', 'novo@adm.local', '--password', 'SenhaForte123']
+    )
+    assert res_ok.exit_code == 0
+    criado = User.query.filter_by(username='adm_novo').first()
+    assert criado is not None
+    assert criado.perfil == PERFIL_ADMIN
+
+    # Tentativa duplicada deve avisar sem quebrar
+    res_dup = cli_runner.invoke(
+        args=['create-admin', '--username', 'adm_novo', '--email', 'novo@adm.local', '--password', 'SenhaForte123']
+    )
+    assert res_dup.exit_code == 0
+    assert 'já existe' in res_dup.output
+
+
+def test_cli_seed_idempotency(cli_runner, db_session):
+    """Valida execução e idempotência do comando flask seed."""
+    res1 = cli_runner.invoke(args=['seed'])
+    assert res1.exit_code == 0
+    assert 'Seed finalizado' in res1.output
+
+    count_users = User.query.count()
+    count_planos = Plano.query.count()
+    count_clientes = Cliente.query.count()
+
+    # Segunda execução não deve duplicar registros nem falhar
+    res2 = cli_runner.invoke(args=['seed'])
+    assert res2.exit_code == 0
+    assert User.query.count() == count_users
+    assert Plano.query.count() == count_planos
+    assert Cliente.query.count() == count_clientes
+
+
+@pytest.mark.parametrize('val,expected', [
+    (None, 'R$ 0,00'),
+    (0, 'R$ 0,00'),
+    (139.9, 'R$ 139,90'),
+    (1234.56, 'R$ 1.234,56'),
+    ('invalido', 'invalido'),
+])
+def test_filter_format_currency(val, expected):
+    """Testa formatação monetária BRL no filtro format_currency."""
+    assert format_currency(val) == expected
+
+
+@pytest.mark.parametrize('doc,expected', [
+    (None, '-'),
+    ('', '-'),
+    ('12345678901', '123.456.789-01'),
+    ('12345678000199', '12.345.678/0001-99'),
+    ('DOC-LIVRE', 'DOC-LIVRE'),
+])
+def test_filter_format_document(doc, expected):
+    """Testa formatação de CPF e CNPJ no filtro format_document."""
+    assert format_document(doc) == expected
+
+
+@pytest.mark.parametrize('phone,expected', [
+    (None, '-'),
+    ('67991234567', '(67) 99123-4567'),
+    ('6733214567', '(67) 3321-4567'),
+    ('0800-123', '0800-123'),
+])
+def test_filter_format_phone(phone, expected):
+    """Testa formatação de telefone fixo e móvel no filtro format_phone."""
+    assert format_phone(phone) == expected
+
+
+def test_filter_format_date():
+    """Testa formatação de datas completas e curtas."""
+    dt = datetime(2026, 10, 16, 14, 30)
+    assert format_date(dt) == '16/10/2026 14:30'
+    assert format_date_short(dt) == '16/10/2026'
+    assert format_date(None) == '-'
+    assert format_date_short(None) == '-'
+
+
+@pytest.mark.parametrize('target_url,is_safe', [
+    ('/clientes', True),
+    ('/pedidos?page=2', True),
+    ('https://evil.example.com/phishing', False),
+    ('//evil.example.com/phishing', False),
+    ('javascript:alert(1)', False),
+    ('http://outro-dominio.com/login', False),
+])
+def test_is_safe_redirect_url_open_redirect_protection(app, target_url, is_safe):
+    """Garante proteção contra Open Redirect no parâmetro next do login."""
+    with app.test_request_context('/auth/login', base_url='http://localhost:5000'):
+        assert is_safe_redirect_url(target_url) is is_safe
+
+
+def test_inactive_user_cannot_access_protected_routes(client, db_session, rbac_users):
+    """Usuário marcado como inativo não consegue autenticar no sistema."""
+    agente = rbac_users['agente']
+    agente.ativo = False
+    db_session.commit()
+
+    res = client.post(
+        '/auth/login',
+        data={'login': agente.username, 'password': 'Senha@123'},
+        follow_redirects=True
+    )
+    assert res.status_code == 200
+    # Continua na tela de login sem sessão ativa
+    res_protegido = client.get('/clientes/')
+    assert res_protegido.status_code == 302
+    assert '/auth/login' in res_protegido.headers.get('Location', '')
+
+
+def test_rbac_group_inheritance_for_lider_and_admin(client, db_session, rbac_users):
+    """Valida herança de papel via grupos de acesso para @lider_required e @admin_required."""
+    agente = rbac_users['agente']
+    grupo_lider = rbac_users['grupo_lider']
+
+    # 1. Agente comum tem acesso negado (403) no painel admin
+    client.post('/auth/login', data={'login': agente.username, 'password': 'Senha@123'}, follow_redirects=True)
+    res_admin = client.get('/admin/usuarios')
+    assert res_admin.status_code == 403
+
+    # 2. Agente adicionado a grupo de líder herda papel de líder técnico
+    agente.grupos.append(grupo_lider)
+    db_session.commit()
+    assert agente.is_lider_tecnico is True
+    # Mas ainda não é admin
+    assert agente.is_admin is False
+    res_admin_ainda_negado = client.get('/admin/usuarios')
+    assert res_admin_ainda_negado.status_code == 403
+
+    # 3. Agente adicionado a grupo de administração herda papel de admin
+    grupo_admin = Grupo(nome='Grupo Diretoria Admin', papel=PERFIL_ADMIN)
+    db_session.add(grupo_admin)
+    agente.grupos.append(grupo_admin)
+    db_session.commit()
+    assert agente.is_admin is True
+
+    res_admin_permitido = client.get('/admin/usuarios')
+    assert res_admin_permitido.status_code == 200
+
+
+def test_cliente_bairro_normalization_on_create_and_edit(admin_client, db_session):
+    """Garante normalização de bairro tanto na criação quanto na edição de clientes."""
+    # 1. Criação com bairro em maiúsculas sem acento
+    res_create = admin_client.post('/clientes/novo', data={
+        'nome': 'Clínica Santa Fé Odontologia',
+        'email': 'contato@santafeodonto.com.br',
+        'telefone': '(67) 99111-2233',
+        'documento': '12.345.678/0001-99',
+        'cep': '79021-000',
+        'logradouro': 'Rua Ceará',
+        'numero': '1200',
+        'bairro': 'SANTA FE',
+        'cidade': 'Campo Grande',
+        'estado': 'MS',
+        'ativo': 'y',
+    }, follow_redirects=True)
+    assert res_create.status_code == 200
+
+    cliente = Cliente.query.filter_by(email='contato@santafeodonto.com.br').first()
+    assert cliente is not None
+    assert cliente.bairro == 'Santa Fé'
+
+    # 2. Edição alterando para outro bairro com variação
+    res_edit = admin_client.post(f'/clientes/{cliente.id}/editar', data={
+        'nome': cliente.nome,
+        'email': cliente.email,
+        'telefone': cliente.telefone,
+        'documento': cliente.documento,
+        'cep': '79040-010',
+        'logradouro': 'Rua Raul Pires Barbosa',
+        'numero': '800',
+        'bairro': 'CHACARA CACHOEIRA',
+        'cidade': 'Campo Grande',
+        'estado': 'MS',
+        'ativo': 'y',
+    }, follow_redirects=True)
+    assert res_edit.status_code == 200
+
+    db_session.refresh(cliente)
+    assert cliente.bairro == 'Chácara Cachoeira'
+
+
+def test_pedido_boundary_1_item_and_10_items_total(admin_client, db_session):
+    """
+    Testa criação de pedido com limite mínimo (1 item) e limite máximo (10 itens),
+    validando cálculo exato do total em centavos.
+    """
+    cliente = Cliente(
+        nome='Hospital dos Olhos MS',
+        email='financeiro@hospitalolhos.com.br',
+        telefone='(67) 3322-9988',
+        documento='33.444.555/0001-66',
+        cep='79020-200',
+        logradouro='Avenida Afonso Pena',
+        numero='3000',
+        bairro='Centro',
+        cidade='Campo Grande',
+        estado='MS',
+        ativo=True,
+    )
+    db_session.add(cliente)
+    db_session.commit()
+
+    # 1. Pedido no limite mínimo: exatamente 1 item
+    res_1 = admin_client.post('/pedidos/novo', data={
+        'cliente_id': str(cliente.id),
+        'status': 'concluido',
+        'descricao': 'Assinatura Fibra',
+        'itens-0-descricao': 'Mensalidade Fibra 700 + DigiMesh',
+        'itens-0-quantidade': '1',
+        'itens-0-valor_unitario': '139.90',
+    }, follow_redirects=True)
+    assert res_1.status_code == 200
+
+    ped1 = Pedido.query.filter_by(cliente_id=cliente.id).order_by(Pedido.id.desc()).first()
+    assert ped1 is not None
+    assert len(ped1.itens) == 1
+    assert abs(ped1.total - 139.90) < 0.01
+
+    # 2. Pedido no limite máximo: exatamente 10 itens
+    form_10 = {
+        'cliente_id': str(cliente.id),
+        'status': 'concluido',
+        'descricao': 'Pedido Corporativo 10 itens',
+    }
+    for i in range(10):
+        form_10[f'itens-{i}-descricao'] = f'Ponto de Rede #{i + 1}'
+        form_10[f'itens-{i}-quantidade'] = '2'
+        form_10[f'itens-{i}-valor_unitario'] = '50.25'
+
+    res_10 = admin_client.post('/pedidos/novo', data=form_10, follow_redirects=True)
+    assert res_10.status_code == 200
+
+    ped2 = Pedido.query.filter_by(cliente_id=cliente.id).order_by(Pedido.id.desc()).first()
+    assert ped2 is not None
+    assert len(ped2.itens) == 10
+    # 10 * (2 * 50.25) = 1005.00
+    assert abs(ped2.total - 1005.00) < 0.01
+
+
+def test_pedido_rejection_no_items_and_invalid_values(admin_client, db_session):
+    """Garante rejeição de pedidos sem itens ou com valores/quantidades inválidos."""
+    cliente = Cliente(
+        nome='Posto Pantanal Ltda',
+        email='contato@postopantanal.com.br',
+        telefone='(67) 3344-5566',
+        documento='44.555.666/0001-77',
+        cep='79002-000',
+        logradouro='Avenida Calógeras',
+        numero='500',
+        bairro='Centro',
+        cidade='Campo Grande',
+        estado='MS',
+        ativo=True,
+    )
+    db_session.add(cliente)
+    db_session.commit()
+
+    pedidos_antes = Pedido.query.count()
+
+    # 1. Sem itens válidos
+    res_sem_itens = admin_client.post('/pedidos/novo', data={
+        'cliente_id': str(cliente.id),
+        'status': 'pendente',
+    }, follow_redirects=True)
+    assert res_sem_itens.status_code == 200
+    assert 'pelo menos 1 item' in res_sem_itens.get_data(as_text=True)
+    assert Pedido.query.count() == pedidos_antes
+
+    # 2. Item com quantidade negativa ou zero
+    res_qtd_invalida = admin_client.post('/pedidos/novo', data={
+        'cliente_id': str(cliente.id),
+        'status': 'pendente',
+        'itens-0-descricao': 'Item Inválido',
+        'itens-0-quantidade': '0',
+        'itens-0-valor_unitario': '100.00',
+    }, follow_redirects=True)
+    assert res_qtd_invalida.status_code == 200
+    assert 'quantidade deve ser maior que zero' in res_qtd_invalida.get_data(as_text=True)
+    assert Pedido.query.count() == pedidos_antes
+
+    # 3. Item com valor unitário zero ou negativo
+    res_valor_invalido = admin_client.post('/pedidos/novo', data={
+        'cliente_id': str(cliente.id),
+        'status': 'pendente',
+        'itens-0-descricao': 'Item Inválido',
+        'itens-0-quantidade': '1',
+        'itens-0-valor_unitario': '-50.00',
+    }, follow_redirects=True)
+    assert res_valor_invalido.status_code == 200
+    assert 'valor unitário deve ser maior que zero' in res_valor_invalido.get_data(as_text=True)
+    assert Pedido.query.count() == pedidos_antes
+
+    # 4. Mais de 10 itens (11 itens)
+    form_11 = {
+        'cliente_id': str(cliente.id),
+        'status': 'pendente',
+    }
+    for i in range(11):
+        form_11[f'itens-{i}-descricao'] = f'Item #{i + 1}'
+        form_11[f'itens-{i}-quantidade'] = '1'
+        form_11[f'itens-{i}-valor_unitario'] = '10.00'
+
+    res_11 = admin_client.post('/pedidos/novo', data=form_11, follow_redirects=True)
+    assert res_11.status_code == 200
+    assert 'no máximo 10 itens' in res_11.get_data(as_text=True)
+    assert Pedido.query.count() == pedidos_antes
+OMNI_EOF
+
+# --- tests/test_pytest_geo_rfb.py ---
+cat > 'tests/test_pytest_geo_rfb.py' <<'OMNI_EOF'
+import gzip
+import io
+import json
+import sqlite3
+import urllib.error
+from unittest.mock import MagicMock
+import pytest
+
+from scripts.carregar_geojson_sqlite import (
+    FieldStats,
+    GeoJsonTable,
+    extract_coordinates_and_bounds,
+    utm21s_to_wgs84,
+)
+from scripts.enriquecer_clientes_rfb import format_cep, format_telefone, normalizar_bairro
+import scripts.restaurar_imoveis as mod_imoveis
+import scripts.restaurar_rfb as mod_rfb
+
+
+@pytest.mark.parametrize('easting,northing,expected_lon,expected_lat', [
+    (744866.7916, 7737103.7295, -54.652909, -20.448769),
+    (750000.0, 7735000.0, -54.603452, -20.467008),
+])
+def test_utm21s_to_wgs84_parametrized(easting, northing, expected_lon, expected_lat):
+    """Testa precisão geodésica da conversão UTM Zona 21S (EPSG:31981) para WGS84 (EPSG:4326)."""
+    lon, lat = utm21s_to_wgs84(easting, northing)
+    assert abs(lon - expected_lon) < 1e-4
+    assert abs(lat - expected_lat) < 1e-4
+
+
+def test_extract_coordinates_and_bounds_wgs84_preservation():
+    """Garante que coordenadas já em WGS84 são preservadas sem distorção."""
+    geom = {
+        'type': 'Polygon',
+        'coordinates': [[[-54.60, -20.45], [-54.59, -20.45], [-54.59, -20.44], [-54.60, -20.44], [-54.60, -20.45]]]
+    }
+    gtype, bbox, centroid = extract_coordinates_and_bounds(geom)
+    assert gtype == 'Polygon'
+    assert abs(bbox[0] - (-54.60)) < 1e-4
+    assert abs(bbox[1] - (-20.45)) < 1e-4
+    assert abs(bbox[2] - (-54.59)) < 1e-4
+    assert abs(bbox[3] - (-20.44)) < 1e-4
+    assert abs(centroid[0] - (-20.446)) < 1e-3
+    assert abs(centroid[1] - (-54.596)) < 1e-3
+
+
+def test_extract_coordinates_and_bounds_utm_reprojection():
+    """Converte ponto em UTM EPSG:31981 para WGS84."""
+    geom_utm = {'type': 'Point', 'coordinates': [744866.7916, 7737103.7295]}
+    gtype, bbox, centroid = extract_coordinates_and_bounds(geom_utm)
+    assert gtype == 'Point'
+    assert abs(bbox[0] - (-54.652909)) < 1e-4
+    assert abs(bbox[1] - (-20.448769)) < 1e-4
+    assert abs(centroid[0] - (-20.448769)) < 1e-4
+    assert abs(centroid[1] - (-54.652909)) < 1e-4
+
+
+@pytest.mark.parametrize('sample_values,expected_type', [
+    ([1, 2, 100], 'INTEGER'),
+    (['10', '25', '300'], 'INTEGER'),
+    (['04160902071', '00017'], 'TEXT'),  # preserva zeros à esquerda
+    ([10, 25.5, 100], 'REAL'),
+    (['RESIDENCIAL', 'COMERCIAL'], 'TEXT'),
+    ([None, None], 'TEXT'),
+    ([True, False], 'INTEGER'),
+    ([[1, 2], [3, 4]], 'TEXT'),
+    ([{'chave': 'valor'}], 'TEXT'),
+])
+def test_field_stats_type_inference(sample_values, expected_type):
+    """Verifica inferência de tipos SQLite em FieldStats para números, zeros à esquerda, booleanos e nulos."""
+    st = FieldStats('campo_teste')
+    for val in sample_values:
+        st.record_value(val)
+    assert st.infer_sqlite_type() == expected_type
+
+
+def test_geojson_table_analyze_and_ddl_generation(tmp_path):
+    """Testa análise de arquivo GeoJSON em EPSG:31981 e geração de DDL com R*Tree."""
+    geojson_file = tmp_path / 'lotes_teste.geojson'
+    sample_data = {
+        'type': 'FeatureCollection',
+        'crs': {'type': 'name', 'properties': {'name': 'urn:ogc:def:crs:EPSG::31981'}},
+        'features': [
+            {
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'MultiPolygon',
+                    'coordinates': [[[[744866.79, 7737103.72], [744877.07, 7737097.54], [744866.79, 7737103.72]]]]
+                },
+                'properties': {
+                    'gid': 1,
+                    'codlote': '04160902071',
+                    'nomebairro': 'SANTO AMARO',
+                    'ruaimo': 'JERUSALEM',
+                    'arealote': 432.0,
+                }
+            }
+        ]
+    }
+    geojson_file.write_text(json.dumps(sample_data), encoding='utf-8')
+
+    gt = GeoJsonTable(str(geojson_file), 'geo_lotes_teste')
+    gt.analyze()
+
+    assert len(gt.features) == 1
+    assert gt.geometry_type == 'MultiPolygon'
+    assert -55.0 < gt.bbox[0] < -54.0
+    assert -21.0 < gt.bbox[1] < -20.0
+    assert gt.fields['codlote'].infer_sqlite_type() == 'TEXT'
+    assert gt.fields['arealote'].infer_sqlite_type() == 'REAL'
+
+    ddl = '\n'.join(gt.generate_ddl())
+    assert 'CREATE TABLE IF NOT EXISTS "geo_lotes_teste"' in ddl
+    assert 'CREATE VIRTUAL TABLE IF NOT EXISTS "geo_lotes_teste_rtree" USING rtree' in ddl
+    assert 'idx_geo_lotes_teste_nomebairro' in ddl
+
+
+def test_restaurar_imoveis_csv_gz_and_idempotency(tmp_path):
+    """Testa restauração de geo_imoveis via .csv.gz e verificação do índice R*Tree."""
+    db_file = tmp_path / 'imoveis.db'
+    csv_gz = tmp_path / 'geo_imoveis.csv.gz'
+
+    csv_content = (
+        'gid,codlote,ruaimo,nrporta,nomebairro,usoimovel,arealote,areaedific,'
+        'geometry_geojson,geometry_type,min_lng,min_lat,max_lng,max_lat,centroid_lat,centroid_lng\n'
+        '1,04160902071,AFONSO PENA,1500,CENTRO,COMERCIAL,500.0,320.0,'
+        '"{""type"":""MultiPolygon"",""coordinates"":[]}",MultiPolygon,-54.62,-20.46,-54.61,-20.45,-20.455,-54.615\n'
+    )
+    with gzip.open(csv_gz, 'wt', encoding='utf-8') as f:
+        f.write(csv_content)
+
+    mod_imoveis.restaurar_dump(csv_gz, db_file, force=True)
+
+    con = sqlite3.connect(str(db_file))
+    assert mod_imoveis.verificar_tabela_existente(con) == 1
+    cur = con.cursor()
+    cur.execute('SELECT COUNT(*) FROM geo_imoveis_rtree')
+    assert cur.fetchone()[0] == 1
+    con.close()
+
+
+def test_restaurar_imoveis_sql_gz_and_rtree_spatial_query(tmp_path):
+    """Testa restauração de geo_imoveis via .sql.gz e consulta espacial na R*Tree."""
+    db_file = tmp_path / 'imoveis_sql.db'
+    sql_gz = tmp_path / 'geo_imoveis.sql.gz'
+
+    cols = 'id, gid, codlote, ruaimo, nrporta, nomebairro, usoimovel, arealote, areaedific, geometry_geojson, geometry_type, min_lng, min_lat, max_lng, max_lat, centroid_lat, centroid_lng'
+    sql_content = (
+        "BEGIN TRANSACTION;\n"
+        "DROP TABLE IF EXISTS \"geo_imoveis_rtree\";\n"
+        "DROP TABLE IF EXISTS \"geo_imoveis\";\n"
+        + mod_imoveis.CREATE_TABLE_GEO_IMOVEIS_SQL + "\n"
+        f"INSERT INTO \"geo_imoveis\" ({cols}) VALUES(1, 1, '04160902071', 'AFONSO PENA', '1500', 'CENTRO', 'COMERCIAL', 500.0, 320.0, '{{\"type\":\"Point\",\"coordinates\":[-54.62,-20.46]}}', 'Point', -54.62, -20.46, -54.62, -20.46, -20.46, -54.62);\n"
+        + "\n".join(mod_imoveis.INDEXES_GEO_IMOVEIS_SQL) + "\n"
+        "COMMIT;\n"
+    )
+    with gzip.open(sql_gz, 'wt', encoding='utf-8') as f:
+        f.write(sql_content)
+
+    mod_imoveis.restaurar_dump(sql_gz, db_file, force=True)
+
+    con = sqlite3.connect(str(db_file))
+    assert mod_imoveis.verificar_tabela_existente(con) == 1
+    cur = con.cursor()
+    cur.execute("SELECT id FROM geo_imoveis_rtree WHERE min_lng <= -54.61 AND max_lng >= -54.63 AND min_lat <= -20.45 AND max_lat >= -20.47")
+    row = cur.fetchone()
+    assert row is not None
+    assert row[0] == 1
+    con.close()
+
+
+def test_restaurar_imoveis_skips_when_already_populated(tmp_path, monkeypatch):
+    """Quando geo_imoveis já possui > 20.000 registros e force=False, não recria a tabela."""
+    db_file = tmp_path / 'imoveis_cheio.db'
+    con = sqlite3.connect(str(db_file))
+    con.execute(mod_imoveis.CREATE_TABLE_GEO_IMOVEIS_SQL)
+    con.commit()
+    con.close()
+
+    monkeypatch.setattr(mod_imoveis, 'verificar_tabela_existente', lambda conn: 462744)
+
+    chamou_sql = {'called': False}
+    monkeypatch.setattr(mod_imoveis, '_restaurar_sql', lambda conn, p: chamou_sql.update(called=True))
+
+    dummy_gz = tmp_path / 'dummy.sql.gz'
+    dummy_gz.write_bytes(b'dummy')
+
+    mod_imoveis.restaurar_dump(dummy_gz, db_file, force=False)
+    assert chamou_sql['called'] is False
+
+
+def test_baixar_dump_cleans_up_tmp_on_network_failure(tmp_path, monkeypatch):
+    """Se o download do dump falhar no meio, o arquivo temporário .tmp deve ser removido."""
+    destino = tmp_path / 'geo_imoveis.sql.gz'
+
+    def broken_urlopen(req, timeout=120):
+        raise urllib.error.URLError('Connection reset by peer')
+
+    monkeypatch.setattr('urllib.request.urlopen', broken_urlopen)
+
+    with pytest.raises(RuntimeError, match='Falha ao baixar dump'):
+        mod_imoveis.baixar_dump('https://example.com/geo_imoveis.sql.gz', destino)
+
+    assert not destino.exists()
+    assert not destino.with_suffix('.tmp').exists()
+
+
+def test_baixar_dump_imoveis_success(tmp_path, monkeypatch):
+    """Download bem-sucedido de dump geo_imoveis deve mover .tmp para o arquivo final."""
+    destino = tmp_path / 'geo_imoveis.sql.gz'
+
+    fake_resp = MagicMock()
+    fake_resp.headers = {'content-length': '10'}
+    fake_resp.read.side_effect = [b'0123456789', b'']
+    fake_resp.__enter__.return_value = fake_resp
+
+    monkeypatch.setattr('urllib.request.urlopen', lambda req, timeout=120: fake_resp)
+
+    mod_imoveis.baixar_dump('https://example.com/geo_imoveis.sql.gz', destino)
+    assert destino.exists()
+    assert destino.read_bytes() == b'0123456789'
+    assert not destino.with_suffix('.tmp').exists()
+
+
+def test_restaurar_rfb_sql_gz_and_view_creation(tmp_path):
+    """Testa restauração de leeds_campo_grande via .sql.gz e criação da VIEW leads_campo_grande."""
+    db_file = tmp_path / 'rfb_test.db'
+    sql_gz = tmp_path / 'leeds_campo_grande.sql.gz'
+
+    sql_script = """
+    CREATE TABLE "leeds_campo_grande" (
+        empresa text,
+        cnpj text primary key,
+        nome text,
+        cargo text,
+        telefone text,
+        email text,
+        logradouro text,
+        numero text,
+        bairro text,
+        complemento text,
+        cep text
+    );
+    INSERT INTO "leeds_campo_grande" VALUES (
+        'PADARIA PAO QUENTE LTDA', '11222333000144', 'JOSE SILVA', 'Sócio-Administrador',
+        '+5567991112233 | +55', 'CONTATO@PAOQUENTE.COM', 'CEARA', '900',
+        'SANTA FE', 'LOJA 1', '79021000'
+    );
+    """
+    with gzip.open(sql_gz, 'wt', encoding='utf-8') as f:
+        f.write(sql_script)
+
+    mod_rfb.restaurar_dump(sql_gz, db_file, force=True)
+
+    con = sqlite3.connect(str(db_file))
+    assert mod_rfb.verificar_tabela_existente(con) == 1
+    cur = con.cursor()
+    cur.execute("SELECT empresa, bairro, complemento FROM leads_campo_grande WHERE cnpj = '11222333000144'")
+    row = cur.fetchone()
+    assert row == ('PADARIA PAO QUENTE LTDA', 'SANTA FE', 'LOJA 1')
+    con.close()
+
+
+def test_restaurar_rfb_csv_gz_and_view_creation(tmp_path):
+    """Testa restauração de leeds_campo_grande via .csv.gz e criação da VIEW leads_campo_grande."""
+    db_file = tmp_path / 'rfb_csv_test.db'
+    csv_gz = tmp_path / 'leeds_campo_grande.csv.gz'
+
+    csv_content = (
+        'empresa,cnpj,nome,cargo,telefone,email,logradouro,numero,bairro,complemento,cep\n'
+        'MERCADO CENTRAL LTDA,22333444000155,MARIA SOUZA,Administradora,+556733221100,MARIA@MERCADO.COM,CALOGERAS,100,CENTRO,SALA 1,79002000\n'
+    )
+    with gzip.open(csv_gz, 'wt', encoding='utf-8') as f:
+        f.write(csv_content)
+
+    mod_rfb.restaurar_dump(csv_gz, db_file, force=True)
+
+    con = sqlite3.connect(str(db_file))
+    assert mod_rfb.verificar_tabela_existente(con) == 1
+    cur = con.cursor()
+    cur.execute("SELECT empresa, bairro FROM leads_campo_grande WHERE cnpj = '22333444000155'")
+    assert cur.fetchone() == ('MERCADO CENTRAL LTDA', 'CENTRO')
+    con.close()
+
+
+def test_restaurar_rfb_skips_when_already_populated(tmp_path, monkeypatch):
+    """Quando leeds_campo_grande já possui registros e force=False, não recria a tabela."""
+    db_file = tmp_path / 'rfb_cheio.db'
+    monkeypatch.setattr(mod_rfb, 'verificar_tabela_existente', lambda conn: 158558)
+
+    chamou_sql = {'called': False}
+    monkeypatch.setattr(mod_rfb, '_restaurar_sql', lambda conn, p: chamou_sql.update(called=True))
+
+    dummy_gz = tmp_path / 'dummy_rfb.sql.gz'
+    dummy_gz.write_bytes(b'dummy')
+
+    mod_rfb.restaurar_dump(dummy_gz, db_file, force=False)
+    assert chamou_sql['called'] is False
+
+
+def test_baixar_dump_rfb_cleans_up_tmp_on_network_failure(tmp_path, monkeypatch):
+    """Se o download do dump RFB falhar, o arquivo temporário .tmp deve ser removido."""
+    destino = tmp_path / 'leeds_campo_grande.sql.gz'
+
+    def broken_urlopen(req, timeout=60):
+        raise urllib.error.URLError('Network unreachable')
+
+    monkeypatch.setattr('urllib.request.urlopen', broken_urlopen)
+
+    with pytest.raises(RuntimeError, match='Falha ao baixar dump RFB'):
+        mod_rfb.baixar_dump('https://example.com/leeds.sql.gz', destino)
+
+    assert not destino.exists()
+    assert not destino.with_suffix('.tmp').exists()
+
+
+@pytest.mark.parametrize('raw_cep,expected_cep', [
+    ('79040010', '79040-010'),
+    ('79002-072', '79002-072'),
+    ('', '79002-000'),
+    (None, '79002-000'),
+])
+def test_enriquecer_format_cep(raw_cep, expected_cep):
+    """Verifica normalização e fallback de CEP em enriquecer_clientes_rfb.py."""
+    assert format_cep(raw_cep) == expected_cep
+
+
+@pytest.mark.parametrize('tel_raw,expected', [
+    ('+5567991112233 | +55', '(67) 99111-2233'),
+    ('6733214567', '(67) 3321-4567'),
+    ('998887766', '(67) 99888-7766'),
+    (None, '(67) 3300-1000'),
+    ('', '(67) 3300-1000'),
+])
+def test_enriquecer_format_telefone(tel_raw, expected):
+    """Verifica split por pipe, remoção de +55 e formatação em enriquecer_clientes_rfb.py."""
+    assert format_telefone(tel_raw) == expected
+
+
+@pytest.mark.parametrize('raw,expected', [
+    ('CHACARA CACHOEIRA', 'Chácara Cachoeira'),
+    ('centro', 'Centro'),
+    ('Jardim dos Estados', 'Jardim dos Estados'),
+    ('SANTA FE', 'Santa Fé'),
+    ('VILASBOAS', 'Vilas Boas'),
+    ('Cachoeira', 'Chácara Cachoeira'),
+    ('TIRADENTES', 'Tiradentes'),
+    ('Bairro Inexistente XYZ', 'Bairro Inexistente Xyz'),
+])
+def test_normalizar_bairro_parametrized(raw, expected):
+    """Verifica normalização de nomes de bairros oficiais do SISGRAN."""
+    assert normalizar_bairro(raw) == expected
+OMNI_EOF
+
+# --- tests/test_pytest_prospector.py ---
+cat > 'tests/test_pytest_prospector.py' <<'OMNI_EOF'
+import json
+import urllib.error
+from unittest.mock import MagicMock
+
+import pytest
+
+from app.models.cliente import Cliente
+from app.models.lead import Lead
+from app.models.pedido import Pedido
+from app.services.prospector import TelecomProspectorService
+
+
+def _make_mock_http_response(payload: dict):
+    """Return a context-managed HTTP response with a JSON payload."""
+    mock_resp = MagicMock()
+    mock_resp.read.return_value = json.dumps(payload).encode('utf-8')
+    mock_resp.__enter__.return_value = mock_resp
+    mock_resp.__exit__.return_value = False
+    return mock_resp
+
+
+def test_cascade_aisa_primary_success(app, monkeypatch):
+    """A successful AIsa response is normalized and returned before other providers."""
+    monkeypatch.setitem(app.config, 'AISA_API_KEY', 'aisa-valid-key')
+    monkeypatch.setitem(app.config, 'GEMINI_API_KEY', '')
+    payload = {
+        'choices': [{
+            'message': {
+                'content': json.dumps({
+                    'leads': [{
+                        'company_name': 'DataCenter Pantanal Tech',
+                        'contact_name': 'Eng. Lucas Prado',
+                        'cargo': 'CTO',
+                        'phone': '(67) 99111-2233',
+                        'email': 'lucas@pantanaltech.com.br',
+                        'address': 'Avenida Afonso Pena',
+                        'numero': '4100',
+                        'cep': '79020-000',
+                        'operadora_atual': 'Vivo Fibra',
+                        'plano_sugerido': 'DigitalNet B2B Link Dedicado Pro',
+                        'valor_mensal_sugerido': 399.90,
+                        'score': 98,
+                        'description': 'Demanda de link dedicado redundante.',
+                        'icebreaker_optin': 'Olá Lucas, podemos avaliar a redundância óptica?',
+                    }]
+                })
+            }
+        }]
+    }
+    monkeypatch.setattr(
+        'urllib.request.urlopen',
+        lambda req, timeout=25: _make_mock_http_response(payload),
+    )
+
+    leads = TelecomProspectorService.prospect_neighborhood(
+        bairro='Jardim dos Estados', cidade='Campo Grande', count=1,
+    )
+
+    assert len(leads) == 1
+    assert leads[0]['empresa'] == 'DataCenter Pantanal Tech'
+    assert leads[0]['lead_score'] == 98
+    assert leads[0]['bairro'] == 'Jardim dos Estados'
+
+
+def test_cascade_failover_aisa_to_gemini(app, monkeypatch):
+    """An AIsa HTTP failure falls through to the normalized Gemini result."""
+    monkeypatch.setitem(app.config, 'AISA_API_KEY', 'aisa-failing-key')
+    monkeypatch.setitem(app.config, 'GEMINI_API_KEY', 'gemini-valid-key')
+    gemini_payload = {
+        'candidates': [{
+            'content': {
+                'parts': [{
+                    'text': json.dumps([{
+                        'empresa': 'Laboratório BioExame MS',
+                        'nome': 'Dra. Helena Costa',
+                        'cargo': 'Diretora Técnica',
+                        'telefone': '(67) 99333-4455',
+                        'email': 'helena@bioexame.com.br',
+                        'logradouro': 'Rua 15 de Novembro',
+                        'numero': '890',
+                        'cep': '79002-140',
+                        'operadora_atual': 'Claro Fibra',
+                        'plano_sugerido': 'DigitalNet B2B Link Dedicado Pro',
+                        'valor_mensal_sugerido': 399.90,
+                        'lead_score': 94,
+                        'dor_principal': 'Lentidão no envio de laudos por imagem.',
+                        'icebreaker_optin': 'Olá Dra. Helena, tudo bem?',
+                    }])
+                }]
+            }
+        }]
+    }
+
+    def fake_urlopen(req, timeout=20):
+        url = req.full_url if hasattr(req, 'full_url') else str(req)
+        if 'aisa.one' in url:
+            raise urllib.error.HTTPError(url, 500, 'Internal Server Error', {}, None)
+        return _make_mock_http_response(gemini_payload)
+
+    monkeypatch.setattr('urllib.request.urlopen', fake_urlopen)
+    leads = TelecomProspectorService.prospect_neighborhood(
+        bairro='Centro', cidade='Campo Grande', count=1,
+    )
+
+    assert len(leads) == 1
+    assert leads[0]['empresa'] == 'Laboratório BioExame MS'
+    assert leads[0]['lead_score'] == 94
+
+
+def test_cascade_failover_to_rfb_and_synthetic_complement(app, rfb_memory_seeded, monkeypatch):
+    """RFB leads precede three synthetic complements when the requested count is five."""
+    monkeypatch.setitem(app.config, 'AISA_API_KEY', '')
+    monkeypatch.setitem(app.config, 'GEMINI_API_KEY', '')
+
+    leads = TelecomProspectorService.prospect_neighborhood(
+        bairro='Chácara Cachoeira', cidade='Campo Grande', count=5,
+    )
+
+    assert len(leads) == 5
+    rfb_empresas = {
+        'clinica medica pantanal ltda',
+        'contabilidade exata ms ltda',
+    }
+    rfb_leads = [lead for lead in leads if lead['empresa'].casefold() in rfb_empresas]
+    assert len(rfb_leads) == 2
+    assert len([lead for lead in leads if lead not in rfb_leads]) == 3
+
+    lead_clinica = next(lead for lead in rfb_leads if 'Clinica Medica Pantanal' in lead['empresa'])
+    assert lead_clinica['telefone'] == '(67) 99123-4567'
+    assert Lead(**lead_clinica).telefone_e164 == '+5567991234567'
+    assert lead_clinica['logradouro'] == 'Raul Pires Barbosa'
+    assert lead_clinica['numero'] == '1240'
+    assert lead_clinica['complemento'] == 'SALA 02'
+
+
+def test_save_prospects_global_deduplication(db_session):
+    """Existing customers and case-insensitive duplicates do not become new leads."""
+    db_session.add(Cliente(
+        nome='Empresa Ja Cliente Ltda',
+        email='cliente@existente.com',
+        telefone='(67) 3322-1100',
+        bairro='Centro',
+        cidade='Campo Grande',
+        estado='MS',
+    ))
+    db_session.commit()
+
+    salvos = TelecomProspectorService.save_prospects([
+        {'empresa': 'Empresa Ja Cliente Ltda', 'nome': 'Contato 1', 'telefone': '(67) 3322-1100', 'bairro': 'Centro'},
+        {'empresa': 'Nova Oportunidade Optica Ltda', 'nome': 'Contato 2', 'telefone': '(67) 99111-2222', 'bairro': 'Centro'},
+        {'empresa': 'nova oportunidade optica ltda', 'nome': 'Contato 2 Dup', 'telefone': '(67) 99111-2222', 'bairro': 'Centro'},
+    ])
+
+    assert len(salvos) == 1
+    assert salvos[0].empresa == 'Nova Oportunidade Optica Ltda'
+
+
+@pytest.mark.parametrize(('obj_key', 'termo_esperado'), [
+    ('fidelidade', 'multa'),
+    ('preco', 'custo'),
+    ('ti_interna', 'fidelidade'),
+])
+def test_objection_tutors_return_actionable_copy(db_session, obj_key, termo_esperado):
+    """Each recognized objection, plus the fallback, returns sales copy with its key argument."""
+    lead = Lead(
+        nome='Roberto Silva', empresa='Silva & Filhos Ltda', telefone='(67) 99123-4567',
+        bairro='Centro', operadora_atual='Vivo Fibra',
+        plano_sugerido='DigitalNet B2B Link Dedicado Pro', valor_mensal_sugerido=399.90,
+    )
+
+    tutor = TelecomProspectorService.get_objection_tutor(obj_key, lead)
+
+    assert {'titulo', 'diagnostico', 'tecnica', 'script_whatsapp'} <= tutor.keys()
+    texto_completo = ' '.join(tutor.values()).lower()
+    assert termo_esperado in texto_completo
+
+
+def test_anti_ban_script_requests_opt_in_and_offers_decline(db_session):
+    """The native WhatsApp script personalizes the lead and explicitly requests consent."""
+    lead = Lead(
+        nome='Marina Souza', empresa='Studio Aurora', bairro='Centro',
+        operadora_atual='Claro Fibra', plano_sugerido='Fibra 900 Advanced (Wi-Fi 6)',
+    )
+
+    script = TelecomProspectorService.generate_anti_ban_whatsapp_script(lead)
+
+    assert 'Olá Marina' in script
+    assert 'Studio Aurora' in script
+    assert 'Posso te enviar' in script
+    assert "responder 'Não'" in script
+
+
+@pytest.mark.parametrize(('channel', 'tone'), [
+    ('whatsapp', 'consultative'),
+    ('whatsapp', 'direct'),
+    ('whatsapp', 'urgent'),
+    ('email', 'consultative'),
+    ('email', 'direct'),
+    ('email', 'urgent'),
+])
+def test_generate_pitch_returns_structured_native_pitch_for_each_channel_and_tone(app, db_session, channel, tone):
+    """All supported pitch selections retain a personalized native opt-in fallback."""
+    lead = Lead(
+        nome='Marina Souza', empresa='Studio Aurora', bairro='Centro', cidade='Campo Grande',
+        operadora_atual='Claro Fibra', plano_sugerido='Fibra 900 Advanced (Wi-Fi 6)',
+        valor_mensal_sugerido=149.90,
+    )
+
+    pitch = TelecomProspectorService.generate_pitch(lead, channel=channel, tone=tone)
+
+    assert {'subject', 'message', 'key_points', 'call_to_action', 'suggested_next_step'} <= pitch.keys()
+    assert pitch['subject'] == 'Modernização de Fibra Óptica no Centro - Studio Aurora'
+    assert 'Olá Marina' in pitch['message']
+    assert pitch['call_to_action'].startswith('Posso te enviar')
+
+
+def test_convert_lead_to_client_and_reuse_existing(db_session, sample_planos):
+    """A second lead for the same company and email reuses its customer and adds an order."""
+    lead1 = Lead(
+        nome='Dr. Fernando Lima', empresa='Clínica OrtoMS Ltda', cargo='Diretor',
+        telefone='(67) 99222-3344', email='contato@ortoms.com.br',
+        logradouro='Rua Euclides da Cunha', numero='500', cep='79020-230',
+        bairro='Jardim dos Estados', cidade='Campo Grande', estado='MS',
+        plano_sugerido=sample_planos['pj'].nome, valor_mensal_sugerido=sample_planos['pj'].valor_mensal,
+    )
+    db_session.add(lead1)
+    db_session.commit()
+
+    cliente1 = TelecomProspectorService.convert_lead_to_client(lead1, plano=sample_planos['pj'])
+
+    assert lead1.status == 'convertido'
+    assert lead1.cliente_convertido_id == cliente1.id
+    pedidos_cliente1 = Pedido.query.filter_by(cliente_id=cliente1.id).all()
+    assert len(pedidos_cliente1) == 1
+    assert pedidos_cliente1[0].plano_id == sample_planos['pj'].id
+    assert abs(pedidos_cliente1[0].valor_total - 399.90) < 0.01
+
+    lead2 = Lead(
+        nome='Dr. Fernando Lima', empresa='Clínica OrtoMS Ltda', telefone='(67) 99222-3344',
+        email='contato@ortoms.com.br', bairro='Jardim dos Estados',
+        plano_sugerido=sample_planos['pf'].nome, valor_mensal_sugerido=sample_planos['pf'].valor_mensal,
+    )
+    db_session.add(lead2)
+    db_session.commit()
+
+    cliente2 = TelecomProspectorService.convert_lead_to_client(lead2, plano=sample_planos['pf'])
+
+    assert cliente2.id == cliente1.id
+    assert Pedido.query.filter_by(cliente_id=cliente1.id).count() == 2
+OMNI_EOF
+
 # --- tests/test_rbac_admin.py ---
 cat > 'tests/test_rbac_admin.py' <<'OMNI_EOF'
 import unittest
@@ -124450,11 +125733,11 @@ OMNI_EOF
 
 cat > test.sh <<'OMNI_EOF'
 #!/usr/bin/env bash
-# Executa a suíte de testes automatizados no Linux
+# Executa a suíte completa de testes automatizados (unittest + pytest) no Linux
 set -e
 source .venv/bin/activate
-echo "Executando suíte de testes automatizados..."
-python3 -m unittest discover -s tests -v
+echo "Executando suíte de testes automatizados (pytest + unittest)..."
+python3 -m pytest -v
 OMNI_EOF
 
 cat > seed.sh <<'OMNI_EOF'

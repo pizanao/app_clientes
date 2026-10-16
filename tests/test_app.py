@@ -153,7 +153,7 @@ class AppTestCase(unittest.TestCase):
             'ativo': 'y'
         }, follow_redirects=True)
         self.assertEqual(res.status_code, 200)
-        self.assertIn('A DigitalNet MS atende exclusivamente no estado de Mato Grosso do Sul (MS).'.encode('utf-8'), res.data)
+        self.assertIn('O Leads Prospector atende exclusivamente no estado de Mato Grosso do Sul (MS).'.encode('utf-8'), res.data)
         self.assertIsNone(Cliente.query.filter_by(email='fora@sp.com').first())
 
     # --- PEDIDOS CRUD TESTS ---

@@ -6,7 +6,7 @@ from app.models.lead import Lead
 from app.models.cliente import Cliente
 from app.models.plano import Plano
 from app.data.perfis_sisgran import normalizar_bairro
-from app.services.prospector import TelecomProspectorService, PLANOS_DIGITALNET
+from app.services.prospector import TelecomProspectorService, PLANOS_OFERTA
 
 leads_bp = Blueprint('leads', __name__, url_prefix='/leads')
 
@@ -204,7 +204,7 @@ def atualizar_status(lead_id: int):
 @leads_bp.route('/<int:lead_id>/converter', methods=['POST'])
 @login_required
 def converter_cliente(lead_id: int):
-    """Converte o lead em cliente e cria o pedido da assinatura DigitalNet vinculado ao Plano."""
+    """Converte o lead em cliente e cria o pedido da assinatura vinculado ao Plano."""
     lead = Lead.query.get_or_404(lead_id)
 
     plano_id = request.form.get('plano_id', type=int)

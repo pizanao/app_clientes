@@ -37,7 +37,7 @@ def test_cascade_aisa_primary_success(app, monkeypatch):
                         'numero': '4100',
                         'cep': '79020-000',
                         'operadora_atual': 'Vivo Fibra',
-                        'plano_sugerido': 'DigitalNet B2B Link Dedicado Pro',
+                        'plano_sugerido': 'Fibra B2B Link Dedicado Pro',
                         'valor_mensal_sugerido': 399.90,
                         'score': 98,
                         'description': 'Demanda de link dedicado redundante.',
@@ -80,7 +80,7 @@ def test_cascade_failover_aisa_to_gemini(app, monkeypatch):
                         'numero': '890',
                         'cep': '79002-140',
                         'operadora_atual': 'Claro Fibra',
-                        'plano_sugerido': 'DigitalNet B2B Link Dedicado Pro',
+                        'plano_sugerido': 'Fibra B2B Link Dedicado Pro',
                         'valor_mensal_sugerido': 399.90,
                         'lead_score': 94,
                         'dor_principal': 'Lentidão no envio de laudos por imagem.',
@@ -165,7 +165,7 @@ def test_objection_tutors_return_actionable_copy(db_session, obj_key, termo_espe
     lead = Lead(
         nome='Roberto Silva', empresa='Silva & Filhos Ltda', telefone='(67) 99123-4567',
         bairro='Centro', operadora_atual='Vivo Fibra',
-        plano_sugerido='DigitalNet B2B Link Dedicado Pro', valor_mensal_sugerido=399.90,
+        plano_sugerido='Fibra B2B Link Dedicado Pro', valor_mensal_sugerido=399.90,
     )
 
     tutor = TelecomProspectorService.get_objection_tutor(obj_key, lead)

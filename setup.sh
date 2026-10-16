@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Script de Criação e Configuração Automatizada - DigitalNet-Prospector (Linux)
+# Script de Criação e Configuração Automatizada - Leads-Prospector (Linux)
 # ==============================================================================
 # ARQUIVO GERADO AUTOMATICAMENTE por scripts/gerar_setup.py — não edite à mão.
 # Para atualizar após mudanças no código: python scripts/gerar_setup.py
@@ -31,7 +31,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}===================================================================${NC}"
-echo -e "${BLUE}    Iniciando a instalação e recriação do projeto DigitalNet-Prospector       ${NC}"
+echo -e "${BLUE}    Iniciando a instalação e recriação do projeto Leads-Prospector       ${NC}"
 echo -e "${BLUE}===================================================================${NC}"
 
 # 1. Verificação de pré-requisitos no Linux
@@ -347,7 +347,7 @@ Para cada lead qualificado, o sistema gera o roteiro anti-ban em 3 blocos:
 Ao clicar em **Converter em Cliente** na tela do lead (`/leads/<id>`):
 - O lead passa para o status `convertido`.
 - O cliente é cadastrado na tabela `clientes`.
-- Um pedido de assinatura DigitalNet é criado na tabela `pedidos` com item e valor totalizados automaticamente.
+- Um pedido de assinatura comercial é criado na tabela `pedidos` com item e valor totalizados automaticamente.
 OMNI_EOF
 
 # --- .env.example ---
@@ -451,14 +451,14 @@ OMNI_EOF
 cat > 'AGENTS.md' <<'OMNI_EOF'
 # AGENTS.md - Diretrizes de Desenvolvimento e Arquitetura do Workspace
 
-Bem-vindo ao workspace do **DigitalNet MS - Radar de Leads & Sistema de Gestão**.
+Bem-vindo ao workspace do **Leads Prospector (`leads-prospector`) - Radar de Leads & Sistema de Gestão**.
 Este documento define as regras de desenvolvimento, catálogo de modelos de dados, motores de inteligência artificial, controle de acesso e regras espaciais obrigatórias para todos os agentes de IA atuando neste repositório.
 
 ---
 
 ## 1. Visão Geral do Sistema
 
-A aplicação é uma plataforma completa de **Gestão Comercial, Controle de Acesso (RBAC) e Radar de Expansão de Telecomunicações** (ISP B2B) para a **DigitalNet MS** em Campo Grande - MS.
+A aplicação é uma plataforma completa de **Gestão Comercial, Controle de Acesso (RBAC) e Radar de Expansão de Telecomunicações** (ISP B2B) em Campo Grande - MS.
 - **Stack:** Python 3.11+, Flask 3, Flask-SQLAlchemy, Flask-Migrate (Alembic), Flask-Login, Flask-WTF, Bootstrap 5.3, Mapbox GL JS / Leaflet.
 - **Bancos de Dados:**
   - **SQLite Primário:** `instance/app_clientes.db` (armazenamento de Usuários, Grupos de Acesso, Clientes, Pedidos, Leads, Tabelas Espaciais e Base RFB).
@@ -715,10 +715,10 @@ def register_cli_commands(app):
     @app.cli.command('seed-planos')
     @with_appcontext
     def seed_planos_command():
-        """Popula ou sincroniza os planos oficiais da DigitalNet (PF e PJ)."""
+        """Popula ou sincroniza os planos oficiais do Leads Prospector (PF e PJ)."""
         db.create_all()
         total = Plano.seed_planos_iniciais()
-        click.echo(f'{total} planos padrão oficiais da DigitalNet MS (PF e PJ) carregados com sucesso!')
+        click.echo(f'{total} planos padrão oficiais do Leads Prospector (PF e PJ) carregados com sucesso!')
 
     @app.cli.command('seed')
     @with_appcontext
@@ -807,7 +807,7 @@ def register_cli_commands(app):
             lider = User(
                 nome='Carlos Eduardo Mendes',
                 username='lider.tecnico',
-                email='carlos.mendes@digitalnetms.com.br',
+                email='carlos.mendes@leadsprospector.com.br',
                 perfil=PERFIL_LIDER,
                 ativo=True
             )
@@ -821,7 +821,7 @@ def register_cli_commands(app):
             agente = User(
                 nome='Mariana Souza',
                 username='agente.comercial',
-                email='mariana.souza@digitalnetms.com.br',
+                email='mariana.souza@leadsprospector.com.br',
                 perfil=PERFIL_AGENTE,
                 ativo=True
             )
@@ -830,7 +830,7 @@ def register_cli_commands(app):
             db.session.add(agente)
             click.echo('Criado usuário agente comercial: "agente.comercial" (Senha: Agente#2026)')
 
-        # 4. Planos de Banda Larga Oficiais DigitalNet (PF e PJ)
+        # 4. Planos de Banda Larga Oficiais (PF e PJ)
         if Plano.query.count() == 0:
             total_planos = Plano.seed_planos_iniciais()
             click.echo(f'{total_planos} Planos oficiais de banda larga (PF e PJ) cadastrados com sucesso!')
@@ -851,7 +851,7 @@ def register_cli_commands(app):
                     cidade='Campo Grande',
                     estado='MS',
                     ativo=True,
-                    observacoes='Condomínio atendido pela fibra DigitalNet com 60 apartamentos conectados.'
+                    observacoes='Condomínio atendido por fibra óptica com 60 apartamentos conectados.'
                 ),
                 Cliente(
                     nome='Clínica Médica Santa Fé Especializada',
@@ -3116,7 +3116,7 @@ class ClienteForm(FlaskForm):
 
     def validate_estado(self, field):
         if field.data and field.data.strip().upper() != 'MS':
-            raise ValidationError('A DigitalNet MS atende exclusivamente no estado de Mato Grosso do Sul (MS).')
+            raise ValidationError('O Leads Prospector atende exclusivamente no estado de Mato Grosso do Sul (MS).')
 OMNI_EOF
 
 # --- app/forms/pedido_forms.py ---
@@ -3495,7 +3495,7 @@ class Pedido(db.Model):
     descricao = db.Column(db.Text, nullable=True)
     observacoes = db.Column(db.Text, nullable=True)
 
-    # Relacionamento N:1 com Plano Oficial da DigitalNet MS
+    # Relacionamento N:1 com Plano Oficial de Banda Larga
     plano_id = db.Column(db.Integer, db.ForeignKey('planos.id', ondelete='SET NULL'), nullable=True, index=True)
     plano = db.relationship('Plano', backref=db.backref('pedidos', lazy='select'))
 
@@ -3665,13 +3665,12 @@ class Plano(db.Model):
     @classmethod
     def seed_planos_iniciais(cls) -> int:
         """
-        Cadastra ou atualiza os planos padrão oficiais da DigitalNet MS
-        conforme publicados em https://digitalnetms.com.br/clientepf/ e https://digitalnetms.com.br/clientepj/.
+        Cadastra ou atualiza os planos padrão oficiais de telecomunicações (PF e PJ).
         Retorna o total de planos criados ou atualizados.
         """
         planos_padrao = [
             # -----------------------------------------------------------------
-            # PLANOS PESSOA FÍSICA (RESIDENCIAIS) - https://digitalnetms.com.br/clientepf/
+            # PLANOS PESSOA FÍSICA (RESIDENCIAIS)
             # -----------------------------------------------------------------
             {
                 'nome': 'Fibra 600 Standard',
@@ -3788,7 +3787,7 @@ class Plano(db.Model):
                 'descricao': 'Casa grande, muitos aparelhos, jogos online',
             },
             # -----------------------------------------------------------------
-            # PLANOS PESSOA JURÍDICA (CORPORATIVOS - DIGICORP) - https://digitalnetms.com.br/clientepj/
+            # PLANOS PESSOA JURÍDICA (CORPORATIVOS - DIGICORP)
             # -----------------------------------------------------------------
             {
                 'nome': 'DigiCorp Profissional',
@@ -4314,7 +4313,7 @@ def grupo_excluir(id):
 
 
 # ==============================================================================
-# GESTÃO DE PLANOS DE BANDA LARGA (PF & PJ - DIGITALNET)
+# GESTÃO DE PLANOS DE BANDA LARGA (PF & PJ)
 # ==============================================================================
 
 @admin_bp.route('/planos')
@@ -4494,7 +4493,7 @@ def plano_excluir(id):
 @admin_required
 def planos_sincronizar_padrao():
     total = Plano.seed_planos_iniciais()
-    flash(f'{total} planos padrão oficiais da DigitalNet MS (PF e PJ) foram sincronizados com sucesso!', 'success')
+    flash(f'{total} planos padrão oficiais (PF e PJ) foram sincronizados com sucesso!', 'success')
     return redirect(url_for('admin.planos'))
 OMNI_EOF
 
@@ -4751,7 +4750,7 @@ from app.models.lead import Lead
 from app.models.cliente import Cliente
 from app.models.plano import Plano
 from app.data.perfis_sisgran import normalizar_bairro
-from app.services.prospector import TelecomProspectorService, PLANOS_DIGITALNET
+from app.services.prospector import TelecomProspectorService, PLANOS_OFERTA
 
 leads_bp = Blueprint('leads', __name__, url_prefix='/leads')
 
@@ -4949,7 +4948,7 @@ def atualizar_status(lead_id: int):
 @leads_bp.route('/<int:lead_id>/converter', methods=['POST'])
 @login_required
 def converter_cliente(lead_id: int):
-    """Converte o lead em cliente e cria o pedido da assinatura DigitalNet vinculado ao Plano."""
+    """Converte o lead em cliente e cria o pedido da assinatura vinculado ao Plano."""
     lead = Lead.query.get_or_404(lead_id)
 
     plano_id = request.form.get('plano_id', type=int)
@@ -5806,8 +5805,8 @@ from app.models.plano import Plano
 
 logger = logging.getLogger(__name__)
 
-# Planos reais da DigitalNet MS
-PLANOS_DIGITALNET = [
+# Planos oficiais de oferta comercial
+PLANOS_OFERTA = [
     {
         'nome': 'Fibra 600 Standard (Wi-Fi 6)',
         'download': '600 Mbps',
@@ -5831,7 +5830,7 @@ PLANOS_DIGITALNET = [
         'diferencial': 'Máxima velocidade residencial/comercial + Wi-Fi 6 + Skeelo',
     },
     {
-        'nome': 'DigitalNet B2B Link Dedicado Pro',
+        'nome': 'Fibra B2B Link Dedicado Pro',
         'download': '1000 Mbps',
         'upload': '1000 Mbps (100% Simétrico)',
         'preco': 399.90,
@@ -5883,7 +5882,7 @@ class TelecomProspectorService:
     def get_neighborhood_clusters() -> List[Dict[str, Any]]:
         """
         Agrupa clientes existentes por bairro e cidade para identificar
-        onde a DigitalNet já possui infraestrutura óptica instalada (CTO/Cabos).
+        onde a operadora já possui infraestrutura óptica instalada (CTO/Cabos).
         Normaliza os bairros para evitar duplicidades entre caixa alta e camelcase.
         """
         clientes = Cliente.query.filter_by(ativo=True).all()
@@ -5965,7 +5964,7 @@ class TelecomProspectorService:
 
         script = (
             f"Olá {nome_curto}, tudo bem? Notei a presença da {empresa} aqui no bairro {bairro}.\n\n"
-            f"A DigitalNet acabou de concluir a modernização da rede de fibra óptica com roteadores Wi-Fi 6 "
+            f"Acabamos de concluir a modernização da rede de fibra óptica com roteadores Wi-Fi 6 "
             f"aqui na sua rua. Identificamos que muitos comércios e escritórios locais sofrem com lentidão e "
             f"suporte demorado de operadoras nacionais como {operadora}.\n\n"
             f"Estruturamos um comparativo rápido mostrando como ter mais velocidade e suporte local 24h em Campo Grande "
@@ -6097,7 +6096,7 @@ class TelecomProspectorService:
     ) -> List[Dict[str, Any]]:
         """Chama a API do Google Gemini via HTTP padrão (sem bibliotecas externas pesadas)."""
         prompt = f"""Você é o maior especialista em prospecção de vendas B2B e expansão de provedores de internet fibra óptica (ISP).
-A empresa é a DigitalNet MS (provedor com rede própria AS61588, Wi-Fi 6 em comodato, suporte local 24h e planos de 600 a 900 Mega em Campo Grande - MS).
+O sistema é o Leads Prospector (provedor com rede própria de fibra óptica, Wi-Fi 6 em comodato, suporte local 24h e planos de 600 a 900 Mega em Campo Grande - MS).
 
 Gere uma lista de {count} leads B2B/comerciais realistas e altamente prováveis localizados EXATAMENTE no bairro "{bairro}" em "{cidade} - {estado}", nicho "{niche}".
 
@@ -6164,7 +6163,7 @@ Retorne EXCLUSIVAMENTE um JSON array (sem formatação markdown, sem ```json) co
     ) -> List[Dict[str, Any]]:
         """Chama a API da AIsa (api.aisa.one) via endpoint OpenAI-compatible /v1/chat/completions."""
         system_prompt = (
-            "Você é o motor de prospecção corporativa B2B e expansão da operadora DigitalNet MS. "
+            "Você é o motor de prospecção corporativa B2B e expansão do sistema Leads Prospector. "
             "Sua missão é retornar uma lista estruturada de empresas comerciais/B2B com dados de contato "
             "válidos e viabilidade de conectividade de fibra óptica em Campo Grande - MS. "
             "Retorne EXCLUSIVAMENTE um objeto JSON contendo a propriedade 'leads' com um array de itens."
@@ -6186,7 +6185,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
       "numero": "120",
       "cep": "79000-000",
       "operadora_atual": "Vivo Fibra ou Claro NET",
-      "plano_sugerido": "Fibra 700 + DigiMesh (Wi-Fi 6) ou DigitalNet B2B Link Dedicado Pro",
+      "plano_sugerido": "Fibra 700 + DigiMesh (Wi-Fi 6) ou Fibra B2B Link Dedicado Pro",
       "valor_mensal_sugerido": 139.90,
       "score": 88,
       "description": "Dor ou motivo de prospecção (ex: lentidão no horário de pico, falha de maquininha, sinal fraco)",
@@ -6212,7 +6211,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             headers={
                 'Content-Type': 'application/json',
                 'Authorization': f'Bearer {api_key}',
-                'User-Agent': 'DigitalNet-Telecom-Prospector/1.0'
+                'User-Agent': 'Leads-Prospector/1.0'
             },
             method='POST'
         )
@@ -6299,7 +6298,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
         if aisa_key and aisa_key.strip():
             try:
                 system_prompt = (
-                    "Você é um especialista em prospecção B2B de telecom e vendas consultivas da DigitalNet MS. "
+                    "Você é um especialista em prospecção B2B de telecom e vendas consultivas do Leads Prospector. "
                     "Gere uma abordagem persuasiva e personalizada para o lead. "
                     "Retorne EXCLUSIVAMENTE um objeto JSON com: 'subject', 'message', 'key_points', 'call_to_action'."
                 )
@@ -6566,7 +6565,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 valor = 139.90
             elif any(term in cnae_desc.lower() for term in ('advoc', 'contáb', 'juríd', 'consult')):
                 dor = 'Queda de conexão durante audiências virtuais e lentidão no envio de relatórios fiscais.'
-                plano = 'DigitalNet B2B Link Dedicado Pro'
+                plano = 'Fibra B2B Link Dedicado Pro'
                 valor = 399.90
             elif any(term in cnae_desc.lower() for term in ('comérci', 'varej', 'alimento', 'restaurant', 'bar')):
                 dor = 'Wi-Fi da operadora atual com sinal fraco no salão de atendimento e instabilidade no checkout.'
@@ -6603,7 +6602,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             lead_item['icebreaker_optin'] = cls.generate_anti_ban_whatsapp_script(temp_lead)
             lead_item['dossie_comercial'] = json.dumps({
                 'perfil_decisor': f"{nome_fmt} ({cargo_fmt}) - CNAE: {cnae_desc or 'Comercial'}.",
-                'vantagem_digitalnet': 'Rede própria AS61588 de fibra óptica com Wi-Fi 6 e suporte local 24h em Campo Grande.',
+                'vantagem_competitiva': 'Rede própria de fibra óptica com Wi-Fi 6 e suporte local 24h em Campo Grande.',
                 'angulo_venda': f"Eliminar a dor de '{dor}' com migração sem interrupção de serviço.",
                 'perfil_territorial': f"Região {info_bairro.get('regiao_urbana', 'Urbana')} ({info_bairro.get('macrozona', '')}). Perfil: {info_bairro.get('perfil_predominante', 'Comercial')}.",
                 'fonte_dados': 'Receita Federal do Brasil (RFB) + SISGRAN/PLANURB Campo Grande',
@@ -6659,7 +6658,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'cargo': 'Sócio Coordenador',
                 'dor': 'Queda de conexão durante audiências virtuais pelo Teams/Zoom e demora no upload de petições pesadas.',
                 'operadora': 'Claro NET',
-                'plano': 'DigitalNet B2B Link Dedicado Pro',
+                'plano': 'Fibra B2B Link Dedicado Pro',
                 'valor': 399.90,
                 'score': 95,
             },
@@ -6709,7 +6708,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'cargo': 'Diretor de Tecnologia',
                 'dor': 'Upload lento para servidores na nuvem e falta de IP fixo com SLA comercial.',
                 'operadora': 'Claro NET',
-                'plano': 'DigitalNet B2B Link Dedicado Pro',
+                'plano': 'Fibra B2B Link Dedicado Pro',
                 'valor': 499.90,
                 'score': 96,
             },
@@ -6759,7 +6758,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'cargo': 'Bioquímico Responsável',
                 'dor': 'Atraso no envio eletrônico de laudos emergenciais por instabilidade na rede de dados.',
                 'operadora': 'Claro NET',
-                'plano': 'DigitalNet B2B Link Dedicado Pro',
+                'plano': 'Fibra B2B Link Dedicado Pro',
                 'valor': 399.90,
                 'score': 94,
             },
@@ -6789,7 +6788,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'cargo': 'Diretora Pedagógica',
                 'dor': 'Ambiente virtual e laboratório de informática travando por falta de banda dedicada e Wi-Fi 6.',
                 'operadora': 'Vivo Fibra',
-                'plano': 'DigitalNet B2B Link Dedicado Pro',
+                'plano': 'Fibra B2B Link Dedicado Pro',
                 'valor': 399.90,
                 'score': 95,
             },
@@ -6859,8 +6858,8 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             lead_item['icebreaker_optin'] = cls.generate_anti_ban_whatsapp_script(temp_lead)
             lead_item['dossie_comercial'] = json.dumps({
                 'perfil_decisor': f"{nome_contato} ({t['cargo']}) busca estabilidade de rede e atendimento direto sem burocracia.",
-                'vantagem_digitalnet': 'Fibra óptica com Wi-Fi 6 de alta densidade + suporte presencial 24h com equipe em Campo Grande.',
-                'angulo_venda': f"Focar na eliminação da dor de '{t['dor']}' demonstrando que a DigitalNet já atende vizinhos nesta mesma rua.",
+                'vantagem_competitiva': 'Fibra óptica com Wi-Fi 6 de alta densidade + suporte presencial 24h com equipe em Campo Grande.',
+                'angulo_venda': f"Focar na eliminação da dor de '{t['dor']}' demonstrando que a rede óptica já atende vizinhos nesta mesma rua.",
                 'perfil_territorial': f"Região {info_bairro.get('regiao_urbana', 'Urbana')} ({info_bairro.get('macrozona', '')}). Perfil: {info_bairro.get('perfil_predominante', 'Comercial')}.",
             }, ensure_ascii=False)
 
@@ -7029,7 +7028,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
     def convert_lead_to_client(cls, lead: Lead, plano: Optional[Plano] = None) -> Cliente:
         """
         Converte o lead em Cliente efetivo e cria automaticamente o Pedido
-        da assinatura da DigitalNet MS vinculado ao Plano oficial e com itens totalizados.
+        da assinatura vinculado ao Plano oficial e com itens totalizados.
         """
         if lead.cliente_convertido_id:
             cliente_existente = db.session.get(Cliente, lead.cliente_convertido_id)
@@ -7124,7 +7123,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             metodo_pagamento='pix',
             valor_total=valor,
             descricao=desc_pedido,
-            observacoes="Ativação inicial de fibra óptica DigitalNet MS."
+            observacoes="Ativação inicial de fibra óptica via Leads Prospector."
         )
         db.session.add(pedido)
         db.session.flush()
@@ -7161,8 +7160,8 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'tecnica': 'Ponte de Transição / Teste em Paralelo',
                 'script_whatsapp': (
                     f"Entendo perfeitamente! Ninguém gosta de pagar multas desnecessárias.\n\n"
-                    f"O que muitos clientes aqui do {bairro} fazem é instalar a DigitalNet nos últimos 60 dias da fidelidade como 'link de segurança', "
-                    f"aproveitando a nossa condição de R$ 99,90 nos primeiros 3 meses. Assim você não fica sem internet se a {operadora} cair "
+                    f"O que muitos clientes aqui do {bairro} fazem é instalar a nossa fibra óptica nos últimos 60 dias da fidelidade como 'link de segurança', "
+                    f"aproveitando a condição de R$ 99,90 nos primeiros 3 meses. Assim você não fica sem internet se a {operadora} cair "
                     f"e faz a transição 100% suave sem pagar multa. Que tal agendarmos a viabilidade?"
                 ),
             },
@@ -7172,16 +7171,16 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'tecnica': 'Custo por Mega & Custo de Queda',
                 'script_whatsapp': (
                     f"Compreendo! Se olharmos só o valor final parece similar, mas na prática você está pagando mais caro por Mega.\n\n"
-                    f"Na DigitalNet você recebe {plano} com dobro de upload e roteador Wi-Fi 6 de alta densidade incluso em comodato (que a concorrência cobra R$ 25/mês de aluguel). "
+                    f"Conosco você recebe {plano} com dobro de upload e roteador Wi-Fi 6 de alta densidade incluso em comodato (que a concorrência cobra R$ 25/mês de aluguel). "
                     f"Além disso, uma única hora sem internet na sua operação custa muito mais que a diferença de mensalidade. Faz sentido dar uma olhada na comparação?"
                 ),
             },
             'marca': {
-                'titulo': 'Objeção: "Nunca ouvi falar da DigitalNet, prefiro as grandes teles"',
+                'titulo': 'Objeção: "Não conheço a operadora, prefiro as grandes teles"',
                 'diagnostico': 'Insegurança em relação à estabilidade e suporte.',
                 'tecnica': 'Autoridade Local + Atendimento Humanizado',
                 'script_whatsapp': (
-                    f"Ótimo ponto! A grande diferença é que a DigitalNet é uma operadora com rede própria autorizada pela Anatel (AS61588) e mais de 700 condomínios atendidos em Campo Grande.\n\n"
+                    f"Ótimo ponto! A grande diferença é que atuamos com rede própria autorizada pela Anatel e mais de 700 condomínios atendidos em Campo Grande.\n\n"
                     f"Enquanto nas teles nacionais você fala com robôs no 0800 e espera 3 dias por um técnico de fora, a nossa equipe de suporte é 100% própria, local e 24h aqui na cidade. "
                     f"Se precisar de suporte, o técnico chega no mesmo dia. Vale a pena testar a estabilidade local!"
                 ),
@@ -7193,7 +7192,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'script_whatsapp': (
                     f"Excelente saber que está funcionando! Posso te fazer uma pergunta rápida de 30 segundos?\n\n"
                     f"Quando a sua internet atual oscila nos horários de pico, qual é o plano de contingência da {lead.empresa} para não parar os computadores e maquininhas? "
-                    f"A DigitalNet pode ficar como sua rota principal com Wi-Fi 6 de alta velocidade para que sua equipe nunca mais sofra lentidão. Posso te passar um comparativo?"
+                    f"Nossa fibra pode ficar como sua rota principal com Wi-Fi 6 de alta velocidade para que sua equipe nunca mais sofra lentidão. Posso te passar um comparativo?"
                 ),
             },
         }
@@ -7800,7 +7799,7 @@ body {
 }
 
 /* ==========================================================================
-   DIGITALNET MS - TEMA AZUL TELECOM & AMARELO FIBRA
+   LEADS PROSPECTOR - TEMA AZUL TELECOM & AMARELO FIBRA
    ========================================================================== */
 
 :root {
@@ -7839,7 +7838,7 @@ body {
   box-shadow: 0 2px 4px rgba(245, 158, 11, 0.25);
 }
 
-/* Botões com Identidade DigitalNet */
+/* Botões com Identidade Leads Prospector */
 .btn-dn-blue {
   background: linear-gradient(135deg, var(--dn-blue), #143e79);
   color: #ffffff !important;
@@ -8772,7 +8771,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-bs-theme', theme);
-    localStorage.setItem('digitalnet_theme', theme);
+    localStorage.setItem('leads_prospector_theme', theme);
 
     if (themeIcon) {
       if (theme === 'dark') {
@@ -8791,7 +8790,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Sincronizar estado inicial dos botões com o tema ativo
-  const currentTheme = document.documentElement.getAttribute('data-bs-theme') || localStorage.getItem('digitalnet_theme') || 'light';
+  const currentTheme = document.documentElement.getAttribute('data-bs-theme') || localStorage.getItem('leads_prospector_theme') || 'light';
   applyTheme(currentTheme);
 
   function toggleTheme() {
@@ -8813,7 +8812,7 @@ OMNI_EOF
 cat > 'app/templates/admin/grupos/form.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}{{ titulo }} - Administração DigitalNet{% endblock %}
+{% block title %}{{ titulo }} - Administração Leads Prospector{% endblock %}
 
 {% block content %}
 <div class="mb-4">
@@ -8921,7 +8920,7 @@ OMNI_EOF
 cat > 'app/templates/admin/grupos/index.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}Grupos de Acesso - Administração DigitalNet{% endblock %}
+{% block title %}Grupos de Acesso - Administração Leads Prospector{% endblock %}
 
 {% block content %}
 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-3 border-bottom gap-3">
@@ -9094,7 +9093,7 @@ OMNI_EOF
 cat > 'app/templates/admin/planos/form.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}{{ titulo }} - Administração DigitalNet{% endblock %}
+{% block title %}{{ titulo }} - Administração Leads Prospector{% endblock %}
 
 {% block content %}
 <div class="mb-4">
@@ -9204,7 +9203,7 @@ cat > 'app/templates/admin/planos/form.html' <<'OMNI_EOF'
                 <div class="invalid-feedback">{{ error }}</div>
               {% endfor %}
             </div>
-            <small class="text-muted">Velocidade de subida (geralmente metade do download na DigitalNet).</small>
+            <small class="text-muted">Velocidade de subida (geralmente metade do download).</small>
           </div>
 
           <div class="col-md-4">
@@ -9242,7 +9241,7 @@ cat > 'app/templates/admin/planos/form.html' <<'OMNI_EOF'
                 <div class="invalid-feedback">{{ error }}</div>
               {% endfor %}
             </div>
-            <small class="text-muted">Padrão DigitalNet: 12 meses (PF) e 24 meses (PJ).</small>
+            <small class="text-muted">Padrão: 12 meses (PF) e 24 meses (PJ).</small>
           </div>
         </div>
       </div>
@@ -9417,7 +9416,7 @@ OMNI_EOF
 cat > 'app/templates/admin/planos/index.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}Planos de Banda Larga - Administração DigitalNet{% endblock %}
+{% block title %}Planos de Banda Larga - Administração Leads Prospector{% endblock %}
 
 {% block content %}
 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 border-bottom gap-3">
@@ -9430,7 +9429,7 @@ cat > 'app/templates/admin/planos/index.html' <<'OMNI_EOF'
     </nav>
     <h2 class="fw-bold mb-1 text-dark">Catálogo de Planos de Banda Larga</h2>
     <p class="text-muted mb-0 small">
-      Gerencie os planos residenciais (Pessoa Física) e corporativos (Pessoa Jurídica) oferecidos pela DigitalNet MS
+      Gerencie os planos residenciais (Pessoa Física) e corporativos (Pessoa Jurídica) oferecidos no Leads Prospector
     </p>
   </div>
   <div class="d-flex flex-wrap gap-2">
@@ -9441,9 +9440,9 @@ cat > 'app/templates/admin/planos/index.html' <<'OMNI_EOF'
       <i class="bi bi-shield-lock me-1"></i> Grupos
     </a>
     <form action="{{ url_for('admin.planos_sincronizar_padrao') }}" method="POST" class="d-inline"
-          onsubmit="return confirm('Deseja restaurar/sincronizar todos os 9 planos padrão oficiais da DigitalNet (PF e PJ)?');">
+          onsubmit="return confirm('Deseja restaurar/sincronizar todos os 9 planos padrão oficiais (PF e PJ)?');">
       {% if csrf_token is defined and csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endif %}
-      <button type="submit" class="btn btn-outline-primary shadow-sm" title="Restaura os planos padrão oficiais dos sites PF e PJ">
+      <button type="submit" class="btn btn-outline-primary shadow-sm" title="Restaura os planos padrão oficiais PF e PJ">
         <i class="bi bi-arrow-repeat me-1"></i> Sincronizar Planos Oficiais
       </button>
     </form>
@@ -9527,13 +9526,13 @@ cat > 'app/templates/admin/planos/index.html' <<'OMNI_EOF'
   </div>
   <div class="flex-grow-1">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-      <h6 class="fw-bold mb-1 text-dark">Portais Oficiais da DigitalNet Telecomunicações (Campo Grande - MS)</h6>
+      <h6 class="fw-bold mb-1 text-dark">Portais de Planos de Telecomunicações (Campo Grande - MS)</h6>
       <div class="d-flex gap-2">
-        <a href="https://digitalnetms.com.br/clientepf/" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-info">
-          <i class="bi bi-box-arrow-up-right me-1"></i> Portal Residencial (PF)
+        <a href="{{ url_for('admin.planos', tipo='PF') }}" class="btn btn-sm btn-outline-info">
+          <i class="bi bi-house-door me-1"></i> Planos Residenciais (PF)
         </a>
-        <a href="https://digitalnetms.com.br/clientepj/" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-warning text-dark">
-          <i class="bi bi-box-arrow-up-right me-1"></i> Portal Corporativo (PJ)
+        <a href="{{ url_for('admin.planos', tipo='PJ') }}" class="btn btn-sm btn-outline-warning text-dark">
+          <i class="bi bi-building me-1"></i> Planos Corporativos (PJ)
         </a>
       </div>
     </div>
@@ -9751,7 +9750,7 @@ cat > 'app/templates/admin/planos/index.html' <<'OMNI_EOF'
     <form action="{{ url_for('admin.planos_sincronizar_padrao') }}" method="POST" class="d-inline">
                     {% if csrf_token is defined and csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>{% endif %}
                     <button type="submit" class="btn btn-sm btn-outline-primary">
-                      <i class="bi bi-arrow-repeat me-1"></i> Carregar Planos Oficiais DigitalNet
+                      <i class="bi bi-arrow-repeat me-1"></i> Carregar Planos Oficiais
                     </button>
                   </form>
                 </div>
@@ -9770,7 +9769,7 @@ OMNI_EOF
 cat > 'app/templates/admin/usuarios/form.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}{{ titulo }} - Administração DigitalNet{% endblock %}
+{% block title %}{{ titulo }} - Administração Leads Prospector{% endblock %}
 
 {% block content %}
 <div class="mb-4">
@@ -9828,7 +9827,7 @@ cat > 'app/templates/admin/usuarios/form.html' <<'OMNI_EOF'
             <label for="email" class="form-label">{{ form.email.label.text }}</label>
             <div class="input-group">
               <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
-              {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="usuario@digitalnetms.com.br") }}
+              {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="usuario@leadsprospector.com.br") }}
               {% for error in form.email.errors %}
                 <div class="invalid-feedback">{{ error }}</div>
               {% endfor %}
@@ -9965,7 +9964,7 @@ OMNI_EOF
 cat > 'app/templates/admin/usuarios/index.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}Administração de Usuários - DigitalNet{% endblock %}
+{% block title %}Administração de Usuários - Leads Prospector{% endblock %}
 
 {% block content %}
 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-3 border-bottom gap-3">
@@ -10245,7 +10244,7 @@ cat > 'app/templates/auth/login.html' <<'OMNI_EOF'
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - DigitalNet-Prospector</title>
+  <title>Login - Leads Prospector</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10256,7 +10255,7 @@ cat > 'app/templates/auth/login.html' <<'OMNI_EOF'
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script>
     (function () {
-      const savedTheme = localStorage.getItem('digitalnet_theme') || 'light';
+      const savedTheme = localStorage.getItem('leads_prospector_theme') || 'light';
       document.documentElement.setAttribute('data-bs-theme', savedTheme);
     })();
   </script>
@@ -10347,7 +10346,7 @@ cat > 'app/templates/auth/register.html' <<'OMNI_EOF'
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadastrar Usuário - DigitalNet-Prospector</title>
+  <title>Cadastrar Usuário - Leads Prospector</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10358,7 +10357,7 @@ cat > 'app/templates/auth/register.html' <<'OMNI_EOF'
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script>
     (function () {
-      const savedTheme = localStorage.getItem('digitalnet_theme') || 'light';
+      const savedTheme = localStorage.getItem('leads_prospector_theme') || 'light';
       document.documentElement.setAttribute('data-bs-theme', savedTheme);
     })();
   </script>
@@ -10483,7 +10482,7 @@ cat > 'app/templates/base.html' <<'OMNI_EOF'
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}DigitalNet - Gestão de Telecom{% endblock %}</title>
+    <title>{% block title %}Leads Prospector - Gestão de Telecom{% endblock %}</title>
 
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10509,7 +10508,7 @@ cat > 'app/templates/base.html' <<'OMNI_EOF'
     <!-- Dark Mode FOUT Prevention -->
     <script>
       (function () {
-        const savedTheme = localStorage.getItem('digitalnet_theme') || 'light';
+        const savedTheme = localStorage.getItem('leads_prospector_theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', savedTheme);
       })();
     </script>
@@ -10526,14 +10525,14 @@ cat > 'app/templates/base.html' <<'OMNI_EOF'
     <!-- SIDEBAR DE NAVEGAÇÃO -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <a href="{{ url_for('main.dashboard') }}" class="brand-logo" title="DigitalNet MS - Telecom Inteligência">
+            <a href="{{ url_for('main.dashboard') }}" class="brand-logo" title="Leads Prospector - Telecom Inteligência">
                 <div class="brand-icon"
                      style="background: linear-gradient(135deg, #1b4f99, #0f2d57); box-shadow: 0 4px 12px rgba(27, 79, 153, 0.4);">
                     <i class="bi bi-broadcast-pin" style="color: #fbbf24;"></i>
                 </div>
                 <div class="brand-text">
-                    <div style="line-height: 1.1; font-weight: 800; letter-spacing: -0.02em;">Digital<span
-                            style="color: #fbbf24;">Net</span></div>
+                    <div style="line-height: 1.1; font-weight: 800; letter-spacing: -0.02em;">Leads<span
+                            style="color: #fbbf24;">Prospector</span></div>
                     <small style="font-size: 0.7rem; color: #94a3b8; font-weight: 500;">Telecom Inteligência</small>
                 </div>
             </a>
@@ -11018,7 +11017,7 @@ OMNI_EOF
 cat > 'app/templates/clientes/form.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}{{ titulo }} - DigitalNet-Prospector{% endblock %}
+{% block title %}{{ titulo }} - Leads Prospector{% endblock %}
 
 {% block content %}
 <div class="mb-4">
@@ -11197,7 +11196,7 @@ OMNI_EOF
 cat > 'app/templates/clientes/index.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}Clientes - DigitalNet MS{% endblock %}
+{% block title %}Clientes - Leads Prospector{% endblock %}
 
 {% block content %}
 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 border-bottom gap-3">
@@ -11567,7 +11566,7 @@ OMNI_EOF
 cat > 'app/templates/dashboard/index.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}Painel de Controle - Atendimento & Monitoramento - DigitalNet-Prospector{% endblock %}
+{% block title %}Painel de Controle - Atendimento & Monitoramento - Leads Prospector{% endblock %}
 
 {% block content %}
 <!-- HEADER & AÇÕES RÁPIDAS -->
@@ -11998,7 +11997,7 @@ cat > 'app/templates/dashboard/index.html' <<'OMNI_EOF'
     </div>
   </div>
 
-  <!-- MIX DE PLANOS & PORTFÓLIO DIGITALNET -->
+  <!-- MIX DE PLANOS & PORTFÓLIO LEADS PROSPECTOR -->
   <div class="col-lg-6">
     <div class="card-custom h-100">
       <div class="card-header bg-white border-bottom p-3 d-flex align-items-center justify-content-between">
@@ -12126,7 +12125,7 @@ OMNI_EOF
 cat > 'app/templates/leads/detail.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}Dossiê Comercial & Central WhatsApp - {{ lead.empresa }} - DigitalNet MS{% endblock %}
+{% block title %}Dossiê Comercial & Central WhatsApp - {{ lead.empresa }} - Leads Prospector{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-0">
@@ -12157,7 +12156,7 @@ cat > 'app/templates/leads/detail.html' <<'OMNI_EOF'
     </div>
   </div>
 
-  <!-- HERO BANNER DO LEAD COM IDENTIDADE DIGITALNET -->
+  <!-- HERO BANNER DO LEAD COM IDENTIDADE LEADS PROSPECTOR -->
   <div class="dn-hero-banner mb-4">
     <div class="row align-items-center">
       <div class="col-lg-8">
@@ -12333,27 +12332,27 @@ cat > 'app/templates/leads/detail.html' <<'OMNI_EOF'
           </div>
 
           <div class="mb-3">
-            <label class="small fw-bold text-muted text-uppercase d-block mb-1">Viabilidade Óptica no Bairro (DigitalNet MS):</label>
+            <label class="small fw-bold text-muted text-uppercase d-block mb-1">Viabilidade Óptica no Bairro (Leads Prospector):</label>
             <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-3 border">
               <div class="p-2 rounded-circle bg-success bg-opacity-10 text-success">
                 <i class="bi bi-check-circle-fill fs-4"></i>
               </div>
               <div>
                 <strong class="text-dark d-block">Porta Óptica Confirmada no Bairro {{ lead.bairro }}</strong>
-                <div class="text-muted" style="font-size: 0.75rem;">Rede FTTH própria AS61588. Instalação rápida inclusa sem obras.</div>
+                <div class="text-muted" style="font-size: 0.75rem;">Rede FTTH própria. Instalação rápida inclusa sem obras.</div>
               </div>
             </div>
           </div>
 
           <div class="border-top pt-3">
-            <label class="small fw-bold text-muted text-uppercase d-block mb-1">Plano Recomendado DigitalNet:</label>
+            <label class="small fw-bold text-muted text-uppercase d-block mb-1">Plano Recomendado:</label>
             <h5 class="fw-bold mb-1" style="color: var(--dn-blue);">{{ lead.plano_sugerido }}</h5>
             <div class="text-muted small">Valor mensal: <strong class="text-dark fs-6">R$ {{ "%.2f"|format(lead.valor_mensal_sugerido)|replace('.', ',') }}</strong> com roteador Wi-Fi 6 em comodato.</div>
           </div>
         </div>
       </div>
 
-      <!-- FORMULÁRIO DE CONVERSÃO EM CLIENTE (DIGITALNET THEMED) -->
+      <!-- FORMULÁRIO DE CONVERSÃO EM CLIENTE (LEADS PROSPECTOR THEMED) -->
       <div class="card border-0 shadow-sm" style="border-top: 4px solid var(--dn-yellow) !important;">
         <div class="card-header bg-white py-3 border-bottom">
           <div class="d-flex align-items-center gap-2">
@@ -12369,7 +12368,7 @@ cat > 'app/templates/leads/detail.html' <<'OMNI_EOF'
           <form action="{{ url_for('leads.converter_cliente', lead_id=lead.id) }}" method="POST">
             <div class="mb-3">
               <label class="form-label small fw-bold text-dark d-flex justify-content-between align-items-center">
-                <span>Plano Oficial da DigitalNet Contratado *</span>
+                <span>Plano Oficial Contratado *</span>
                 <span class="badge bg-light text-primary border" id="badgePlanoTipo">Residencial / B2B</span>
               </label>
               <select name="plano_id" class="form-select bg-light fw-semibold" id="selectPlano">
@@ -12485,7 +12484,7 @@ OMNI_EOF
 cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}Radar de Leads Telecom & Expansão de Fibra - DigitalNet MS{% endblock %}
+{% block title %}Radar de Leads Telecom & Expansão de Fibra - Leads Prospector{% endblock %}
 
 {% block extra_css %}
 <!-- Leaflet CSS para o Mapa de Calor -->
@@ -12552,13 +12551,13 @@ cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
 {% block content %}
 <div class="container-fluid px-0">
 
-  <!-- CABEÇALHO COM IDENTIDADE DIGITALNET -->
+  <!-- CABEÇALHO COM IDENTIDADE LEADS PROSPECTOR -->
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
     <div>
       <div class="d-flex align-items-center gap-2 flex-wrap">
         <h1 class="h3 mb-0 dn-header-title">Radar de Prospecção & Expansão de Fibra</h1>
         <span class="badge py-2 px-3 dn-badge-corp rounded-pill">
-          <i class="bi bi-broadcast-pin text-warning me-1"></i> DigitalNet MS &bull; Campo Grande
+          <i class="bi bi-broadcast-pin text-warning me-1"></i> Leads Prospector &bull; Campo Grande
         </span>
       </div>
       <p class="text-muted small mb-0 mt-1">
@@ -12588,7 +12587,7 @@ cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
           <div class="col-md-4">
             <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.08);">
               <strong class="text-warning d-block mb-1"><i class="bi bi-geo-alt-fill me-1"></i>1. Viabilidade por Vizinhos:</strong>
-              Prospecta apenas em quarteirões onde a DigitalNet já possui clientes ativos. Custo de instalação mínimo e viabilidade técnica garantida no poste.
+              Prospecta apenas em quarteirões onde a rede já possui clientes ativos. Custo de instalação mínimo e viabilidade técnica garantida no poste.
             </div>
           </div>
           <div class="col-md-4">
@@ -12753,7 +12752,7 @@ cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
             </div>
             <div>
               <h5 class="fw-bold mb-0 text-dark">Clusters de Cobertura Óptica</h5>
-              <small class="text-muted">Bairros com clientes ativos DigitalNet</small>
+              <small class="text-muted">Bairros com clientes ativos na rede</small>
             </div>
           </div>
           <span class="badge py-2 px-3 rounded-pill bg-light text-dark border fw-semibold">
@@ -12803,7 +12802,7 @@ cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
     </div>
   </div>
 
-  <!-- MÉTRICAS DO FUNIL DE LEADS (KPI CARDS DIGITALNET) -->
+  <!-- MÉTRICAS DO FUNIL DE LEADS (KPI CARDS LEADS PROSPECTOR) -->
   <div class="row g-3 mb-4">
     <div class="col-xl-2 col-md-4 col-6">
       <div class="dn-kpi-card" style="border-top: 3px solid var(--dn-blue);">
@@ -13067,13 +13066,13 @@ cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
                         </div>
                       </div>
 
-                      <!-- BLOCO 3: OFERTA RECOMENDADA DIGITALNET -->
+                      <!-- BLOCO 3: OFERTA RECOMENDADA -->
                       <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
                         <div class="card-header collapsible-header py-2 px-3 bg-white" data-bs-toggle="collapse" data-bs-target="#collapseOferta-{{ l.id }}" style="cursor: pointer;">
                           <div class="d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-2">
                               <i class="bi bi-router-fill text-primary"></i>
-                              <span class="fw-bold small text-dark">Oferta Recomendada DigitalNet</span>
+                              <span class="fw-bold small text-dark">Oferta Recomendada</span>
                             </div>
                             <span class="fw-bold text-success small">R$ {{ "%.2f"|format(l.valor_mensal_sugerido)|replace('.', ',') }}/mês</span>
                           </div>
@@ -13124,7 +13123,7 @@ cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
 
 </div>
 
-<!-- MODAL PROSPECTAR COM IA (TEMA DIGITALNET) -->
+<!-- MODAL PROSPECTAR COM IA (TEMA LEADS PROSPECTOR) -->
 <div class="modal fade" id="modalProspectar" tabindex="-1" aria-labelledby="modalProspectarLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content border-0 shadow-lg">
@@ -13137,7 +13136,7 @@ cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
         </div>
         <div class="modal-body p-4">
           <p class="small text-muted mb-3">
-            O motor de IA identifica novos clientes potenciais no mesmo bairro onde a <strong>DigitalNet MS</strong> já possui rede óptica ativa, garantindo viabilidade e gerando o script anti-ban para WhatsApp.
+            O motor de IA identifica novos clientes potenciais no mesmo bairro onde o <strong>Leads Prospector</strong> já possui rede óptica ativa mapeada, garantindo viabilidade e gerando o script anti-ban para WhatsApp.
           </p>
 
           <div class="mb-3">
@@ -13184,13 +13183,13 @@ cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
   </div>
 </div>
 
-<!-- OFFCANVAS: EMPRESAS NO RAIO DO NÓ ÓPTICO DIGITALNET -->
+<!-- OFFCANVAS: EMPRESAS NO RAIO DO NÓ ÓPTICO -->
 <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasNodoEmpresas" aria-labelledby="offcanvasNodoLabel" style="width: 440px; max-width: 95vw; z-index: 1070;">
   <div class="offcanvas-header text-white" style="background: linear-gradient(135deg, #0f2d57, #1b4f99); border-bottom: 2px solid #fbbf24;">
     <div>
       <div class="d-flex align-items-center gap-2">
         <span class="badge py-1 px-2 rounded-pill" style="background: #fbbf24; color: #0f172a; font-weight: 700; font-size: 0.65rem;">
-          <i class="bi bi-broadcast-pin me-1"></i> Nó Óptico DigitalNet
+          <i class="bi bi-broadcast-pin me-1"></i> Nó Óptico Leads Prospector
         </span>
         <span class="badge bg-white bg-opacity-20 text-white" style="font-size: 0.65rem;" id="offcanvasBadgeViabilidade">Viabilidade 99%</span>
       </div>
@@ -13321,7 +13320,7 @@ cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
         const popupContent = `
           <div style="width: 260px;">
             <div style="background: linear-gradient(135deg, #0f2d57, #1b4f99); color: white; padding: 12px 14px;">
-              <small style="color: #fbbf24; text-transform: uppercase; font-weight: 700; font-size: 0.7rem;">Nó de Fibra DigitalNet</small>
+              <small style="color: #fbbf24; text-transform: uppercase; font-weight: 700; font-size: 0.7rem;">Nó de Fibra Leads Prospector</small>
               <h6 style="margin: 0; font-weight: 700; font-size: 1rem;">${pt.bairro}</h6>
             </div>
             <div style="padding: 12px 14px; background: white; font-size: 0.85rem;">
@@ -13709,14 +13708,14 @@ cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
   });
 
   // =========================================================================
-  // HOOK DE INTEGRAÇÃO & CARREGAMENTO DINÂMICO: NÓ DE FIBRA DIGITALNET
+  // HOOK DE INTEGRAÇÃO & CARREGAMENTO DINÂMICO: NÓ DE FIBRA LEADS PROSPECTOR
   // =========================================================================
   window.carregarEmpresasDoNodo = async function(bairroEscaped, lat, lng) {
     const bairro = unescape(bairroEscaped);
-    console.log(`[DigitalNet] Carregando empresas do Nó Óptico: ${bairro} (${lat}, ${lng})`);
+    console.log(`[LeadsProspector] Carregando empresas do Nó Óptico: ${bairro} (${lat}, ${lng})`);
 
-    // 1. Dispara evento customizado da DigitalNet
-    const event = new CustomEvent('digitalnet:nodo_fibra_clicado', {
+    // 1. Dispara evento customizado do Leads Prospector
+    const event = new CustomEvent('leadsprospector:nodo_fibra_clicado', {
       detail: { bairro: bairro, lat: lat, lng: lng }
     });
     window.dispatchEvent(event);
@@ -13922,7 +13921,7 @@ cat > 'app/templates/leads/index.html' <<'OMNI_EOF'
       toast.style.cssText = 'position: fixed; bottom: 24px; right: 24px; z-index: 2000; background: linear-gradient(135deg, #0f2d57, #1b4f99); color: white; padding: 12px 18px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-size: 0.875rem; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(251, 191, 36, 0.4); transition: opacity 0.3s ease;';
       document.body.appendChild(toast);
     }
-    toast.innerHTML = `<i class="bi bi-broadcast text-warning fs-5"></i> <div><strong>Nó DigitalNet</strong><div style="font-size: 0.78rem; opacity: 0.9;">${mensagem}</div></div>`;
+    toast.innerHTML = `<i class="bi bi-broadcast text-warning fs-5"></i> <div><strong>Nó Leads Prospector</strong><div style="font-size: 0.78rem; opacity: 0.9;">${mensagem}</div></div>`;
     toast.style.opacity = '1';
     toast.style.display = 'flex';
     clearTimeout(window._nodoToastTimer);
@@ -14090,7 +14089,7 @@ cat > 'app/templates/pedidos/detail.html' <<'OMNI_EOF'
             <div class="brand-icon" style="width: 36px; height: 36px; font-size: 1.1rem;">
               <i class="bi bi-layers-fill"></i>
             </div>
-            <h4 class="fw-bold mb-0 text-dark">DigitalNet-Prospector</h4>
+            <h4 class="fw-bold mb-0 text-dark">Leads Prospector</h4>
           </div>
           <p class="text-muted small mb-0">Comprovante e Detalhes do Pedido Comercial</p>
         </div>
@@ -14146,7 +14145,7 @@ cat > 'app/templates/pedidos/detail.html' <<'OMNI_EOF'
           </div>
           {% if pedido.plano %}
           <div class="mb-2 p-2 rounded-2 border bg-light">
-            <span class="text-muted small d-block">Plano DigitalNet Vinculado:</span>
+            <span class="text-muted small d-block">Plano Vinculado:</span>
             <div class="d-flex align-items-center gap-2 mt-1">
               <span class="badge bg-primary text-white fs-6">
                 <i class="bi bi-router-fill me-1"></i>{{ pedido.plano.nome }}
@@ -14249,7 +14248,7 @@ cat > 'app/templates/pedidos/detail.html' <<'OMNI_EOF'
 
       <!-- FOOTER NOTE -->
       <div class="pt-4 border-top text-center text-muted small">
-        <p class="mb-0">Documento gerado automaticamente pelo sistema DigitalNet-Prospector.</p>
+        <p class="mb-0">Documento gerado automaticamente pelo sistema Leads Prospector.</p>
       </div>
     </div>
   </div>
@@ -14261,7 +14260,7 @@ OMNI_EOF
 cat > 'app/templates/pedidos/form.html' <<'OMNI_EOF'
 {% extends "base.html" %}
 
-{% block title %}{{ titulo }} - DigitalNet-Prospector{% endblock %}
+{% block title %}{{ titulo }} - Leads Prospector{% endblock %}
 
 {% block content %}
 <div class="mb-4">
@@ -15217,17 +15216,17 @@ OMNI_EOF
 
 # --- docs/NOTES.md ---
 cat > 'docs/NOTES.md' <<'OMNI_EOF'
-# Notas de Desenvolvimento e Arquitetura - DigitalNet MS Prospector
+# Notas de Desenvolvimento e Arquitetura - Leads Prospector
 
 **Data de Consolidação:** 11 de Outubro de 2026  
-**Sistema:** DigitalNet MS - Radar de Leads Telecom, Gestão Comercial & Controle de Acesso (RBAC)  
+**Sistema:** Leads Prospector - Radar de Leads Telecom, Gestão Comercial & Controle de Acesso (RBAC)  
 **Ambiente:** Linux (Ubuntu 22.04+) / Python 3.11+ / Flask 3.1 / SQLite 3 (com suporte a R*Tree) / PostgreSQL 16 + PostGIS  
 
 ---
 
 ## 1. Visão Geral e Propósito do Sistema
 
-A aplicação foi projetada como uma plataforma integrada para a operadora **DigitalNet MS** em Campo Grande - MS, combinando três pilares essenciais:
+A aplicação foi projetada como uma plataforma integrada de **Leads Prospector** em Campo Grande - MS, combinando três pilares essenciais:
 
 1. **Gestão Operacional de Telecom:** Cadastro de clientes corporativos e residenciais, histórico de conexões, emissão de pedidos com totalização automática e controle de status de instalação.
 2. **Controle de Acesso Baseado em Papéis (RBAC):** Estrutura hierárquica dividida em Administrador Master, Líder Técnico e Agente Comercial, com suporte a herança dinâmica de papéis via grupos de acesso configuráveis.
@@ -15289,7 +15288,7 @@ A aplicação foi projetada como uma plataforma integrada para a operadora **Dig
   - *Clientes:* Exibição de dossiê cadastral, atalho para WhatsApp e histórico completo de pedidos vinculados.
   - *Leads:* Acordeão com dados territoriais da CTO, script anti-ban e botão de conversão direta.
 
-### Fase 8: Catálogo de Planos DigitalNet & Blindagem do Setup
+### Fase 8: Catálogo de Planos & Blindagem do Setup
 - Criação do modelo [`Plano`](app/models/plano.py) cobrindo planos Residenciais (PF) e Corporativos (PJ), com migração Alembic `batch_alter_table`.
 - Seeding inicial com os planos oficiais da operadora (Fibra 500, 700, 900, DigiCorp e Link Dedicado Pro).
 - Auto-preenchimento no formulário de pedidos: integração via `<datalist id="planosCatalog">` que preenche a descrição e o valor unitário de tabela automaticamente ao selecionar um plano.
@@ -15332,7 +15331,7 @@ A aplicação foi projetada como uma plataforma integrada para a operadora **Dig
 - **Restrição Territorial Estrita para o Estado de MS:**
   - Validador `validate_estado` implementado em `ClienteForm` ([`app/forms/cliente_forms.py`](app/forms/cliente_forms.py)), bloqueando cadastros de fora de Mato Grosso do Sul.
   - Valores padrão do formulário definidos para `cidade='Campo Grande'` e `estado='MS'`.
-  - Atualização do comando `flask seed` em `app/cli.py`, removendo os 4 clientes e pedidos residuais de fora do estado (São Paulo, Curitiba, Salvador) e fixando 100% da semente em Campo Grande - MS com planos oficiais da DigitalNet.
+  - Atualização do comando `flask seed` em `app/cli.py`, removendo os 4 clientes e pedidos residuais de fora do estado (São Paulo, Curitiba, Salvador) e fixando 100% da semente em Campo Grande - MS com planos oficiais do catálogo.
 
 ### Fase 12: Sidebar Compacta com Ícones & Alternância de Tema Claro e Escuro (Dark Mode)
 - **Menu Lateral Compacto (Mini-Sidebar):**
@@ -15455,7 +15454,7 @@ app_clientes.db (SQLite)
    - Acesso administrativo ao catálogo de planos.
    - Criação e validação de planos residenciais (PF) e corporativos (PJ).
    - Bloqueio de nomes duplicados e alternância de status ativo/inativo.
-   - Seeding dos 9 planos oficiais da DigitalNet MS.
+   - Seeding dos 9 planos oficiais do catálogo.
    - Relacionamento bidirecional `Plano <-> Pedido` e propriedade `plano.pedidos`.
    - Navegação integrada entre as abas de Usuários, Grupos e Planos no painel.
 
@@ -119533,7 +119532,7 @@ def main():
             f"Cliente Corporativo RFB (Situação: ATIVA). CNAE: {cnae}. "
             f"Contato Decisor: {nome_contato} ({cargo_contato}). "
             f"Operadora anterior: {operadora}. "
-            f"Plano DigitalNet: {plano} (Lead Score: {score}/100)."
+            f"Plano Sugerido: {plano} (Lead Score: {score}/100)."
         )
 
         cliente_dado = (
@@ -119595,7 +119594,7 @@ OMNI_EOF
 cat > 'scripts/gerar_audio_demonstracao.py' <<'OMNI_EOF'
 #!/usr/bin/env python3
 """
-Gera a trilha de áudio narrada para o vídeo de demonstração do DigitalLeads.
+Gera a trilha de áudio narrada para o vídeo de demonstração do Leads Prospector.
 Utiliza a voz clonada 'Considera' (id: bf91cd6a) via VoiceStudio local.
 """
 
@@ -119637,10 +119636,10 @@ SCRIPT_SEGMENTS = [
         )
     },
     {
-        "id": "digitalleads_apresentacao",
+        "id": "leads_prospector_apresentacao",
         "pause_after": 0.7,
         "text": (
-            "O resultado é o DigitalLeads: um CRM com foco em prospecção B2B geolocalizada para a DigitalNet Telecomunicações. "
+            "O resultado é o Leads Prospector: um CRM com foco em prospecção B2B geolocalizada para operadoras de telecomunicações. "
             "A ferramenta cruza a base oficial de 177 mil empresas ativas da Receita Federal com as camadas geográficas em GeoJSON de Campo Grande."
         )
     },
@@ -119649,7 +119648,7 @@ SCRIPT_SEGMENTS = [
         "pause_after": 0.7,
         "text": (
             "Na primeira funcionalidade, temos o Radar de Leads e expansão da rede óptica. "
-            "O mapa mostra manchas térmicas de oportunidades e os pontos de fibra da DigitalNet. "
+            "O mapa mostra manchas térmicas de oportunidades e os pontos de fibra óptica ativa. "
             "Clicando em um nó, o sistema abre uma gaveta lateral e lista todas as empresas vizinhas com viabilidade imediata de atendimento."
         )
     },
@@ -120642,7 +120641,7 @@ cat > 'scripts/gravar_demonstracao.py' <<'OMNI_EOF'
 """
 Script Automatizado de Demonstração e Gravação em Vídeo com Playwright.
 
-Executa o fluxo completo do sistema DigitalNet-Prospector com gravação de vídeo em alta definição:
+Executa o fluxo completo do sistema Leads Prospector com gravação de vídeo em alta definição:
 1. Autenticação e Login como Administrador (admin).
 2. Acesso ao Radar de Leads & Expansão de Fibra Óptica (/leads/).
 3. Demonstração do Mapa de Cobertura de Campo Grande com nós ópticos (CTO) e oportunidades.
@@ -120832,7 +120831,7 @@ def converter_para_whatsapp(mp4_origem: Path) -> Path | None:
         return None
 
     saida_whatsapp = mp4_origem.parent / f"{mp4_origem.stem}_whatsapp.mp4"
-    saida_recente_whatsapp = mp4_origem.parent / "demonstracao_digitalnet_whatsapp.mp4"
+    saida_recente_whatsapp = mp4_origem.parent / "demonstracao_leads_prospector_whatsapp.mp4"
 
     print(f"[*] Gerando versão otimizada para WhatsApp (<16MB, 720p, +faststart)...")
     cmd = [
@@ -120891,7 +120890,7 @@ def gravar_fluxo(
     duracao_audio = obter_duracao_audio(audio_path) if audio_path and audio_path.exists() else 0.0
 
     print("=" * 75)
-    print("=== GRAVADOR AUTOMATIZADO DE VÍDEO - DIGITALNET PROSPECTOR")
+    print("=== GRAVADOR AUTOMATIZADO DE VÍDEO - LEADS PROSPECTOR")
     print(f"=== URL Alvo: {base_url}")
     print(f"=== Credenciais Admin: admin / {senha_admin}")
     print(f"=== Modo Visual: {'Headed (Navegador Visível)' if headed else 'Headless (Segundo Plano)'}")
@@ -121197,8 +121196,8 @@ def gravar_fluxo(
 
     # Move e renomeia o vídeo para nome amigável
     data_hora = time.strftime("%Y%m%d_%H%M%S")
-    video_final_webm = VIDEOS_DIR / f"demonstracao_digitalnet_{data_hora}.webm"
-    video_recente_webm = VIDEOS_DIR / "demonstracao_digitalnet_recente.webm"
+    video_final_webm = VIDEOS_DIR / f"demonstracao_leads_prospector_{data_hora}.webm"
+    video_recente_webm = VIDEOS_DIR / "demonstracao_leads_prospector_recente.webm"
 
     if os.path.exists(video_raw_path):
         shutil.move(video_raw_path, str(video_final_webm))
@@ -121214,7 +121213,7 @@ def gravar_fluxo(
         # Conversão opcional para MP4 embutindo a trilha de áudio
         video_mp4 = converter_para_mp4(video_final_webm, audio_path)
         if video_mp4 != video_final_webm:
-            shutil.copy(str(video_mp4), str(VIDEOS_DIR / "demonstracao_digitalnet_recente.mp4"))
+            shutil.copy(str(video_mp4), str(VIDEOS_DIR / "demonstracao_leads_prospector_recente.mp4"))
             if gerar_whatsapp:
                 converter_para_whatsapp(video_mp4)
         print("=" * 75)
@@ -121225,7 +121224,7 @@ def gravar_fluxo(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Grava um vídeo automatizado com Playwright do ecossistema DigitalNet.",
+        description="Grava um vídeo automatizado com Playwright do ecossistema Leads Prospector.",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument('--port', type=int, default=5055, help='Porta HTTP da aplicação (default: 5055)')
@@ -121302,7 +121301,7 @@ GEOJSON_IMOVEIS = ROOT / 'geojson' / 'imoveis.geojson'
 # URL pública padrão (pode ser sobrescrita via variável de ambiente IMOVEIS_DUMP_URL ou argumento --url)
 DEFAULT_URL = os.environ.get(
     'IMOVEIS_DUMP_URL',
-    'https://raw.githubusercontent.com/pizanao/digitalnet-dados-abertos/main/data/geo_imoveis.sql.gz'
+    'https://raw.githubusercontent.com/pizanao/leads-prospector/main/data/geo_imoveis.sql.gz'
 )
 
 CREATE_TABLE_GEO_IMOVEIS_SQL = """CREATE TABLE IF NOT EXISTS "geo_imoveis" (
@@ -121377,7 +121376,7 @@ def baixar_dump(url: str, destino: Path):
 
     req = urllib.request.Request(
         url,
-        headers={'User-Agent': 'DigitalNet-Setup/1.0'}
+        headers={'User-Agent': 'LeadsProspector-Setup/1.0'}
     )
     t0 = time.time()
     try:
@@ -121684,7 +121683,7 @@ LOCAL_DUMP = ROOT / 'data' / 'leeds_campo_grande.sql.gz'
 # URL pública padrão (pode ser sobrescrita via variável de ambiente RFB_DUMP_URL ou argumento --url)
 DEFAULT_URL = os.environ.get(
     'RFB_DUMP_URL',
-    'https://raw.githubusercontent.com/pizanao/digitalnet-dados-abertos/main/data/leeds_campo_grande.sql.gz'
+    'https://raw.githubusercontent.com/pizanao/leads-prospector/main/data/leeds_campo_grande.sql.gz'
 )
 
 
@@ -121711,7 +121710,7 @@ def baixar_dump(url: str, destino: Path):
 
     req = urllib.request.Request(
         url,
-        headers={'User-Agent': 'DigitalNet-Setup/1.0'}
+        headers={'User-Agent': 'LeadsProspector-Setup/1.0'}
     )
     t0 = time.time()
     try:
@@ -121862,7 +121861,7 @@ Script de Configuração e Geração de Documentação para Agentes de IA (AGENT
 
 Gera e mantém sincronizados:
 1. AGENTS.md: Guia mestre de arquitetura, padrões e instruções para agentes de IA (Antigravity, Cursor, Copilot).
-2. README.md: Documentação executiva e técnica completa do ecossistema DigitalNet MS.
+2. README.md: Documentação executiva e técnica completa do ecossistema Leads Prospector.
 3. SKILLs do Workspace (.agents/skills/):
    - enriquecer-prospectar-rfb: Enriquecimento e prospecção com 177k empresas da RFB e SISGRAN.
    - carregar-geojson-sqlite: Análise e carregamento de camadas GeoJSON no SQLite com índices espaciais R*Tree.
@@ -122003,7 +122002,7 @@ Para cada lead qualificado, o sistema gera o roteiro anti-ban em 3 blocos:
 Ao clicar em **Converter em Cliente** na tela do lead (`/leads/<id>`):
 - O lead passa para o status `convertido`.
 - O cliente é cadastrado na tabela `clientes`.
-- Um pedido de assinatura DigitalNet é criado na tabela `pedidos` com item e valor totalizados automaticamente.
+- Um pedido de assinatura comercial é criado na tabela `pedidos` com item e valor totalizados automaticamente.
 """
 
 SKILL_CARREGAR_GEOJSON_SQLITE = """---
@@ -122139,14 +122138,14 @@ Os dados carregados no SQLite servem de suporte para enriquecer os perfis territ
 def build_agents_md() -> str:
     return """# AGENTS.md - Diretrizes de Desenvolvimento e Arquitetura do Workspace
 
-Bem-vindo ao workspace do **DigitalNet MS - Radar de Leads & Sistema de Gestão**.
+Bem-vindo ao workspace do **Leads Prospector (`leads-prospector`) - Radar de Leads & Sistema de Gestão**.
 Este documento define as regras de desenvolvimento, catálogo de modelos de dados, motores de inteligência artificial, controle de acesso e regras espaciais obrigatórias para todos os agentes de IA atuando neste repositório.
 
 ---
 
 ## 1. Visão Geral do Sistema
 
-A aplicação é uma plataforma completa de **Gestão Comercial, Controle de Acesso (RBAC) e Radar de Expansão de Telecomunicações** (ISP B2B) para a **DigitalNet MS** em Campo Grande - MS.
+A aplicação é uma plataforma completa de **Gestão Comercial, Controle de Acesso (RBAC) e Radar de Expansão de Telecomunicações** (ISP B2B) em Campo Grande - MS.
 - **Stack:** Python 3.11+, Flask 3, Flask-SQLAlchemy, Flask-Migrate (Alembic), Flask-Login, Flask-WTF, Bootstrap 5.3, Mapbox GL JS / Leaflet.
 - **Bancos de Dados:**
   - **SQLite Primário:** `instance/app_clientes.db` (armazenamento de Usuários, Grupos de Acesso, Clientes, Pedidos, Leads, Tabelas Espaciais e Base RFB).
@@ -122250,11 +122249,11 @@ As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos com
 # ==============================================================================
 
 def build_readme_md() -> str:
-    return """# DigitalNet MS - Radar de Leads, Gestão Comercial & Controle de Acesso (RBAC)
+    return """# Leads Prospector (`leads-prospector`) - Radar de Leads, Gestão Comercial & Controle de Acesso (RBAC)
 
-Sistema integrado de **Gestão Comercial, Controle de Acesso por Perfis & Grupos, Prospecção Geo-Localizada e Expansão de Infraestrutura Óptica B2B** para a operadora **DigitalNet MS** em Campo Grande - MS.
+Sistema integrado de **Gestão Comercial, Controle de Acesso por Perfis & Grupos, Prospecção Geo-Localizada e Expansão de Infraestrutura Óptica B2B** em Campo Grande - MS.
 
-Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Controle de Acesso RBAC**, **Inteligência Artificial (AIsa e Gemini)**, dados geográficos oficiais do **SISGRAN / PLANURB**, mais de **21.000 feições urbanas** (bairros, imóveis e loteamentos) com indexação espacial **R*Tree** no SQLite e uma base de **177.614 empresas da Receita Federal do Brasil**.
+Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Controle de Acesso RBAC**, **Inteligência Artificial (AIsa e Gemini)**, dados geográficos oficiais do **SISGRAN / PLANURB**, mais de **463.000 feições urbanas** (bairros, imóveis e loteamentos) com indexação espacial **R*Tree** no SQLite e uma base de **158.558 empresas da Receita Federal do Brasil**.
 
 ---
 
@@ -122267,7 +122266,7 @@ Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Controle de Aces
 - [Instalação Rápida com setup.sh](#instalacao-rapida-com-setupsh)
 - [Motores de Prospecção e Inteligência Artificial](#motores-de-prospeccao-e-inteligencia-artificial)
 - [Dados Geoespaciais e SISGRAN](#dados-geoespaciais-e-sisgran)
-- [Base de 177k Empresas da Receita Federal](#base-de-177k-empresas-da-receita-federal)
+- [Base de Empresas da Receita Federal](#base-de-177k-empresas-da-receita-federal)
 - [Scripts e Ferramentas CLI](#scripts-e-ferramentas-cli)
 - [Suíte de Testes](#suite-de-testes)
 - [Agentes de IA e SKILLs](#agentes-de-ia-e-skills)
@@ -122278,13 +122277,13 @@ Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Controle de Aces
 
 - **Controle de Acesso por Perfis (RBAC):** Hierarquia de permissões estruturada para **Administrador**, **Líder Técnico** e **Agente**, além de grupos de trabalho customizáveis.
 - **Painel Administrativo Completo:** Gestão centralizada de usuários (`/admin/usuarios`) com criação, edição de perfis, ativação/desativação e grupos de acesso (`/admin/grupos`).
-- **Viabilidade Óptica Hiperlocal:** O sistema calcula clusters de clientes conectados por bairro de Campo Grande, permitindo prospectar empresas exatamente onde a fibra óptica da DigitalNet já está nos postes (AS61588).
+- **Viabilidade Óptica Hiperlocal:** O sistema calcula clusters de clientes conectados por bairro de Campo Grande, permitindo prospectar empresas exatamente onde a fibra óptica já está ativa nos postes.
 - **Interatividade nos Nós Ópticos (Offcanvas):** Ao clicar em um nó de fibra no mapa, abre uma gaveta lateral listando as empresas reais daquele raio, com scores, WhatsApp anti-ban em 1-clique e navegação focada no mapa.
 - **Interface Imersiva (Menu Recolhível & Mapa Fullscreen):** Barra lateral retrátil com persistência em `localStorage` e badges identificadores do perfil do operador.
 - **Roteiro WhatsApp Anti-Ban com Opt-in:** Reduz o risco de bloqueio de número para quase zero com um método consultivo em 3 passos, oferecendo Wi-Fi 6 em comodato e pontos DigiMesh sem custos de aluguel.
 - **Cascata Multi-Provedor de Prospecção:** Integração com a API AIsa (`asi1-mini`), Google Gemini AI, banco de dados abertos da RFB e gerador sintético de alta diversidade.
-- **Banco Espacial Dual (SQLite R*Tree & PostGIS):** Análise e ingestão automática de 21.042 feições urbanas com bounding boxes e centróides tanto em SQLite puro quanto em PostgreSQL + PostGIS.
-- **Conversão em 1-Clique:** Transforma um lead prospectado em Cliente e gera automaticamente o Pedido com planos reais da operadora.
+- **Banco Espacial Dual (SQLite R*Tree & PostGIS):** Análise e ingestão automática de 463.786 feições urbanas com bounding boxes e centróides tanto em SQLite puro quanto em PostgreSQL + PostGIS.
+- **Conversão em 1-Clique:** Transforma um lead prospectado em Cliente e gera automaticamente o Pedido com planos oficiais.
 - **Deploy Autônomo Blindado (POC em 30s):** `setup.sh` auto-contido para demonstrações de POC, configurando todo o ambiente em menos de 30 segundos.
 
 ---
@@ -122311,7 +122310,7 @@ flowchart TD
     subgraph Data["Camada de Dados (SQLite & Geo)"]
         MainDB[("SQLite: instance/app_clientes.db")]
         UsersDB[("Tabelas: usuarios, grupos, usuario_grupos")]
-        RFB[("Tabela leeds_campo_grande (177k RFB)")]
+        RFB[("Tabela leeds_campo_grande (RFB)")]
         GeoSQLite[("Tabelas Espaciais R*Tree (geo_*)")]
         GeoFiles["GeoJSON (bairros, imoveis, parcelamentos)"]
     end
@@ -122364,7 +122363,7 @@ flowchart TD
 - **DataTables 2 & Extensão Responsive:** As tabelas de Clientes (/clientes/) e Leads (/leads/) adaptam-se com fluidez a qualquer resolução de tela (desktop, tablet e mobile).
 - **Linhas Aninhadas (Child Rows com Subtabelas):** O botão interativo Detalhes expande painéis avançados sob demanda:
   - *Tabela de Clientes:* Dossiê cadastral, endereço completo, total gasto acumulado e subtabela aninhada com o histórico de pedidos conectados e atalhos rápidos de WhatsApp.
-  - *Tabela de Leads:* Acordeão técnico com inteligência territorial de Campo Grande (CTO no quarteirão), script anti-ban para WhatsApp com botão de cópia de 1 clique, e pacote recomendado DigitalNet com botão de conversão imediata em cliente.
+  - *Tabela de Leads:* Acordeão técnico com inteligência territorial de Campo Grande (CTO no quarteirão), script anti-ban para WhatsApp com botão de cópia de 1 clique, e pacote recomendado com botão de conversão imediata em cliente.
 
 ---
 
@@ -122663,7 +122662,7 @@ def agente_client(client, rbac_users):
 def sample_planos(db_session):
     """Popula planos PF e PJ básicos para testes de conversão e pedidos."""
     plano_pf = Plano(
-        nome='DigitalNet Fibra 700 + DigiMesh (Wi-Fi 6)',
+        nome='Fibra 700 + DigiMesh (Wi-Fi 6)',
         tipo=TIPO_PF,
         velocidade_download=700,
         velocidade_upload=350,
@@ -122673,7 +122672,7 @@ def sample_planos(db_session):
         ativo=True,
     )
     plano_pj = Plano(
-        nome='DigitalNet B2B Link Dedicado Pro',
+        nome='Fibra B2B Link Dedicado Pro',
         tipo=TIPO_PJ,
         velocidade_download=1000,
         velocidade_upload=1000,
@@ -122723,7 +122722,7 @@ def rfb_memory_seeded(db_session):
             'DR ROBERTO ALMEIDA', 'Sócio-Administrador',
             '+5567991234567 | +556733210000', 'CONTATO@CLINICAPANTANAL.COM.BR',
             'RAUL PIRES BARBOSA', '1240', 'CHACARA CACHOEIRA', 'SALA 02', '79040150',
-            'Vivo Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 95,
+            'Vivo Fibra', 'Fibra B2B Link Dedicado Pro', 399.9, 95,
             'Atividade médica ambulatorial com recursos para realização de procedimentos cirúrgicos',
             'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
         ),
@@ -122732,7 +122731,7 @@ def rfb_memory_seeded(db_session):
             'MARCOS VINICIUS SOUZA', 'Sócio-Administrador',
             '+556798234567 | +55', 'FISCAL@EXATAMS.COM.BR',
             'JERIBA', '455', 'CHACARA CACHOEIRA', '', '79040220',
-            'Claro / Embratel', 'DigitalNet Fibra 700 + DigiMesh (Wi-Fi 6)', 139.9, 91,
+            'Claro / Embratel', 'Fibra 700 + DigiMesh (Wi-Fi 6)', 139.9, 91,
             'Atividades de contabilidade',
             'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
         ),
@@ -122741,7 +122740,7 @@ def rfb_memory_seeded(db_session):
             'DRA PATRICIA NOGUEIRA', 'Titular',
             '+556733824455 | +55000000000000', 'CONTATO@CENTRALADV.COM.BR',
             'AFONSO PENA', '2500', 'CENTRO', 'CONJ 801', '79002074',
-            'Vivo Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 93,
+            'Vivo Fibra', 'Fibra B2B Link Dedicado Pro', 399.9, 93,
             'Serviços advocatícios',
             'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
         ),
@@ -122750,7 +122749,7 @@ def rfb_memory_seeded(db_session):
             'CARLOS EDUARDO MENDES', 'Diretor Comercial',
             '+556799876543 | +55', 'COMPRAS@ESTRELASUL.COM.BR',
             'MATO GROSSO', '1800', 'JARDIM DOS ESTADOS', 'LOJA A', '79020200',
-            'Oi Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 90,
+            'Oi Fibra', 'Fibra B2B Link Dedicado Pro', 399.9, 90,
             'Comércio varejista de mercadorias em geral, com predominância de produtos alimentícios - supermercados',
             'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
         ),
@@ -122759,7 +122758,7 @@ def rfb_memory_seeded(db_session):
             'ANA PAULA FERREIRA', 'Sócia-Administradora',
             '+5567995554433 | +556733221100', 'CONTATO@TECNOCG.COM.BR',
             'VIA PARK', '700', 'VILA ALTA', 'SALA 12', '79051000',
-            'Vivo Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 89,
+            'Vivo Fibra', 'Fibra B2B Link Dedicado Pro', 399.9, 89,
             'Desenvolvimento de programas de computador sob encomenda',
             'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
         ),
@@ -122937,7 +122936,7 @@ class AppTestCase(unittest.TestCase):
             'ativo': 'y'
         }, follow_redirects=True)
         self.assertEqual(res.status_code, 200)
-        self.assertIn('A DigitalNet MS atende exclusivamente no estado de Mato Grosso do Sul (MS).'.encode('utf-8'), res.data)
+        self.assertIn('O Leads Prospector atende exclusivamente no estado de Mato Grosso do Sul (MS).'.encode('utf-8'), res.data)
         self.assertIsNone(Cliente.query.filter_by(email='fora@sp.com').first())
 
     # --- PEDIDOS CRUD TESTS ---
@@ -123406,7 +123405,7 @@ class LeadsTestCase(unittest.TestCase):
         Plano.seed_planos_iniciais()
 
         # Create a test user
-        user = User(nome='Vendedor Telecom', username='vendedor', email='vendedor@digitalnet.local')
+        user = User(nome='Vendedor Telecom', username='vendedor', email='vendedor@leadsprospector.local')
         user.set_password('senha12345')
         db.session.add(user)
 
@@ -123789,7 +123788,7 @@ class LeadsTestCase(unittest.TestCase):
             cidade='Campo Grande',
             estado='MS',
             dor_principal='Queda frequente de link nas cirurgias e consultas',
-            plano_sugerido='DigitalNet B2B Link Dedicado Pro',
+            plano_sugerido='Fibra B2B Link Dedicado Pro',
             valor_mensal_sugerido=399.90
         )
         db.session.add(lead)
@@ -123820,7 +123819,7 @@ class LeadsTestCase(unittest.TestCase):
                             'numero': '300',
                             'cep': '79002-000',
                             'operadora_atual': 'Vivo Fibra',
-                            'plano_sugerido': 'DigitalNet B2B Link Dedicado Pro',
+                            'plano_sugerido': 'Fibra B2B Link Dedicado Pro',
                             'valor_mensal_sugerido': 399.90,
                             'score': 96,
                             'description': 'Necessidade de link redundante e baixa latência.',
@@ -124012,7 +124011,7 @@ class PlanosAdminTestCase(unittest.TestCase):
         self.user_admin = User(
             nome='Admin Planos',
             username='admin_planos',
-            email='admin.planos@digitalnetms.com.br',
+            email='admin.planos@leadsprospector.com.br',
             perfil=PERFIL_ADMIN,
             ativo=True
         )
@@ -124021,7 +124020,7 @@ class PlanosAdminTestCase(unittest.TestCase):
         self.user_lider = User(
             nome='Líder Técnico',
             username='lider_planos',
-            email='lider.planos@digitalnetms.com.br',
+            email='lider.planos@leadsprospector.com.br',
             perfil=PERFIL_LIDER,
             ativo=True
         )
@@ -124030,7 +124029,7 @@ class PlanosAdminTestCase(unittest.TestCase):
         self.user_agente = User(
             nome='Agente Comercial',
             username='agente_planos',
-            email='agente.planos@digitalnetms.com.br',
+            email='agente.planos@leadsprospector.com.br',
             perfil=PERFIL_AGENTE,
             ativo=True
         )
@@ -125103,7 +125102,7 @@ def test_cascade_aisa_primary_success(app, monkeypatch):
                         'numero': '4100',
                         'cep': '79020-000',
                         'operadora_atual': 'Vivo Fibra',
-                        'plano_sugerido': 'DigitalNet B2B Link Dedicado Pro',
+                        'plano_sugerido': 'Fibra B2B Link Dedicado Pro',
                         'valor_mensal_sugerido': 399.90,
                         'score': 98,
                         'description': 'Demanda de link dedicado redundante.',
@@ -125146,7 +125145,7 @@ def test_cascade_failover_aisa_to_gemini(app, monkeypatch):
                         'numero': '890',
                         'cep': '79002-140',
                         'operadora_atual': 'Claro Fibra',
-                        'plano_sugerido': 'DigitalNet B2B Link Dedicado Pro',
+                        'plano_sugerido': 'Fibra B2B Link Dedicado Pro',
                         'valor_mensal_sugerido': 399.90,
                         'lead_score': 94,
                         'dor_principal': 'Lentidão no envio de laudos por imagem.',
@@ -125231,7 +125230,7 @@ def test_objection_tutors_return_actionable_copy(db_session, obj_key, termo_espe
     lead = Lead(
         nome='Roberto Silva', empresa='Silva & Filhos Ltda', telefone='(67) 99123-4567',
         bairro='Centro', operadora_atual='Vivo Fibra',
-        plano_sugerido='DigitalNet B2B Link Dedicado Pro', valor_mensal_sugerido=399.90,
+        plano_sugerido='Fibra B2B Link Dedicado Pro', valor_mensal_sugerido=399.90,
     )
 
     tutor = TelecomProspectorService.get_objection_tutor(obj_key, lead)
@@ -125357,7 +125356,7 @@ class RbacAdminTestCase(unittest.TestCase):
         self.user_admin = User(
             nome='Administrador Sistema',
             username='admin_test',
-            email='admin@digitalnetms.com.br',
+            email='admin@leadsprospector.com.br',
             perfil=PERFIL_ADMIN,
             ativo=True
         )
@@ -125368,7 +125367,7 @@ class RbacAdminTestCase(unittest.TestCase):
         self.user_lider = User(
             nome='Líder Técnico Silva',
             username='lider_test',
-            email='lider@digitalnetms.com.br',
+            email='lider@leadsprospector.com.br',
             perfil=PERFIL_LIDER,
             ativo=True
         )
@@ -125379,7 +125378,7 @@ class RbacAdminTestCase(unittest.TestCase):
         self.user_agente = User(
             nome='Agente Comercial Pereira',
             username='agente_test',
-            email='agente@digitalnetms.com.br',
+            email='agente@leadsprospector.com.br',
             perfil=PERFIL_AGENTE,
             ativo=True
         )
@@ -125428,7 +125427,7 @@ class RbacAdminTestCase(unittest.TestCase):
         user_hibrido = User(
             nome='Operador Promovido',
             username='hibrido',
-            email='hibrido@digitalnetms.com.br',
+            email='hibrido@leadsprospector.com.br',
             perfil=PERFIL_AGENTE,
             ativo=True
         )
@@ -125480,7 +125479,7 @@ class RbacAdminTestCase(unittest.TestCase):
 
     def test_agente_nao_pode_excluir_cliente_ou_pedido(self):
         """Agente não tem permissão para excluir clientes ou pedidos."""
-        c = Cliente(nome='Cliente Teste Exclusao', email='excluir@digitalnetms.com.br')
+        c = Cliente(nome='Cliente Teste Exclusao', email='excluir@leadsprospector.com.br')
         db.session.add(c)
         db.session.commit()
 
@@ -125493,7 +125492,7 @@ class RbacAdminTestCase(unittest.TestCase):
 
     def test_lider_pode_excluir_cliente_e_pedido(self):
         """Líder Técnico tem permissão para excluir clientes e pedidos."""
-        c = Cliente(nome='Cliente Para Excluir Lider', email='excluir_lider@digitalnetms.com.br')
+        c = Cliente(nome='Cliente Para Excluir Lider', email='excluir_lider@leadsprospector.com.br')
         db.session.add(c)
         db.session.commit()
 
@@ -125513,7 +125512,7 @@ class RbacAdminTestCase(unittest.TestCase):
         res = self.client.post('/admin/usuarios/novo', data={
             'nome': 'Novo Operador Cadastrado',
             'username': 'novolider',
-            'email': 'novolider@digitalnetms.com.br',
+            'email': 'novolider@leadsprospector.com.br',
             'perfil': PERFIL_LIDER,
             'grupos': [self.grupo_lider.id],
             'password': 'SenhaForte#123',
@@ -125543,7 +125542,7 @@ class RbacAdminTestCase(unittest.TestCase):
         res_edit = self.client.post(f'/admin/usuarios/{self.user_agente.id}/editar', data={
             'nome': 'Agente Comercial Atualizado',
             'username': 'agente_atualizado',
-            'email': 'agente_atualizado@digitalnetms.com.br',
+            'email': 'agente_atualizado@leadsprospector.com.br',
             'perfil': PERFIL_LIDER,  # promovido para líder
             'grupos': [self.grupo_lider.id],
             'password': 'NovaSenha#2026',
@@ -125727,7 +125726,7 @@ source .venv/bin/activate
 export FLASK_APP=wsgi.py
 export HOST="${HOST:-127.0.0.1}"
 export PORT="${PORT:-5000}"
-echo "Iniciando servidor DigitalNet-Prospector em http://${HOST}:${PORT} ..."
+echo "Iniciando servidor Leads-Prospector em http://${HOST}:${PORT} ..."
 python3 wsgi.py
 OMNI_EOF
 

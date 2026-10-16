@@ -91,13 +91,12 @@ class Plano(db.Model):
     @classmethod
     def seed_planos_iniciais(cls) -> int:
         """
-        Cadastra ou atualiza os planos padrão oficiais da DigitalNet MS
-        conforme publicados em https://digitalnetms.com.br/clientepf/ e https://digitalnetms.com.br/clientepj/.
+        Cadastra ou atualiza os planos padrão oficiais de telecomunicações (PF e PJ).
         Retorna o total de planos criados ou atualizados.
         """
         planos_padrao = [
             # -----------------------------------------------------------------
-            # PLANOS PESSOA FÍSICA (RESIDENCIAIS) - https://digitalnetms.com.br/clientepf/
+            # PLANOS PESSOA FÍSICA (RESIDENCIAIS)
             # -----------------------------------------------------------------
             {
                 'nome': 'Fibra 600 Standard',
@@ -214,7 +213,7 @@ class Plano(db.Model):
                 'descricao': 'Casa grande, muitos aparelhos, jogos online',
             },
             # -----------------------------------------------------------------
-            # PLANOS PESSOA JURÍDICA (CORPORATIVOS - DIGICORP) - https://digitalnetms.com.br/clientepj/
+            # PLANOS PESSOA JURÍDICA (CORPORATIVOS - DIGICORP)
             # -----------------------------------------------------------------
             {
                 'nome': 'DigiCorp Profissional',

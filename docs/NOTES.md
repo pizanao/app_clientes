@@ -1,14 +1,14 @@
-# Notas de Desenvolvimento e Arquitetura - DigitalNet MS Prospector
+# Notas de Desenvolvimento e Arquitetura - Leads Prospector
 
 **Data de Consolidação:** 11 de Outubro de 2026  
-**Sistema:** DigitalNet MS - Radar de Leads Telecom, Gestão Comercial & Controle de Acesso (RBAC)  
+**Sistema:** Leads Prospector - Radar de Leads Telecom, Gestão Comercial & Controle de Acesso (RBAC)  
 **Ambiente:** Linux (Ubuntu 22.04+) / Python 3.11+ / Flask 3.1 / SQLite 3 (com suporte a R*Tree) / PostgreSQL 16 + PostGIS  
 
 ---
 
 ## 1. Visão Geral e Propósito do Sistema
 
-A aplicação foi projetada como uma plataforma integrada para a operadora **DigitalNet MS** em Campo Grande - MS, combinando três pilares essenciais:
+A aplicação foi projetada como uma plataforma integrada de **Leads Prospector** em Campo Grande - MS, combinando três pilares essenciais:
 
 1. **Gestão Operacional de Telecom:** Cadastro de clientes corporativos e residenciais, histórico de conexões, emissão de pedidos com totalização automática e controle de status de instalação.
 2. **Controle de Acesso Baseado em Papéis (RBAC):** Estrutura hierárquica dividida em Administrador Master, Líder Técnico e Agente Comercial, com suporte a herança dinâmica de papéis via grupos de acesso configuráveis.
@@ -70,7 +70,7 @@ A aplicação foi projetada como uma plataforma integrada para a operadora **Dig
   - *Clientes:* Exibição de dossiê cadastral, atalho para WhatsApp e histórico completo de pedidos vinculados.
   - *Leads:* Acordeão com dados territoriais da CTO, script anti-ban e botão de conversão direta.
 
-### Fase 8: Catálogo de Planos DigitalNet & Blindagem do Setup
+### Fase 8: Catálogo de Planos & Blindagem do Setup
 - Criação do modelo [`Plano`](app/models/plano.py) cobrindo planos Residenciais (PF) e Corporativos (PJ), com migração Alembic `batch_alter_table`.
 - Seeding inicial com os planos oficiais da operadora (Fibra 500, 700, 900, DigiCorp e Link Dedicado Pro).
 - Auto-preenchimento no formulário de pedidos: integração via `<datalist id="planosCatalog">` que preenche a descrição e o valor unitário de tabela automaticamente ao selecionar um plano.
@@ -113,7 +113,7 @@ A aplicação foi projetada como uma plataforma integrada para a operadora **Dig
 - **Restrição Territorial Estrita para o Estado de MS:**
   - Validador `validate_estado` implementado em `ClienteForm` ([`app/forms/cliente_forms.py`](app/forms/cliente_forms.py)), bloqueando cadastros de fora de Mato Grosso do Sul.
   - Valores padrão do formulário definidos para `cidade='Campo Grande'` e `estado='MS'`.
-  - Atualização do comando `flask seed` em `app/cli.py`, removendo os 4 clientes e pedidos residuais de fora do estado (São Paulo, Curitiba, Salvador) e fixando 100% da semente em Campo Grande - MS com planos oficiais da DigitalNet.
+  - Atualização do comando `flask seed` em `app/cli.py`, removendo os 4 clientes e pedidos residuais de fora do estado (São Paulo, Curitiba, Salvador) e fixando 100% da semente em Campo Grande - MS com planos oficiais do catálogo.
 
 ### Fase 12: Sidebar Compacta com Ícones & Alternância de Tema Claro e Escuro (Dark Mode)
 - **Menu Lateral Compacto (Mini-Sidebar):**
@@ -236,7 +236,7 @@ app_clientes.db (SQLite)
    - Acesso administrativo ao catálogo de planos.
    - Criação e validação de planos residenciais (PF) e corporativos (PJ).
    - Bloqueio de nomes duplicados e alternância de status ativo/inativo.
-   - Seeding dos 9 planos oficiais da DigitalNet MS.
+   - Seeding dos 9 planos oficiais do catálogo.
    - Relacionamento bidirecional `Plano <-> Pedido` e propriedade `plano.pedidos`.
    - Navegação integrada entre as abas de Usuários, Grupos e Planos no painel.
 

@@ -37,7 +37,7 @@ class Pedido(db.Model):
     descricao = db.Column(db.Text, nullable=True)
     observacoes = db.Column(db.Text, nullable=True)
 
-    # Relacionamento N:1 com Plano Oficial da DigitalNet MS
+    # Relacionamento N:1 com Plano Oficial de Banda Larga
     plano_id = db.Column(db.Integer, db.ForeignKey('planos.id', ondelete='SET NULL'), nullable=True, index=True)
     plano = db.relationship('Plano', backref=db.backref('pedidos', lazy='select'))
 

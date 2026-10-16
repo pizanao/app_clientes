@@ -1,14 +1,14 @@
 # Especificação de Design: Suíte de Testes Modulares com Pytest para Subagent-Driven Development
 
 - **Data:** 2026-10-16
-- **Projeto:** DigitalNet MS — Radar de Leads & Sistema de Gestão (`app_clientes`)
+- **Projeto:** Leads Prospector — Radar de Leads & Sistema de Gestão (`app_clientes`)
 - **Status:** Aprovado em Brainstorming — Pronto para Planejamento (`writing-plans`)
 
 ---
 
 ## 1. Objetivo e Contexto
 
-Expandir a cobertura de testes automatizados da plataforma **DigitalNet MS** introduzindo o framework **pytest** com arquitetura modular de *fixtures* compartilhadas (`tests/conftest.py`) e **3 novas suítes especializadas**, projetadas com fronteiras de arquivos estritamente isoladas para execução paralela e independente via **Subagent-Driven Development**.
+Expandir a cobertura de testes automatizados da plataforma **Leads Prospector** introduzindo o framework **pytest** com arquitetura modular de *fixtures* compartilhadas (`tests/conftest.py`) e **3 novas suítes especializadas**, projetadas com fronteiras de arquivos estritamente isoladas para execução paralela e independente via **Subagent-Driven Development**.
 
 ### 1.1 Restrições e Regras Arquiteturais Obrigatórias
 1. **Preservação Integral do Legado (`unittest`):** Os 4 arquivos existentes (`tests/test_app.py`, `tests/test_leads.py`, `tests/test_planos_admin.py` e `tests/test_rbac_admin.py`, totalizando 60 testes) devem permanecer intactos e funcionando tanto via `pytest` quanto via `python -m unittest discover -s tests -v`.

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Radar de Leads Telecom & Expansão de Fibra - DigitalNet MS{% endblock %}
+{% block title %}Radar de Leads Telecom & Expansão de Fibra - Leads Prospector{% endblock %}
 
 {% block extra_css %}
 <!-- Leaflet CSS para o Mapa de Calor -->
@@ -67,13 +67,13 @@
 {% block content %}
 <div class="container-fluid px-0">
 
-  <!-- CABEÇALHO COM IDENTIDADE DIGITALNET -->
+  <!-- CABEÇALHO COM IDENTIDADE LEADS PROSPECTOR -->
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
     <div>
       <div class="d-flex align-items-center gap-2 flex-wrap">
         <h1 class="h3 mb-0 dn-header-title">Radar de Prospecção & Expansão de Fibra</h1>
         <span class="badge py-2 px-3 dn-badge-corp rounded-pill">
-          <i class="bi bi-broadcast-pin text-warning me-1"></i> DigitalNet MS &bull; Campo Grande
+          <i class="bi bi-broadcast-pin text-warning me-1"></i> Leads Prospector &bull; Campo Grande
         </span>
       </div>
       <p class="text-muted small mb-0 mt-1">
@@ -103,7 +103,7 @@
           <div class="col-md-4">
             <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.08);">
               <strong class="text-warning d-block mb-1"><i class="bi bi-geo-alt-fill me-1"></i>1. Viabilidade por Vizinhos:</strong>
-              Prospecta apenas em quarteirões onde a DigitalNet já possui clientes ativos. Custo de instalação mínimo e viabilidade técnica garantida no poste.
+              Prospecta apenas em quarteirões onde a rede já possui clientes ativos. Custo de instalação mínimo e viabilidade técnica garantida no poste.
             </div>
           </div>
           <div class="col-md-4">
@@ -268,7 +268,7 @@
             </div>
             <div>
               <h5 class="fw-bold mb-0 text-dark">Clusters de Cobertura Óptica</h5>
-              <small class="text-muted">Bairros com clientes ativos DigitalNet</small>
+              <small class="text-muted">Bairros com clientes ativos na rede</small>
             </div>
           </div>
           <span class="badge py-2 px-3 rounded-pill bg-light text-dark border fw-semibold">
@@ -318,7 +318,7 @@
     </div>
   </div>
 
-  <!-- MÉTRICAS DO FUNIL DE LEADS (KPI CARDS DIGITALNET) -->
+  <!-- MÉTRICAS DO FUNIL DE LEADS (KPI CARDS LEADS PROSPECTOR) -->
   <div class="row g-3 mb-4">
     <div class="col-xl-2 col-md-4 col-6">
       <div class="dn-kpi-card" style="border-top: 3px solid var(--dn-blue);">
@@ -582,13 +582,13 @@
                         </div>
                       </div>
 
-                      <!-- BLOCO 3: OFERTA RECOMENDADA DIGITALNET -->
+                      <!-- BLOCO 3: OFERTA RECOMENDADA -->
                       <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
                         <div class="card-header collapsible-header py-2 px-3 bg-white" data-bs-toggle="collapse" data-bs-target="#collapseOferta-{{ l.id }}" style="cursor: pointer;">
                           <div class="d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-2">
                               <i class="bi bi-router-fill text-primary"></i>
-                              <span class="fw-bold small text-dark">Oferta Recomendada DigitalNet</span>
+                              <span class="fw-bold small text-dark">Oferta Recomendada</span>
                             </div>
                             <span class="fw-bold text-success small">R$ {{ "%.2f"|format(l.valor_mensal_sugerido)|replace('.', ',') }}/mês</span>
                           </div>
@@ -639,7 +639,7 @@
 
 </div>
 
-<!-- MODAL PROSPECTAR COM IA (TEMA DIGITALNET) -->
+<!-- MODAL PROSPECTAR COM IA (TEMA LEADS PROSPECTOR) -->
 <div class="modal fade" id="modalProspectar" tabindex="-1" aria-labelledby="modalProspectarLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content border-0 shadow-lg">
@@ -652,7 +652,7 @@
         </div>
         <div class="modal-body p-4">
           <p class="small text-muted mb-3">
-            O motor de IA identifica novos clientes potenciais no mesmo bairro onde a <strong>DigitalNet MS</strong> já possui rede óptica ativa, garantindo viabilidade e gerando o script anti-ban para WhatsApp.
+            O motor de IA identifica novos clientes potenciais no mesmo bairro onde o <strong>Leads Prospector</strong> já possui rede óptica ativa mapeada, garantindo viabilidade e gerando o script anti-ban para WhatsApp.
           </p>
 
           <div class="mb-3">
@@ -699,13 +699,13 @@
   </div>
 </div>
 
-<!-- OFFCANVAS: EMPRESAS NO RAIO DO NÓ ÓPTICO DIGITALNET -->
+<!-- OFFCANVAS: EMPRESAS NO RAIO DO NÓ ÓPTICO -->
 <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="offcanvasNodoEmpresas" aria-labelledby="offcanvasNodoLabel" style="width: 440px; max-width: 95vw; z-index: 1070;">
   <div class="offcanvas-header text-white" style="background: linear-gradient(135deg, #0f2d57, #1b4f99); border-bottom: 2px solid #fbbf24;">
     <div>
       <div class="d-flex align-items-center gap-2">
         <span class="badge py-1 px-2 rounded-pill" style="background: #fbbf24; color: #0f172a; font-weight: 700; font-size: 0.65rem;">
-          <i class="bi bi-broadcast-pin me-1"></i> Nó Óptico DigitalNet
+          <i class="bi bi-broadcast-pin me-1"></i> Nó Óptico Leads Prospector
         </span>
         <span class="badge bg-white bg-opacity-20 text-white" style="font-size: 0.65rem;" id="offcanvasBadgeViabilidade">Viabilidade 99%</span>
       </div>
@@ -836,7 +836,7 @@
         const popupContent = `
           <div style="width: 260px;">
             <div style="background: linear-gradient(135deg, #0f2d57, #1b4f99); color: white; padding: 12px 14px;">
-              <small style="color: #fbbf24; text-transform: uppercase; font-weight: 700; font-size: 0.7rem;">Nó de Fibra DigitalNet</small>
+              <small style="color: #fbbf24; text-transform: uppercase; font-weight: 700; font-size: 0.7rem;">Nó de Fibra Leads Prospector</small>
               <h6 style="margin: 0; font-weight: 700; font-size: 1rem;">${pt.bairro}</h6>
             </div>
             <div style="padding: 12px 14px; background: white; font-size: 0.85rem;">
@@ -1224,14 +1224,14 @@
   });
 
   // =========================================================================
-  // HOOK DE INTEGRAÇÃO & CARREGAMENTO DINÂMICO: NÓ DE FIBRA DIGITALNET
+  // HOOK DE INTEGRAÇÃO & CARREGAMENTO DINÂMICO: NÓ DE FIBRA LEADS PROSPECTOR
   // =========================================================================
   window.carregarEmpresasDoNodo = async function(bairroEscaped, lat, lng) {
     const bairro = unescape(bairroEscaped);
-    console.log(`[DigitalNet] Carregando empresas do Nó Óptico: ${bairro} (${lat}, ${lng})`);
+    console.log(`[LeadsProspector] Carregando empresas do Nó Óptico: ${bairro} (${lat}, ${lng})`);
 
-    // 1. Dispara evento customizado da DigitalNet
-    const event = new CustomEvent('digitalnet:nodo_fibra_clicado', {
+    // 1. Dispara evento customizado do Leads Prospector
+    const event = new CustomEvent('leadsprospector:nodo_fibra_clicado', {
       detail: { bairro: bairro, lat: lat, lng: lng }
     });
     window.dispatchEvent(event);
@@ -1437,7 +1437,7 @@
       toast.style.cssText = 'position: fixed; bottom: 24px; right: 24px; z-index: 2000; background: linear-gradient(135deg, #0f2d57, #1b4f99); color: white; padding: 12px 18px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-size: 0.875rem; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(251, 191, 36, 0.4); transition: opacity 0.3s ease;';
       document.body.appendChild(toast);
     }
-    toast.innerHTML = `<i class="bi bi-broadcast text-warning fs-5"></i> <div><strong>Nó DigitalNet</strong><div style="font-size: 0.78rem; opacity: 0.9;">${mensagem}</div></div>`;
+    toast.innerHTML = `<i class="bi bi-broadcast text-warning fs-5"></i> <div><strong>Nó Leads Prospector</strong><div style="font-size: 0.78rem; opacity: 0.9;">${mensagem}</div></div>`;
     toast.style.opacity = '1';
     toast.style.display = 'flex';
     clearTimeout(window._nodoToastTimer);

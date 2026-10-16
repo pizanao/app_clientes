@@ -69,7 +69,7 @@ def bloco_arquivo(caminho):
 
 CABECALHO = r'''#!/usr/bin/env bash
 # ==============================================================================
-# Script de Criação e Configuração Automatizada - DigitalNet-Prospector (Linux)
+# Script de Criação e Configuração Automatizada - Leads-Prospector (Linux)
 # ==============================================================================
 # ARQUIVO GERADO AUTOMATICAMENTE por scripts/gerar_setup.py — não edite à mão.
 # Para atualizar após mudanças no código: python scripts/gerar_setup.py
@@ -100,7 +100,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}===================================================================${NC}"
-echo -e "${BLUE}    Iniciando a instalação e recriação do projeto DigitalNet-Prospector       ${NC}"
+echo -e "${BLUE}    Iniciando a instalação e recriação do projeto Leads-Prospector       ${NC}"
 echo -e "${BLUE}===================================================================${NC}"
 
 # 1. Verificação de pré-requisitos no Linux
@@ -181,7 +181,7 @@ source .venv/bin/activate
 export FLASK_APP=wsgi.py
 export HOST="${HOST:-127.0.0.1}"
 export PORT="${PORT:-5000}"
-echo "Iniciando servidor DigitalNet-Prospector em http://${HOST}:${PORT} ..."
+echo "Iniciando servidor Leads-Prospector em http://${HOST}:${PORT} ..."
 python3 wsgi.py
 OMNI_EOF
 

@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-bs-theme', theme);
-    localStorage.setItem('digitalnet_theme', theme);
+    localStorage.setItem('leads_prospector_theme', theme);
 
     if (themeIcon) {
       if (theme === 'dark') {
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Sincronizar estado inicial dos botões com o tema ativo
-  const currentTheme = document.documentElement.getAttribute('data-bs-theme') || localStorage.getItem('digitalnet_theme') || 'light';
+  const currentTheme = document.documentElement.getAttribute('data-bs-theme') || localStorage.getItem('leads_prospector_theme') || 'light';
   applyTheme(currentTheme);
 
   function toggleTheme() {

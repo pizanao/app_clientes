@@ -86,4 +86,4 @@ class ClienteForm(FlaskForm):
 
     def validate_estado(self, field):
         if field.data and field.data.strip().upper() != 'MS':
-            raise ValidationError('A DigitalNet MS atende exclusivamente no estado de Mato Grosso do Sul (MS).')
+            raise ValidationError('O Leads Prospector atende exclusivamente no estado de Mato Grosso do Sul (MS).')

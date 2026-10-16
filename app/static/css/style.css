@@ -595,7 +595,7 @@ body {
 }
 
 /* ==========================================================================
-   DIGITALNET MS - TEMA AZUL TELECOM & AMARELO FIBRA
+   LEADS PROSPECTOR - TEMA AZUL TELECOM & AMARELO FIBRA
    ========================================================================== */
 
 :root {
@@ -634,7 +634,7 @@ body {
   box-shadow: 0 2px 4px rgba(245, 158, 11, 0.25);
 }
 
-/* Botões com Identidade DigitalNet */
+/* Botões com Identidade Leads Prospector */
 .btn-dn-blue {
   background: linear-gradient(135deg, var(--dn-blue), #143e79);
   color: #ffffff !important;

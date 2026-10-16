@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}DigitalNet - Gestão de Telecom{% endblock %}</title>
+    <title>{% block title %}Leads Prospector - Gestão de Telecom{% endblock %}</title>
 
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,7 +29,7 @@
     <!-- Dark Mode FOUT Prevention -->
     <script>
       (function () {
-        const savedTheme = localStorage.getItem('digitalnet_theme') || 'light';
+        const savedTheme = localStorage.getItem('leads_prospector_theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', savedTheme);
       })();
     </script>
@@ -46,14 +46,14 @@
     <!-- SIDEBAR DE NAVEGAÇÃO -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <a href="{{ url_for('main.dashboard') }}" class="brand-logo" title="DigitalNet MS - Telecom Inteligência">
+            <a href="{{ url_for('main.dashboard') }}" class="brand-logo" title="Leads Prospector - Telecom Inteligência">
                 <div class="brand-icon"
                      style="background: linear-gradient(135deg, #1b4f99, #0f2d57); box-shadow: 0 4px 12px rgba(27, 79, 153, 0.4);">
                     <i class="bi bi-broadcast-pin" style="color: #fbbf24;"></i>
                 </div>
                 <div class="brand-text">
-                    <div style="line-height: 1.1; font-weight: 800; letter-spacing: -0.02em;">Digital<span
-                            style="color: #fbbf24;">Net</span></div>
+                    <div style="line-height: 1.1; font-weight: 800; letter-spacing: -0.02em;">Leads<span
+                            style="color: #fbbf24;">Prospector</span></div>
                     <small style="font-size: 0.7rem; color: #94a3b8; font-weight: 500;">Telecom Inteligência</small>
                 </div>
             </a>

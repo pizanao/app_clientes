@@ -38,7 +38,7 @@ class RbacAdminTestCase(unittest.TestCase):
         self.user_admin = User(
             nome='Administrador Sistema',
             username='admin_test',
-            email='admin@digitalnetms.com.br',
+            email='admin@leadsprospector.com.br',
             perfil=PERFIL_ADMIN,
             ativo=True
         )
@@ -49,7 +49,7 @@ class RbacAdminTestCase(unittest.TestCase):
         self.user_lider = User(
             nome='Líder Técnico Silva',
             username='lider_test',
-            email='lider@digitalnetms.com.br',
+            email='lider@leadsprospector.com.br',
             perfil=PERFIL_LIDER,
             ativo=True
         )
@@ -60,7 +60,7 @@ class RbacAdminTestCase(unittest.TestCase):
         self.user_agente = User(
             nome='Agente Comercial Pereira',
             username='agente_test',
-            email='agente@digitalnetms.com.br',
+            email='agente@leadsprospector.com.br',
             perfil=PERFIL_AGENTE,
             ativo=True
         )
@@ -109,7 +109,7 @@ class RbacAdminTestCase(unittest.TestCase):
         user_hibrido = User(
             nome='Operador Promovido',
             username='hibrido',
-            email='hibrido@digitalnetms.com.br',
+            email='hibrido@leadsprospector.com.br',
             perfil=PERFIL_AGENTE,
             ativo=True
         )
@@ -161,7 +161,7 @@ class RbacAdminTestCase(unittest.TestCase):
 
     def test_agente_nao_pode_excluir_cliente_ou_pedido(self):
         """Agente não tem permissão para excluir clientes ou pedidos."""
-        c = Cliente(nome='Cliente Teste Exclusao', email='excluir@digitalnetms.com.br')
+        c = Cliente(nome='Cliente Teste Exclusao', email='excluir@leadsprospector.com.br')
         db.session.add(c)
         db.session.commit()
 
@@ -174,7 +174,7 @@ class RbacAdminTestCase(unittest.TestCase):
 
     def test_lider_pode_excluir_cliente_e_pedido(self):
         """Líder Técnico tem permissão para excluir clientes e pedidos."""
-        c = Cliente(nome='Cliente Para Excluir Lider', email='excluir_lider@digitalnetms.com.br')
+        c = Cliente(nome='Cliente Para Excluir Lider', email='excluir_lider@leadsprospector.com.br')
         db.session.add(c)
         db.session.commit()
 
@@ -194,7 +194,7 @@ class RbacAdminTestCase(unittest.TestCase):
         res = self.client.post('/admin/usuarios/novo', data={
             'nome': 'Novo Operador Cadastrado',
             'username': 'novolider',
-            'email': 'novolider@digitalnetms.com.br',
+            'email': 'novolider@leadsprospector.com.br',
             'perfil': PERFIL_LIDER,
             'grupos': [self.grupo_lider.id],
             'password': 'SenhaForte#123',
@@ -224,7 +224,7 @@ class RbacAdminTestCase(unittest.TestCase):
         res_edit = self.client.post(f'/admin/usuarios/{self.user_agente.id}/editar', data={
             'nome': 'Agente Comercial Atualizado',
             'username': 'agente_atualizado',
-            'email': 'agente_atualizado@digitalnetms.com.br',
+            'email': 'agente_atualizado@leadsprospector.com.br',
             'perfil': PERFIL_LIDER,  # promovido para líder
             'grupos': [self.grupo_lider.id],
             'password': 'NovaSenha#2026',

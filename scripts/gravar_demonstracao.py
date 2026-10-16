@@ -2,7 +2,7 @@
 """
 Script Automatizado de Demonstração e Gravação em Vídeo com Playwright.
 
-Executa o fluxo completo do sistema DigitalNet-Prospector com gravação de vídeo em alta definição:
+Executa o fluxo completo do sistema Leads Prospector com gravação de vídeo em alta definição:
 1. Autenticação e Login como Administrador (admin).
 2. Acesso ao Radar de Leads & Expansão de Fibra Óptica (/leads/).
 3. Demonstração do Mapa de Cobertura de Campo Grande com nós ópticos (CTO) e oportunidades.
@@ -192,7 +192,7 @@ def converter_para_whatsapp(mp4_origem: Path) -> Path | None:
         return None
 
     saida_whatsapp = mp4_origem.parent / f"{mp4_origem.stem}_whatsapp.mp4"
-    saida_recente_whatsapp = mp4_origem.parent / "demonstracao_digitalnet_whatsapp.mp4"
+    saida_recente_whatsapp = mp4_origem.parent / "demonstracao_leads_prospector_whatsapp.mp4"
 
     print(f"[*] Gerando versão otimizada para WhatsApp (<16MB, 720p, +faststart)...")
     cmd = [
@@ -251,7 +251,7 @@ def gravar_fluxo(
     duracao_audio = obter_duracao_audio(audio_path) if audio_path and audio_path.exists() else 0.0
 
     print("=" * 75)
-    print("=== GRAVADOR AUTOMATIZADO DE VÍDEO - DIGITALNET PROSPECTOR")
+    print("=== GRAVADOR AUTOMATIZADO DE VÍDEO - LEADS PROSPECTOR")
     print(f"=== URL Alvo: {base_url}")
     print(f"=== Credenciais Admin: admin / {senha_admin}")
     print(f"=== Modo Visual: {'Headed (Navegador Visível)' if headed else 'Headless (Segundo Plano)'}")
@@ -557,8 +557,8 @@ def gravar_fluxo(
 
     # Move e renomeia o vídeo para nome amigável
     data_hora = time.strftime("%Y%m%d_%H%M%S")
-    video_final_webm = VIDEOS_DIR / f"demonstracao_digitalnet_{data_hora}.webm"
-    video_recente_webm = VIDEOS_DIR / "demonstracao_digitalnet_recente.webm"
+    video_final_webm = VIDEOS_DIR / f"demonstracao_leads_prospector_{data_hora}.webm"
+    video_recente_webm = VIDEOS_DIR / "demonstracao_leads_prospector_recente.webm"
 
     if os.path.exists(video_raw_path):
         shutil.move(video_raw_path, str(video_final_webm))
@@ -574,7 +574,7 @@ def gravar_fluxo(
         # Conversão opcional para MP4 embutindo a trilha de áudio
         video_mp4 = converter_para_mp4(video_final_webm, audio_path)
         if video_mp4 != video_final_webm:
-            shutil.copy(str(video_mp4), str(VIDEOS_DIR / "demonstracao_digitalnet_recente.mp4"))
+            shutil.copy(str(video_mp4), str(VIDEOS_DIR / "demonstracao_leads_prospector_recente.mp4"))
             if gerar_whatsapp:
                 converter_para_whatsapp(video_mp4)
         print("=" * 75)
@@ -585,7 +585,7 @@ def gravar_fluxo(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Grava um vídeo automatizado com Playwright do ecossistema DigitalNet.",
+        description="Grava um vídeo automatizado com Playwright do ecossistema Leads Prospector.",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument('--port', type=int, default=5055, help='Porta HTTP da aplicação (default: 5055)')

@@ -283,7 +283,7 @@ def main():
             f"Cliente Corporativo RFB (Situação: ATIVA). CNAE: {cnae}. "
             f"Contato Decisor: {nome_contato} ({cargo_contato}). "
             f"Operadora anterior: {operadora}. "
-            f"Plano DigitalNet: {plano} (Lead Score: {score}/100)."
+            f"Plano Sugerido: {plano} (Lead Score: {score}/100)."
         )
 
         cliente_dado = (

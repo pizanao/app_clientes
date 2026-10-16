@@ -17,8 +17,8 @@ from app.models.plano import Plano
 
 logger = logging.getLogger(__name__)
 
-# Planos reais da DigitalNet MS
-PLANOS_DIGITALNET = [
+# Planos oficiais de oferta comercial
+PLANOS_OFERTA = [
     {
         'nome': 'Fibra 600 Standard (Wi-Fi 6)',
         'download': '600 Mbps',
@@ -42,7 +42,7 @@ PLANOS_DIGITALNET = [
         'diferencial': 'Máxima velocidade residencial/comercial + Wi-Fi 6 + Skeelo',
     },
     {
-        'nome': 'DigitalNet B2B Link Dedicado Pro',
+        'nome': 'Fibra B2B Link Dedicado Pro',
         'download': '1000 Mbps',
         'upload': '1000 Mbps (100% Simétrico)',
         'preco': 399.90,
@@ -94,7 +94,7 @@ class TelecomProspectorService:
     def get_neighborhood_clusters() -> List[Dict[str, Any]]:
         """
         Agrupa clientes existentes por bairro e cidade para identificar
-        onde a DigitalNet já possui infraestrutura óptica instalada (CTO/Cabos).
+        onde a operadora já possui infraestrutura óptica instalada (CTO/Cabos).
         Normaliza os bairros para evitar duplicidades entre caixa alta e camelcase.
         """
         clientes = Cliente.query.filter_by(ativo=True).all()
@@ -176,7 +176,7 @@ class TelecomProspectorService:
 
         script = (
             f"Olá {nome_curto}, tudo bem? Notei a presença da {empresa} aqui no bairro {bairro}.\n\n"
-            f"A DigitalNet acabou de concluir a modernização da rede de fibra óptica com roteadores Wi-Fi 6 "
+            f"Acabamos de concluir a modernização da rede de fibra óptica com roteadores Wi-Fi 6 "
             f"aqui na sua rua. Identificamos que muitos comércios e escritórios locais sofrem com lentidão e "
             f"suporte demorado de operadoras nacionais como {operadora}.\n\n"
             f"Estruturamos um comparativo rápido mostrando como ter mais velocidade e suporte local 24h em Campo Grande "
@@ -308,7 +308,7 @@ class TelecomProspectorService:
     ) -> List[Dict[str, Any]]:
         """Chama a API do Google Gemini via HTTP padrão (sem bibliotecas externas pesadas)."""
         prompt = f"""Você é o maior especialista em prospecção de vendas B2B e expansão de provedores de internet fibra óptica (ISP).
-A empresa é a DigitalNet MS (provedor com rede própria AS61588, Wi-Fi 6 em comodato, suporte local 24h e planos de 600 a 900 Mega em Campo Grande - MS).
+O sistema é o Leads Prospector (provedor com rede própria de fibra óptica, Wi-Fi 6 em comodato, suporte local 24h e planos de 600 a 900 Mega em Campo Grande - MS).
 
 Gere uma lista de {count} leads B2B/comerciais realistas e altamente prováveis localizados EXATAMENTE no bairro "{bairro}" em "{cidade} - {estado}", nicho "{niche}".
 
@@ -375,7 +375,7 @@ Retorne EXCLUSIVAMENTE um JSON array (sem formatação markdown, sem ```json) co
     ) -> List[Dict[str, Any]]:
         """Chama a API da AIsa (api.aisa.one) via endpoint OpenAI-compatible /v1/chat/completions."""
         system_prompt = (
-            "Você é o motor de prospecção corporativa B2B e expansão da operadora DigitalNet MS. "
+            "Você é o motor de prospecção corporativa B2B e expansão do sistema Leads Prospector. "
             "Sua missão é retornar uma lista estruturada de empresas comerciais/B2B com dados de contato "
             "válidos e viabilidade de conectividade de fibra óptica em Campo Grande - MS. "
             "Retorne EXCLUSIVAMENTE um objeto JSON contendo a propriedade 'leads' com um array de itens."
@@ -397,7 +397,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
       "numero": "120",
       "cep": "79000-000",
       "operadora_atual": "Vivo Fibra ou Claro NET",
-      "plano_sugerido": "Fibra 700 + DigiMesh (Wi-Fi 6) ou DigitalNet B2B Link Dedicado Pro",
+      "plano_sugerido": "Fibra 700 + DigiMesh (Wi-Fi 6) ou Fibra B2B Link Dedicado Pro",
       "valor_mensal_sugerido": 139.90,
       "score": 88,
       "description": "Dor ou motivo de prospecção (ex: lentidão no horário de pico, falha de maquininha, sinal fraco)",
@@ -423,7 +423,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             headers={
                 'Content-Type': 'application/json',
                 'Authorization': f'Bearer {api_key}',
-                'User-Agent': 'DigitalNet-Telecom-Prospector/1.0'
+                'User-Agent': 'Leads-Prospector/1.0'
             },
             method='POST'
         )
@@ -510,7 +510,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
         if aisa_key and aisa_key.strip():
             try:
                 system_prompt = (
-                    "Você é um especialista em prospecção B2B de telecom e vendas consultivas da DigitalNet MS. "
+                    "Você é um especialista em prospecção B2B de telecom e vendas consultivas do Leads Prospector. "
                     "Gere uma abordagem persuasiva e personalizada para o lead. "
                     "Retorne EXCLUSIVAMENTE um objeto JSON com: 'subject', 'message', 'key_points', 'call_to_action'."
                 )
@@ -777,7 +777,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 valor = 139.90
             elif any(term in cnae_desc.lower() for term in ('advoc', 'contáb', 'juríd', 'consult')):
                 dor = 'Queda de conexão durante audiências virtuais e lentidão no envio de relatórios fiscais.'
-                plano = 'DigitalNet B2B Link Dedicado Pro'
+                plano = 'Fibra B2B Link Dedicado Pro'
                 valor = 399.90
             elif any(term in cnae_desc.lower() for term in ('comérci', 'varej', 'alimento', 'restaurant', 'bar')):
                 dor = 'Wi-Fi da operadora atual com sinal fraco no salão de atendimento e instabilidade no checkout.'
@@ -814,7 +814,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             lead_item['icebreaker_optin'] = cls.generate_anti_ban_whatsapp_script(temp_lead)
             lead_item['dossie_comercial'] = json.dumps({
                 'perfil_decisor': f"{nome_fmt} ({cargo_fmt}) - CNAE: {cnae_desc or 'Comercial'}.",
-                'vantagem_digitalnet': 'Rede própria AS61588 de fibra óptica com Wi-Fi 6 e suporte local 24h em Campo Grande.',
+                'vantagem_competitiva': 'Rede própria de fibra óptica com Wi-Fi 6 e suporte local 24h em Campo Grande.',
                 'angulo_venda': f"Eliminar a dor de '{dor}' com migração sem interrupção de serviço.",
                 'perfil_territorial': f"Região {info_bairro.get('regiao_urbana', 'Urbana')} ({info_bairro.get('macrozona', '')}). Perfil: {info_bairro.get('perfil_predominante', 'Comercial')}.",
                 'fonte_dados': 'Receita Federal do Brasil (RFB) + SISGRAN/PLANURB Campo Grande',
@@ -870,7 +870,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'cargo': 'Sócio Coordenador',
                 'dor': 'Queda de conexão durante audiências virtuais pelo Teams/Zoom e demora no upload de petições pesadas.',
                 'operadora': 'Claro NET',
-                'plano': 'DigitalNet B2B Link Dedicado Pro',
+                'plano': 'Fibra B2B Link Dedicado Pro',
                 'valor': 399.90,
                 'score': 95,
             },
@@ -920,7 +920,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'cargo': 'Diretor de Tecnologia',
                 'dor': 'Upload lento para servidores na nuvem e falta de IP fixo com SLA comercial.',
                 'operadora': 'Claro NET',
-                'plano': 'DigitalNet B2B Link Dedicado Pro',
+                'plano': 'Fibra B2B Link Dedicado Pro',
                 'valor': 499.90,
                 'score': 96,
             },
@@ -970,7 +970,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'cargo': 'Bioquímico Responsável',
                 'dor': 'Atraso no envio eletrônico de laudos emergenciais por instabilidade na rede de dados.',
                 'operadora': 'Claro NET',
-                'plano': 'DigitalNet B2B Link Dedicado Pro',
+                'plano': 'Fibra B2B Link Dedicado Pro',
                 'valor': 399.90,
                 'score': 94,
             },
@@ -1000,7 +1000,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'cargo': 'Diretora Pedagógica',
                 'dor': 'Ambiente virtual e laboratório de informática travando por falta de banda dedicada e Wi-Fi 6.',
                 'operadora': 'Vivo Fibra',
-                'plano': 'DigitalNet B2B Link Dedicado Pro',
+                'plano': 'Fibra B2B Link Dedicado Pro',
                 'valor': 399.90,
                 'score': 95,
             },
@@ -1070,8 +1070,8 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             lead_item['icebreaker_optin'] = cls.generate_anti_ban_whatsapp_script(temp_lead)
             lead_item['dossie_comercial'] = json.dumps({
                 'perfil_decisor': f"{nome_contato} ({t['cargo']}) busca estabilidade de rede e atendimento direto sem burocracia.",
-                'vantagem_digitalnet': 'Fibra óptica com Wi-Fi 6 de alta densidade + suporte presencial 24h com equipe em Campo Grande.',
-                'angulo_venda': f"Focar na eliminação da dor de '{t['dor']}' demonstrando que a DigitalNet já atende vizinhos nesta mesma rua.",
+                'vantagem_competitiva': 'Fibra óptica com Wi-Fi 6 de alta densidade + suporte presencial 24h com equipe em Campo Grande.',
+                'angulo_venda': f"Focar na eliminação da dor de '{t['dor']}' demonstrando que a rede óptica já atende vizinhos nesta mesma rua.",
                 'perfil_territorial': f"Região {info_bairro.get('regiao_urbana', 'Urbana')} ({info_bairro.get('macrozona', '')}). Perfil: {info_bairro.get('perfil_predominante', 'Comercial')}.",
             }, ensure_ascii=False)
 
@@ -1240,7 +1240,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
     def convert_lead_to_client(cls, lead: Lead, plano: Optional[Plano] = None) -> Cliente:
         """
         Converte o lead em Cliente efetivo e cria automaticamente o Pedido
-        da assinatura da DigitalNet MS vinculado ao Plano oficial e com itens totalizados.
+        da assinatura vinculado ao Plano oficial e com itens totalizados.
         """
         if lead.cliente_convertido_id:
             cliente_existente = db.session.get(Cliente, lead.cliente_convertido_id)
@@ -1335,7 +1335,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
             metodo_pagamento='pix',
             valor_total=valor,
             descricao=desc_pedido,
-            observacoes="Ativação inicial de fibra óptica DigitalNet MS."
+            observacoes="Ativação inicial de fibra óptica via Leads Prospector."
         )
         db.session.add(pedido)
         db.session.flush()
@@ -1372,8 +1372,8 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'tecnica': 'Ponte de Transição / Teste em Paralelo',
                 'script_whatsapp': (
                     f"Entendo perfeitamente! Ninguém gosta de pagar multas desnecessárias.\n\n"
-                    f"O que muitos clientes aqui do {bairro} fazem é instalar a DigitalNet nos últimos 60 dias da fidelidade como 'link de segurança', "
-                    f"aproveitando a nossa condição de R$ 99,90 nos primeiros 3 meses. Assim você não fica sem internet se a {operadora} cair "
+                    f"O que muitos clientes aqui do {bairro} fazem é instalar a nossa fibra óptica nos últimos 60 dias da fidelidade como 'link de segurança', "
+                    f"aproveitando a condição de R$ 99,90 nos primeiros 3 meses. Assim você não fica sem internet se a {operadora} cair "
                     f"e faz a transição 100% suave sem pagar multa. Que tal agendarmos a viabilidade?"
                 ),
             },
@@ -1383,16 +1383,16 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'tecnica': 'Custo por Mega & Custo de Queda',
                 'script_whatsapp': (
                     f"Compreendo! Se olharmos só o valor final parece similar, mas na prática você está pagando mais caro por Mega.\n\n"
-                    f"Na DigitalNet você recebe {plano} com dobro de upload e roteador Wi-Fi 6 de alta densidade incluso em comodato (que a concorrência cobra R$ 25/mês de aluguel). "
+                    f"Conosco você recebe {plano} com dobro de upload e roteador Wi-Fi 6 de alta densidade incluso em comodato (que a concorrência cobra R$ 25/mês de aluguel). "
                     f"Além disso, uma única hora sem internet na sua operação custa muito mais que a diferença de mensalidade. Faz sentido dar uma olhada na comparação?"
                 ),
             },
             'marca': {
-                'titulo': 'Objeção: "Nunca ouvi falar da DigitalNet, prefiro as grandes teles"',
+                'titulo': 'Objeção: "Não conheço a operadora, prefiro as grandes teles"',
                 'diagnostico': 'Insegurança em relação à estabilidade e suporte.',
                 'tecnica': 'Autoridade Local + Atendimento Humanizado',
                 'script_whatsapp': (
-                    f"Ótimo ponto! A grande diferença é que a DigitalNet é uma operadora com rede própria autorizada pela Anatel (AS61588) e mais de 700 condomínios atendidos em Campo Grande.\n\n"
+                    f"Ótimo ponto! A grande diferença é que atuamos com rede própria autorizada pela Anatel e mais de 700 condomínios atendidos em Campo Grande.\n\n"
                     f"Enquanto nas teles nacionais você fala com robôs no 0800 e espera 3 dias por um técnico de fora, a nossa equipe de suporte é 100% própria, local e 24h aqui na cidade. "
                     f"Se precisar de suporte, o técnico chega no mesmo dia. Vale a pena testar a estabilidade local!"
                 ),
@@ -1404,7 +1404,7 @@ ESTRUTURA DO JSON OBRIGATÓRIA:
                 'script_whatsapp': (
                     f"Excelente saber que está funcionando! Posso te fazer uma pergunta rápida de 30 segundos?\n\n"
                     f"Quando a sua internet atual oscila nos horários de pico, qual é o plano de contingência da {lead.empresa} para não parar os computadores e maquininhas? "
-                    f"A DigitalNet pode ficar como sua rota principal com Wi-Fi 6 de alta velocidade para que sua equipe nunca mais sofra lentidão. Posso te passar um comparativo?"
+                    f"Nossa fibra pode ficar como sua rota principal com Wi-Fi 6 de alta velocidade para que sua equipe nunca mais sofra lentidão. Posso te passar um comparativo?"
                 ),
             },
         }

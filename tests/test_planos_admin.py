@@ -26,7 +26,7 @@ class PlanosAdminTestCase(unittest.TestCase):
         self.user_admin = User(
             nome='Admin Planos',
             username='admin_planos',
-            email='admin.planos@digitalnetms.com.br',
+            email='admin.planos@leadsprospector.com.br',
             perfil=PERFIL_ADMIN,
             ativo=True
         )
@@ -35,7 +35,7 @@ class PlanosAdminTestCase(unittest.TestCase):
         self.user_lider = User(
             nome='Líder Técnico',
             username='lider_planos',
-            email='lider.planos@digitalnetms.com.br',
+            email='lider.planos@leadsprospector.com.br',
             perfil=PERFIL_LIDER,
             ativo=True
         )
@@ -44,7 +44,7 @@ class PlanosAdminTestCase(unittest.TestCase):
         self.user_agente = User(
             nome='Agente Comercial',
             username='agente_planos',
-            email='agente.planos@digitalnetms.com.br',
+            email='agente.planos@leadsprospector.com.br',
             perfil=PERFIL_AGENTE,
             ativo=True
         )

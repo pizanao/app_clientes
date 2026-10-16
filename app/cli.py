@@ -81,10 +81,10 @@ def register_cli_commands(app):
     @app.cli.command('seed-planos')
     @with_appcontext
     def seed_planos_command():
-        """Popula ou sincroniza os planos oficiais da DigitalNet (PF e PJ)."""
+        """Popula ou sincroniza os planos oficiais do Leads Prospector (PF e PJ)."""
         db.create_all()
         total = Plano.seed_planos_iniciais()
-        click.echo(f'{total} planos padrão oficiais da DigitalNet MS (PF e PJ) carregados com sucesso!')
+        click.echo(f'{total} planos padrão oficiais do Leads Prospector (PF e PJ) carregados com sucesso!')
 
     @app.cli.command('seed')
     @with_appcontext
@@ -173,7 +173,7 @@ def register_cli_commands(app):
             lider = User(
                 nome='Carlos Eduardo Mendes',
                 username='lider.tecnico',
-                email='carlos.mendes@digitalnetms.com.br',
+                email='carlos.mendes@leadsprospector.com.br',
                 perfil=PERFIL_LIDER,
                 ativo=True
             )
@@ -187,7 +187,7 @@ def register_cli_commands(app):
             agente = User(
                 nome='Mariana Souza',
                 username='agente.comercial',
-                email='mariana.souza@digitalnetms.com.br',
+                email='mariana.souza@leadsprospector.com.br',
                 perfil=PERFIL_AGENTE,
                 ativo=True
             )
@@ -196,7 +196,7 @@ def register_cli_commands(app):
             db.session.add(agente)
             click.echo('Criado usuário agente comercial: "agente.comercial" (Senha: Agente#2026)')
 
-        # 4. Planos de Banda Larga Oficiais DigitalNet (PF e PJ)
+        # 4. Planos de Banda Larga Oficiais (PF e PJ)
         if Plano.query.count() == 0:
             total_planos = Plano.seed_planos_iniciais()
             click.echo(f'{total_planos} Planos oficiais de banda larga (PF e PJ) cadastrados com sucesso!')
@@ -217,7 +217,7 @@ def register_cli_commands(app):
                     cidade='Campo Grande',
                     estado='MS',
                     ativo=True,
-                    observacoes='Condomínio atendido pela fibra DigitalNet com 60 apartamentos conectados.'
+                    observacoes='Condomínio atendido por fibra óptica com 60 apartamentos conectados.'
                 ),
                 Cliente(
                     nome='Clínica Médica Santa Fé Especializada',

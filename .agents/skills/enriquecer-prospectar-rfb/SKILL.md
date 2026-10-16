@@ -110,4 +110,4 @@ Para cada lead qualificado, o sistema gera o roteiro anti-ban em 3 blocos:
 Ao clicar em **Converter em Cliente** na tela do lead (`/leads/<id>`):
 - O lead passa para o status `convertido`.
 - O cliente é cadastrado na tabela `clientes`.
-- Um pedido de assinatura DigitalNet é criado na tabela `pedidos` com item e valor totalizados automaticamente.
+- Um pedido de assinatura comercial é criado na tabela `pedidos` com item e valor totalizados automaticamente.

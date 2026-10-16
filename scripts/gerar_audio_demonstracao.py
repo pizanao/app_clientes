@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Gera a trilha de áudio narrada para o vídeo de demonstração do DigitalLeads.
+Gera a trilha de áudio narrada para o vídeo de demonstração do Leads Prospector.
 Utiliza a voz clonada 'Considera' (id: bf91cd6a) via VoiceStudio local.
 """
 
@@ -42,10 +42,10 @@ SCRIPT_SEGMENTS = [
         )
     },
     {
-        "id": "digitalleads_apresentacao",
+        "id": "leads_prospector_apresentacao",
         "pause_after": 0.7,
         "text": (
-            "O resultado é o DigitalLeads: um CRM com foco em prospecção B2B geolocalizada para a DigitalNet Telecomunicações. "
+            "O resultado é o Leads Prospector: um CRM com foco em prospecção B2B geolocalizada para operadoras de telecomunicações. "
             "A ferramenta cruza a base oficial de 177 mil empresas ativas da Receita Federal com as camadas geográficas em GeoJSON de Campo Grande."
         )
     },
@@ -54,7 +54,7 @@ SCRIPT_SEGMENTS = [
         "pause_after": 0.7,
         "text": (
             "Na primeira funcionalidade, temos o Radar de Leads e expansão da rede óptica. "
-            "O mapa mostra manchas térmicas de oportunidades e os pontos de fibra da DigitalNet. "
+            "O mapa mostra manchas térmicas de oportunidades e os pontos de fibra óptica ativa. "
             "Clicando em um nó, o sistema abre uma gaveta lateral e lista todas as empresas vizinhas com viabilidade imediata de atendimento."
         )
     },

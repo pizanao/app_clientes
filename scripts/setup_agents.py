@@ -4,7 +4,7 @@ Script de Configuração e Geração de Documentação para Agentes de IA (AGENT
 
 Gera e mantém sincronizados:
 1. AGENTS.md: Guia mestre de arquitetura, padrões e instruções para agentes de IA (Antigravity, Cursor, Copilot).
-2. README.md: Documentação executiva e técnica completa do ecossistema DigitalNet MS.
+2. README.md: Documentação executiva e técnica completa do ecossistema Leads Prospector.
 3. SKILLs do Workspace (.agents/skills/):
    - enriquecer-prospectar-rfb: Enriquecimento e prospecção com 177k empresas da RFB e SISGRAN.
    - carregar-geojson-sqlite: Análise e carregamento de camadas GeoJSON no SQLite com índices espaciais R*Tree.
@@ -145,7 +145,7 @@ Para cada lead qualificado, o sistema gera o roteiro anti-ban em 3 blocos:
 Ao clicar em **Converter em Cliente** na tela do lead (`/leads/<id>`):
 - O lead passa para o status `convertido`.
 - O cliente é cadastrado na tabela `clientes`.
-- Um pedido de assinatura DigitalNet é criado na tabela `pedidos` com item e valor totalizados automaticamente.
+- Um pedido de assinatura comercial é criado na tabela `pedidos` com item e valor totalizados automaticamente.
 """
 
 SKILL_CARREGAR_GEOJSON_SQLITE = """---
@@ -281,14 +281,14 @@ Os dados carregados no SQLite servem de suporte para enriquecer os perfis territ
 def build_agents_md() -> str:
     return """# AGENTS.md - Diretrizes de Desenvolvimento e Arquitetura do Workspace
 
-Bem-vindo ao workspace do **DigitalNet MS - Radar de Leads & Sistema de Gestão**.
+Bem-vindo ao workspace do **Leads Prospector (`leads-prospector`) - Radar de Leads & Sistema de Gestão**.
 Este documento define as regras de desenvolvimento, catálogo de modelos de dados, motores de inteligência artificial, controle de acesso e regras espaciais obrigatórias para todos os agentes de IA atuando neste repositório.
 
 ---
 
 ## 1. Visão Geral do Sistema
 
-A aplicação é uma plataforma completa de **Gestão Comercial, Controle de Acesso (RBAC) e Radar de Expansão de Telecomunicações** (ISP B2B) para a **DigitalNet MS** em Campo Grande - MS.
+A aplicação é uma plataforma completa de **Gestão Comercial, Controle de Acesso (RBAC) e Radar de Expansão de Telecomunicações** (ISP B2B) em Campo Grande - MS.
 - **Stack:** Python 3.11+, Flask 3, Flask-SQLAlchemy, Flask-Migrate (Alembic), Flask-Login, Flask-WTF, Bootstrap 5.3, Mapbox GL JS / Leaflet.
 - **Bancos de Dados:**
   - **SQLite Primário:** `instance/app_clientes.db` (armazenamento de Usuários, Grupos de Acesso, Clientes, Pedidos, Leads, Tabelas Espaciais e Base RFB).
@@ -392,11 +392,11 @@ As skills do projeto residem em `.agents/skills/` e ensinam os procedimentos com
 # ==============================================================================
 
 def build_readme_md() -> str:
-    return """# DigitalNet MS - Radar de Leads, Gestão Comercial & Controle de Acesso (RBAC)
+    return """# Leads Prospector (`leads-prospector`) - Radar de Leads, Gestão Comercial & Controle de Acesso (RBAC)
 
-Sistema integrado de **Gestão Comercial, Controle de Acesso por Perfis & Grupos, Prospecção Geo-Localizada e Expansão de Infraestrutura Óptica B2B** para a operadora **DigitalNet MS** em Campo Grande - MS.
+Sistema integrado de **Gestão Comercial, Controle de Acesso por Perfis & Grupos, Prospecção Geo-Localizada e Expansão de Infraestrutura Óptica B2B** em Campo Grande - MS.
 
-Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Controle de Acesso RBAC**, **Inteligência Artificial (AIsa e Gemini)**, dados geográficos oficiais do **SISGRAN / PLANURB**, mais de **21.000 feições urbanas** (bairros, imóveis e loteamentos) com indexação espacial **R*Tree** no SQLite e uma base de **177.614 empresas da Receita Federal do Brasil**.
+Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Controle de Acesso RBAC**, **Inteligência Artificial (AIsa e Gemini)**, dados geográficos oficiais do **SISGRAN / PLANURB**, mais de **463.000 feições urbanas** (bairros, imóveis e loteamentos) com indexação espacial **R*Tree** no SQLite e uma base de **158.558 empresas da Receita Federal do Brasil**.
 
 ---
 
@@ -409,7 +409,7 @@ Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Controle de Aces
 - [Instalação Rápida com setup.sh](#instalacao-rapida-com-setupsh)
 - [Motores de Prospecção e Inteligência Artificial](#motores-de-prospeccao-e-inteligencia-artificial)
 - [Dados Geoespaciais e SISGRAN](#dados-geoespaciais-e-sisgran)
-- [Base de 177k Empresas da Receita Federal](#base-de-177k-empresas-da-receita-federal)
+- [Base de Empresas da Receita Federal](#base-de-177k-empresas-da-receita-federal)
 - [Scripts e Ferramentas CLI](#scripts-e-ferramentas-cli)
 - [Suíte de Testes](#suite-de-testes)
 - [Agentes de IA e SKILLs](#agentes-de-ia-e-skills)
@@ -420,13 +420,13 @@ Desenvolvido em **Python 3.11+ e Flask 3**, o sistema integra **Controle de Aces
 
 - **Controle de Acesso por Perfis (RBAC):** Hierarquia de permissões estruturada para **Administrador**, **Líder Técnico** e **Agente**, além de grupos de trabalho customizáveis.
 - **Painel Administrativo Completo:** Gestão centralizada de usuários (`/admin/usuarios`) com criação, edição de perfis, ativação/desativação e grupos de acesso (`/admin/grupos`).
-- **Viabilidade Óptica Hiperlocal:** O sistema calcula clusters de clientes conectados por bairro de Campo Grande, permitindo prospectar empresas exatamente onde a fibra óptica da DigitalNet já está nos postes (AS61588).
+- **Viabilidade Óptica Hiperlocal:** O sistema calcula clusters de clientes conectados por bairro de Campo Grande, permitindo prospectar empresas exatamente onde a fibra óptica já está ativa nos postes.
 - **Interatividade nos Nós Ópticos (Offcanvas):** Ao clicar em um nó de fibra no mapa, abre uma gaveta lateral listando as empresas reais daquele raio, com scores, WhatsApp anti-ban em 1-clique e navegação focada no mapa.
 - **Interface Imersiva (Menu Recolhível & Mapa Fullscreen):** Barra lateral retrátil com persistência em `localStorage` e badges identificadores do perfil do operador.
 - **Roteiro WhatsApp Anti-Ban com Opt-in:** Reduz o risco de bloqueio de número para quase zero com um método consultivo em 3 passos, oferecendo Wi-Fi 6 em comodato e pontos DigiMesh sem custos de aluguel.
 - **Cascata Multi-Provedor de Prospecção:** Integração com a API AIsa (`asi1-mini`), Google Gemini AI, banco de dados abertos da RFB e gerador sintético de alta diversidade.
-- **Banco Espacial Dual (SQLite R*Tree & PostGIS):** Análise e ingestão automática de 21.042 feições urbanas com bounding boxes e centróides tanto em SQLite puro quanto em PostgreSQL + PostGIS.
-- **Conversão em 1-Clique:** Transforma um lead prospectado em Cliente e gera automaticamente o Pedido com planos reais da operadora.
+- **Banco Espacial Dual (SQLite R*Tree & PostGIS):** Análise e ingestão automática de 463.786 feições urbanas com bounding boxes e centróides tanto em SQLite puro quanto em PostgreSQL + PostGIS.
+- **Conversão em 1-Clique:** Transforma um lead prospectado em Cliente e gera automaticamente o Pedido com planos oficiais.
 - **Deploy Autônomo Blindado (POC em 30s):** `setup.sh` auto-contido para demonstrações de POC, configurando todo o ambiente em menos de 30 segundos.
 
 ---
@@ -453,7 +453,7 @@ flowchart TD
     subgraph Data["Camada de Dados (SQLite & Geo)"]
         MainDB[("SQLite: instance/app_clientes.db")]
         UsersDB[("Tabelas: usuarios, grupos, usuario_grupos")]
-        RFB[("Tabela leeds_campo_grande (177k RFB)")]
+        RFB[("Tabela leeds_campo_grande (RFB)")]
         GeoSQLite[("Tabelas Espaciais R*Tree (geo_*)")]
         GeoFiles["GeoJSON (bairros, imoveis, parcelamentos)"]
     end
@@ -506,7 +506,7 @@ flowchart TD
 - **DataTables 2 & Extensão Responsive:** As tabelas de Clientes (/clientes/) e Leads (/leads/) adaptam-se com fluidez a qualquer resolução de tela (desktop, tablet e mobile).
 - **Linhas Aninhadas (Child Rows com Subtabelas):** O botão interativo Detalhes expande painéis avançados sob demanda:
   - *Tabela de Clientes:* Dossiê cadastral, endereço completo, total gasto acumulado e subtabela aninhada com o histórico de pedidos conectados e atalhos rápidos de WhatsApp.
-  - *Tabela de Leads:* Acordeão técnico com inteligência territorial de Campo Grande (CTO no quarteirão), script anti-ban para WhatsApp com botão de cópia de 1 clique, e pacote recomendado DigitalNet com botão de conversão imediata em cliente.
+  - *Tabela de Leads:* Acordeão técnico com inteligência territorial de Campo Grande (CTO no quarteirão), script anti-ban para WhatsApp com botão de cópia de 1 clique, e pacote recomendado com botão de conversão imediata em cliente.
 
 ---
 

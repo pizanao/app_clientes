@@ -146,7 +146,7 @@ def agente_client(client, rbac_users):
 def sample_planos(db_session):
     """Popula planos PF e PJ básicos para testes de conversão e pedidos."""
     plano_pf = Plano(
-        nome='DigitalNet Fibra 700 + DigiMesh (Wi-Fi 6)',
+        nome='Fibra 700 + DigiMesh (Wi-Fi 6)',
         tipo=TIPO_PF,
         velocidade_download=700,
         velocidade_upload=350,
@@ -156,7 +156,7 @@ def sample_planos(db_session):
         ativo=True,
     )
     plano_pj = Plano(
-        nome='DigitalNet B2B Link Dedicado Pro',
+        nome='Fibra B2B Link Dedicado Pro',
         tipo=TIPO_PJ,
         velocidade_download=1000,
         velocidade_upload=1000,
@@ -206,7 +206,7 @@ def rfb_memory_seeded(db_session):
             'DR ROBERTO ALMEIDA', 'Sócio-Administrador',
             '+5567991234567 | +556733210000', 'CONTATO@CLINICAPANTANAL.COM.BR',
             'RAUL PIRES BARBOSA', '1240', 'CHACARA CACHOEIRA', 'SALA 02', '79040150',
-            'Vivo Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 95,
+            'Vivo Fibra', 'Fibra B2B Link Dedicado Pro', 399.9, 95,
             'Atividade médica ambulatorial com recursos para realização de procedimentos cirúrgicos',
             'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
         ),
@@ -215,7 +215,7 @@ def rfb_memory_seeded(db_session):
             'MARCOS VINICIUS SOUZA', 'Sócio-Administrador',
             '+556798234567 | +55', 'FISCAL@EXATAMS.COM.BR',
             'JERIBA', '455', 'CHACARA CACHOEIRA', '', '79040220',
-            'Claro / Embratel', 'DigitalNet Fibra 700 + DigiMesh (Wi-Fi 6)', 139.9, 91,
+            'Claro / Embratel', 'Fibra 700 + DigiMesh (Wi-Fi 6)', 139.9, 91,
             'Atividades de contabilidade',
             'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
         ),
@@ -224,7 +224,7 @@ def rfb_memory_seeded(db_session):
             'DRA PATRICIA NOGUEIRA', 'Titular',
             '+556733824455 | +55000000000000', 'CONTATO@CENTRALADV.COM.BR',
             'AFONSO PENA', '2500', 'CENTRO', 'CONJ 801', '79002074',
-            'Vivo Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 93,
+            'Vivo Fibra', 'Fibra B2B Link Dedicado Pro', 399.9, 93,
             'Serviços advocatícios',
             'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
         ),
@@ -233,7 +233,7 @@ def rfb_memory_seeded(db_session):
             'CARLOS EDUARDO MENDES', 'Diretor Comercial',
             '+556799876543 | +55', 'COMPRAS@ESTRELASUL.COM.BR',
             'MATO GROSSO', '1800', 'JARDIM DOS ESTADOS', 'LOJA A', '79020200',
-            'Oi Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 90,
+            'Oi Fibra', 'Fibra B2B Link Dedicado Pro', 399.9, 90,
             'Comércio varejista de mercadorias em geral, com predominância de produtos alimentícios - supermercados',
             'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
         ),
@@ -242,7 +242,7 @@ def rfb_memory_seeded(db_session):
             'ANA PAULA FERREIRA', 'Sócia-Administradora',
             '+5567995554433 | +556733221100', 'CONTATO@TECNOCG.COM.BR',
             'VIA PARK', '700', 'VILA ALTA', 'SALA 12', '79051000',
-            'Vivo Fibra', 'DigitalNet B2B Link Dedicado Pro', 399.9, 89,
+            'Vivo Fibra', 'Fibra B2B Link Dedicado Pro', 399.9, 89,
             'Desenvolvimento de programas de computador sob encomenda',
             'SEM MOTIVO', 'CAMPO GRANDE', 'ATIVA',
         ),

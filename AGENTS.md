@@ -1,13 +1,13 @@
 # AGENTS.md - Diretrizes de Desenvolvimento e Arquitetura do Workspace
 
-Bem-vindo ao workspace do **DigitalNet MS - Radar de Leads & Sistema de Gestão**.
+Bem-vindo ao workspace do **Leads Prospector (`leads-prospector`) - Radar de Leads & Sistema de Gestão**.
 Este documento define as regras de desenvolvimento, catálogo de modelos de dados, motores de inteligência artificial, controle de acesso e regras espaciais obrigatórias para todos os agentes de IA atuando neste repositório.
 
 ---
 
 ## 1. Visão Geral do Sistema
 
-A aplicação é uma plataforma completa de **Gestão Comercial, Controle de Acesso (RBAC) e Radar de Expansão de Telecomunicações** (ISP B2B) para a **DigitalNet MS** em Campo Grande - MS.
+A aplicação é uma plataforma completa de **Gestão Comercial, Controle de Acesso (RBAC) e Radar de Expansão de Telecomunicações** (ISP B2B) em Campo Grande - MS.
 - **Stack:** Python 3.11+, Flask 3, Flask-SQLAlchemy, Flask-Migrate (Alembic), Flask-Login, Flask-WTF, Bootstrap 5.3, Mapbox GL JS / Leaflet.
 - **Bancos de Dados:**
   - **SQLite Primário:** `instance/app_clientes.db` (armazenamento de Usuários, Grupos de Acesso, Clientes, Pedidos, Leads, Tabelas Espaciais e Base RFB).

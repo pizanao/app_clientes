@@ -30,7 +30,7 @@ class LeadsTestCase(unittest.TestCase):
         Plano.seed_planos_iniciais()
 
         # Create a test user
-        user = User(nome='Vendedor Telecom', username='vendedor', email='vendedor@digitalnet.local')
+        user = User(nome='Vendedor Telecom', username='vendedor', email='vendedor@leadsprospector.local')
         user.set_password('senha12345')
         db.session.add(user)
 
@@ -413,7 +413,7 @@ class LeadsTestCase(unittest.TestCase):
             cidade='Campo Grande',
             estado='MS',
             dor_principal='Queda frequente de link nas cirurgias e consultas',
-            plano_sugerido='DigitalNet B2B Link Dedicado Pro',
+            plano_sugerido='Fibra B2B Link Dedicado Pro',
             valor_mensal_sugerido=399.90
         )
         db.session.add(lead)
@@ -444,7 +444,7 @@ class LeadsTestCase(unittest.TestCase):
                             'numero': '300',
                             'cep': '79002-000',
                             'operadora_atual': 'Vivo Fibra',
-                            'plano_sugerido': 'DigitalNet B2B Link Dedicado Pro',
+                            'plano_sugerido': 'Fibra B2B Link Dedicado Pro',
                             'valor_mensal_sugerido': 399.90,
                             'score': 96,
                             'description': 'Necessidade de link redundante e baixa latência.',

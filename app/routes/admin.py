@@ -305,7 +305,7 @@ def grupo_excluir(id):
 
 
 # ==============================================================================
-# GESTÃO DE PLANOS DE BANDA LARGA (PF & PJ - DIGITALNET)
+# GESTÃO DE PLANOS DE BANDA LARGA (PF & PJ)
 # ==============================================================================
 
 @admin_bp.route('/planos')
@@ -485,5 +485,5 @@ def plano_excluir(id):
 @admin_required
 def planos_sincronizar_padrao():
     total = Plano.seed_planos_iniciais()
-    flash(f'{total} planos padrão oficiais da DigitalNet MS (PF e PJ) foram sincronizados com sucesso!', 'success')
+    flash(f'{total} planos padrão oficiais (PF e PJ) foram sincronizados com sucesso!', 'success')
     return redirect(url_for('admin.planos'))

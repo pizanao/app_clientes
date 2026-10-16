@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ titulo }} - Administração DigitalNet{% endblock %}
+{% block title %}{{ titulo }} - Administração Leads Prospector{% endblock %}
 
 {% block content %}
 <div class="mb-4">
@@ -58,7 +58,7 @@
             <label for="email" class="form-label">{{ form.email.label.text }}</label>
             <div class="input-group">
               <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
-              {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="usuario@digitalnetms.com.br") }}
+              {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="usuario@leadsprospector.com.br") }}
               {% for error in form.email.errors %}
                 <div class="invalid-feedback">{{ error }}</div>
               {% endfor %}

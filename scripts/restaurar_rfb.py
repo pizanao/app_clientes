@@ -23,7 +23,7 @@ LOCAL_DUMP = ROOT / 'data' / 'leeds_campo_grande.sql.gz'
 # URL pública padrão (pode ser sobrescrita via variável de ambiente RFB_DUMP_URL ou argumento --url)
 DEFAULT_URL = os.environ.get(
     'RFB_DUMP_URL',
-    'https://raw.githubusercontent.com/pizanao/digitalnet-dados-abertos/main/data/leeds_campo_grande.sql.gz'
+    'https://raw.githubusercontent.com/pizanao/leads-prospector/main/data/leeds_campo_grande.sql.gz'
 )
 
 
@@ -50,7 +50,7 @@ def baixar_dump(url: str, destino: Path):
 
     req = urllib.request.Request(
         url,
-        headers={'User-Agent': 'DigitalNet-Setup/1.0'}
+        headers={'User-Agent': 'LeadsProspector-Setup/1.0'}
     )
     t0 = time.time()
     try:
